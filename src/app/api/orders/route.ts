@@ -1,0 +1,119 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as Record<string, unknown>).id as string;
+
+    const orders = await db.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        service: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            shortDescription: true,
+            icon: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(orders);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as Record<string, unknown>).id as string;
+    const body = await request.json();
+    const { serviceId, duration, telegramUsername, screenshot } = body;
+
+    if (!serviceId || !duration) {
+      return NextResponse.json(
+        { error: "Service ID and duration are required" },
+        { status: 400 }
+      );
+    }
+
+    const validDurations = ["3months", "6months", "1year"];
+    if (!validDurations.includes(duration)) {
+      return NextResponse.json(
+        { error: "Invalid duration. Must be 3months, 6months, or 1year" },
+        { status: 400 }
+      );
+    }
+
+    // Validate service exists and is active
+    const service = await db.service.findUnique({
+      where: { id: serviceId },
+    });
+
+    if (!service || !service.isActive) {
+      return NextResponse.json(
+        { error: "Service not found or inactive" },
+        { status: 404 }
+      );
+    }
+
+    // Calculate amount based on duration
+    let amount = 0;
+    switch (duration) {
+      case "3months":
+        amount = service.price3m;
+        break;
+      case "6months":
+        amount = service.price6m;
+        break;
+      case "1year":
+        amount = service.price12m;
+        break;
+    }
+
+    // Create order
+    const order = await db.order.create({
+      data: {
+        userId,
+        serviceId,
+        duration,
+        amount,
+        telegramUsername: telegramUsername || null,
+        screenshot: screenshot || null,
+        status: "pending",
+      },
+      include: {
+        service: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            shortDescription: true,
+            icon: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(order, { status: 201 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

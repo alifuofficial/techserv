@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  phone     String?
+  telegram  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Service {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  shortDescription String
+  longDescription  String   @default("")
+  features         String   @default("")
+  icon             String   @default("Zap")
+  price3m          Float
+  price6m          Float
+  price12m         Float
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  orders           Order[]
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  userId           String
+  serviceId        String
+  status           String   @default("pending")
+  duration         String
+  amount           Float
+  telegramUsername String?
+  screenshot       String?
+  adminNote        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service          Service  @relation(fields: [serviceId], references: [id])
+}
