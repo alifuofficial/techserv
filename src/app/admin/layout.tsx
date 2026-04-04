@@ -1,24 +1,38 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-
-/* ────────────────────────────────────────────
-   Animation Variants
-   ──────────────────────────────────────────── */
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-  },
-}
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+  SidebarInset,
+  SidebarTrigger,
+  SidebarSeparator,
+} from '@/components/ui/sidebar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Toaster } from 'sonner'
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  ArrowLeft,
+  LogOut,
+  Zap,
+} from 'lucide-react'
 
 /* ────────────────────────────────────────────
    Access Denied Component
@@ -27,9 +41,9 @@ function AccessDenied() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="text-center px-4"
       >
         <div className="h-20 w-20 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-6">
@@ -56,6 +70,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { data: session, status } = useSession()
 
   useEffect(() => {
@@ -64,7 +79,6 @@ export default function AdminLayout({
     }
   }, [status, router])
 
-  // Loading state
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -73,14 +87,119 @@ export default function AdminLayout({
     )
   }
 
-  // Not authenticated — redirect will fire
   if (!session) return null
 
-  // Check admin role
   const userRole = (session.user as Record<string, unknown>).role as string
   if (userRole !== 'admin') {
     return <AccessDenied />
   }
 
-  return <>{children}</>
+  const navItems = [
+    { title: 'Overview', href: '/admin', icon: LayoutDashboard },
+    { title: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+  ]
+
+  return (
+    <SidebarProvider>
+      {/* Sidebar */}
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/admin">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Zap className="size-4" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 leading-none">
+                    <span className="font-semibold">TechServ</span>
+                    <span className="text-xs text-muted-foreground">Admin</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+
+        <SidebarSeparator />
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
+                        item.href === '/admin'
+                          ? pathname === '/admin'
+                          : pathname.startsWith(item.href)
+                      }
+                      tooltip={item.title}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Back to Site">
+                <Link href="/">
+                  <ArrowLeft />
+                  <span>Back to Site</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <SidebarSeparator />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                    {session.user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{session.user?.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{session.user?.email}</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+
+      {/* Main Content */}
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-medium">Admin</span>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
+      </SidebarInset>
+
+      <Toaster richColors position="top-right" />
+    </SidebarProvider>
+  )
 }
