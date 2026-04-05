@@ -302,8 +302,11 @@ async function seed() {
     return `${prefix}-${String(i).padStart(4, '0')}`;
   }
 
-  await db.invoice.create({
-    data: {
+  await db.invoice.upsert({
+    where: { id: "inv_sample_001" },
+    update: {},
+    create: {
+      id: "inv_sample_001",
       invoiceNumber: generateInvoiceNumber(1),
       orderId: sampleOrder.id,
       userId: testUser.id,
@@ -314,8 +317,11 @@ async function seed() {
   });
   console.log("✅ Invoice created for sample order");
 
-  await db.invoice.create({
-    data: {
+  await db.invoice.upsert({
+    where: { id: "inv_sample_002" },
+    update: {},
+    create: {
+      id: "inv_sample_002",
       invoiceNumber: generateInvoiceNumber(2),
       orderId: completedOrder.id,
       userId: testUser.id,
@@ -327,8 +333,11 @@ async function seed() {
   });
   console.log("✅ Invoice created for completed order");
 
-  await db.invoice.create({
-    data: {
+  await db.invoice.upsert({
+    where: { id: "inv_sample_003" },
+    update: {},
+    create: {
+      id: "inv_sample_003",
       invoiceNumber: generateInvoiceNumber(3),
       orderId: botOrder.id,
       userId: testUser.id,
