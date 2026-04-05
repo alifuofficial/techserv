@@ -13,6 +13,11 @@ import {
   XCircle,
   Zap,
   Wallet,
+  Globe,
+  Code,
+  Star,
+  Layers,
+  Package,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
