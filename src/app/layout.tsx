@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { MaintenanceWrapper } from "@/components/maintenance-wrapper";
 import { db } from "@/lib/db";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -54,9 +55,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <Providers>
-          <SiteHeader logoUrl={logoUrl} siteName={siteName} />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <MaintenanceWrapper>
+            <SiteHeader logoUrl={logoUrl} siteName={siteName} />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </MaintenanceWrapper>
         </Providers>
       </body>
     </html>

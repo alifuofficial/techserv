@@ -66,6 +66,12 @@ interface Stats {
   rejectedOrders: number
   totalRevenue: number
   totalUsers: number
+  trends: {
+    revenue: number
+    orders: number
+    users: number
+  }
+  dailyRevenue: Array<{ date: string; revenue: number }>
 }
 
 interface Order {
@@ -159,18 +165,6 @@ const revenueChartConfig = {
 /* ────────────────────────────────────────────
    Generate mock 7-day revenue data
    ──────────────────────────────────────────── */
-function generateMockRevenueData(baseRevenue: number) {
-  const today = new Date()
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(today, 6 - i)
-    const variance = 0.6 + Math.random() * 0.8
-    const dailyRevenue = baseRevenue > 0 ? (baseRevenue / 30) * variance : 120 * variance
-    return {
-      date: format(date, 'MMM d'),
-      revenue: Math.round(dailyRevenue * 100) / 100,
-    }
-  })
-}
 
 /* ────────────────────────────────────────────
    Stat Card Component
@@ -453,8 +447,8 @@ export default function AdminDashboardPage() {
   )
 
   const revenueData = useMemo(
-    () => generateMockRevenueData(stats?.totalRevenue ?? 0),
-    [stats?.totalRevenue]
+    () => stats?.dailyRevenue ?? [],
+    [stats?.dailyRevenue]
   )
 
   return (
@@ -485,11 +479,14 @@ export default function AdminDashboardPage() {
             iconColor="text-green-600 dark:text-green-400"
             badge={
               <>
-                <TrendingUp className="h-3 w-3" />
-                12%
+                {stats.trends.revenue >= 0 ? <TrendingUp className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                {stats.trends.revenue >= 0 ? '+' : ''}{stats.trends.revenue}%
               </>
             }
-            badgeColor="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+            badgeColor={stats.trends.revenue >= 0 
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            }
             delay={0.05}
           />
           <StatCard
@@ -498,8 +495,15 @@ export default function AdminDashboardPage() {
             icon={ShoppingCart}
             iconBg="bg-primary/10"
             iconColor="text-primary"
-            badge={`${stats.completedOrders} done`}
-            badgeColor="bg-primary/10 text-primary"
+            badge={
+              <>
+                {stats.trends.orders >= 0 ? '+' : ''}{stats.trends.orders}%
+              </>
+            }
+            badgeColor={stats.trends.orders >= 0 
+              ? "bg-primary/10 text-primary"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            }
             delay={0.1}
           />
           <StatCard
@@ -523,8 +527,15 @@ export default function AdminDashboardPage() {
             icon={Users}
             iconBg="bg-blue-100 dark:bg-blue-900/30"
             iconColor="text-blue-600 dark:text-blue-400"
-            badge="Active"
-            badgeColor="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+            badge={
+              <>
+                {stats.trends.users >= 0 ? '+' : ''}{stats.trends.users}%
+              </>
+            }
+            badgeColor={stats.trends.users >= 0 
+              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            }
             delay={0.2}
           />
         </div>

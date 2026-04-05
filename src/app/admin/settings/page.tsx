@@ -136,7 +136,7 @@ const settingDescriptions: Record<string, string> = {
   webhook_url: 'Endpoint URL for receiving order status webhook callbacks',
   api_rate_limit: 'Maximum API requests allowed per minute per user',
   session_timeout: 'User session duration in minutes before auto-logout',
-  enable_registration: 'Allow new users to register on the platform',
+  registration_enabled: 'Allow or block new users from creating accounts on the platform',
   currency: 'Default currency used for displaying prices and payments',
   timezone: 'Platform timezone used for scheduling and display purposes',
   email_notifications: 'Enable email notifications for important system events',
@@ -152,6 +152,9 @@ const settingDescriptions: Record<string, string> = {
   telegram_notifications: 'Send automated order status updates via the bot',
   account_tier_enabled: 'Display user account tiers (Standard, Gold, etc.) and related benefits',
   referral_system_enabled: 'Activate the user referral program with unique links and tracking',
+  tier_benefits_standard: 'List of features and perks for Standard level accounts',
+  tier_benefits_gold: 'List of features and perks for Gold level accounts',
+  referral_benefits: 'Description of rewards for successful user referrals',
 }
 
 function getDescription(key: string, label: string): string {
@@ -671,7 +674,7 @@ export default function AdminSettingsPage() {
       animate="visible"
     >
       {/* ── Page Header ── */}
-      <motion.div variants={fadeUp} transition={{ delay: 0 }}>
+      <motion.div variants={fadeUp} transition={{ delay: 0 } as any}>
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
             <Settings className="h-4.5 w-4.5 text-primary" />
@@ -693,7 +696,7 @@ export default function AdminSettingsPage() {
       ) : originalData && groupKeys.length > 0 ? (
         <>
           {/* ── Tabs ── */}
-          <motion.div variants={fadeUp} transition={{ delay: 0.05 }}>
+          <motion.div variants={fadeUp} transition={{ delay: 0.05 } as any}>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 {groupKeys.map((groupKey) => {
@@ -723,7 +726,8 @@ export default function AdminSettingsPage() {
                     key={groupKey}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as any }}
+                    exit={{ opacity: 0, height: 0, transition: { duration: 0.3 } }}
                   >
                     <GroupSettingsCard
                       groupKey={groupKey}

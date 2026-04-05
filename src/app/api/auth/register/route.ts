@@ -5,7 +5,19 @@ import { db } from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, referralCode: providedReferralCode } = body;
+
+    // Check if registration is enabled
+    const registrationSetting = await (db.setting as any).findUnique({
+      where: { key: "registration_enabled" }
+    });
+    
+    if (registrationSetting && registrationSetting.value === "false") {
+      return NextResponse.json(
+        { error: "Registration is currently disabled by the administrator." },
+        { status: 403 }
+      );
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -30,13 +42,13 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Generate a simple unique referral code
-    const referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const newReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
     // Check for referral code if provided
-    let referredById = null;
-    if (body.referralCode) {
-      const referrer = await db.user.findUnique({
-        where: { referralCode: body.referralCode },
+    let referredById: any = null;
+    if (providedReferralCode) {
+      const referrer = await (db.user as any).findUnique({
+        where: { referralCode: providedReferralCode } as any,
         select: { id: true },
       });
       if (referrer) {
@@ -45,14 +57,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user
-    const user = await db.user.create({
+    const user = await (db.user as any).create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: "user",
         tier: "Standard",
-        referralCode,
+        referralCode: newReferralCode,
         referredById,
       },
     });

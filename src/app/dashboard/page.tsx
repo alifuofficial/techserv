@@ -63,6 +63,34 @@ interface Service {
   pricingTiers: string
 }
 
+interface Service {
+  id: string
+  title: string
+  slug: string
+  shortDescription: string
+  icon: string
+  pricingType: string
+  pricingTiers: string
+}
+
+interface UserStats {
+  totalOrders: number
+  pendingOrders: number
+  completedOrders: number
+  totalSpent: number
+  tier: string
+  tierProgress: number
+  nextTierRequirement: number
+  referralCode: string
+  referralCount: number
+  trends: {
+    orders: number
+    ordersGrowth: number
+    spendingGrowth: number
+    newActivity: number
+  }
+}
+
 /* ─── Animation Variants ─── */
 const stagger = {
   hidden: {},
@@ -81,7 +109,7 @@ const scaleIn = {
   hidden: { opacity: 0, scale: 0.95 },
   visible: {
     opacity: 1, scale: 1,
-    transition: { duration: 0.3, ease: 'easeOut' },
+    transition: { duration: 0.3, ease: 'easeOut' } as any,
   },
 }
 
@@ -188,23 +216,23 @@ export default function DashboardPage() {
     account_tier_enabled: 'true',
     referral_system_enabled: 'true'
   })
-  const [referralData, setReferralData] = useState<{ referralCode: string, referralCount: number } | null>(null)
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
 
   useEffect(() => {
     if (status !== 'authenticated') return
     let cancelled = false
     async function fetchData() {
       try {
-        const [ordersRes, servicesRes, settingsRes, referralRes] = await Promise.all([
+        const [ordersRes, servicesRes, settingsRes, statsRes] = await Promise.all([
           fetch('/api/orders'),
           fetch('/api/services?active=true'),
           fetch('/api/settings/public'),
-          fetch('/api/user/referrals'),
+          fetch('/api/user/stats'),
         ])
         if (ordersRes.ok && !cancelled) setOrders(await ordersRes.json())
         if (servicesRes.ok && !cancelled) setServices(await servicesRes.json())
         if (settingsRes.ok && !cancelled) setSettings(await settingsRes.json())
-        if (referralRes.ok && !cancelled) setReferralData(await referralRes.json())
+        if (statsRes.ok && !cancelled) setUserStats(await statsRes.json())
       } catch { /* ignore */ } finally {
         if (!cancelled) setLoading(false)
       }
@@ -232,10 +260,10 @@ export default function DashboardPage() {
   }
 
   const firstName = session?.user?.name?.split(' ')[0] || 'User'
-  const totalOrders = orders.length
-  const pendingOrders = orders.filter(o => o.status === 'pending').length
-  const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'approved').length
-  const totalSpent = orders.filter(o => o.status === 'completed' || o.status === 'approved').reduce((s, o) => s + o.amount, 0)
+  const totalOrders = userStats?.totalOrders || 0
+  const pendingOrders = userStats?.pendingOrders || 0
+  const completedOrders = userStats?.completedOrders || 0
+  const totalSpent = userStats?.totalSpent || 0
   const recentOrders = orders.slice(0, 5)
   const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0
 
@@ -259,7 +287,7 @@ export default function DashboardPage() {
           icon={Layers} 
           colorClass="bg-primary/10 text-primary"
           status={`Total ${totalOrders} placed`}
-          trend="+2 New"
+          trend={userStats?.trends.ordersGrowth ? `${userStats.trends.ordersGrowth >= 0 ? '+' : ''}${userStats.trends.ordersGrowth}%` : undefined}
         />
         <StatCard 
           title="Requests Pending" 
@@ -274,7 +302,7 @@ export default function DashboardPage() {
           icon={Wallet} 
           colorClass="bg-emerald-500/10 text-emerald-600"
           status="Across all services"
-          trend="8% MoM"
+          trend={userStats?.trends.spendingGrowth ? `${userStats.trends.spendingGrowth >= 0 ? '+' : ''}${userStats.trends.spendingGrowth}% MoM` : undefined}
         />
         <StatCard 
           title="Project Success" 
@@ -321,13 +349,13 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {recentOrders.map((order, i) => (
-                    <motion.div 
-                      key={order.id}
-                      variants={scaleIn}
-                      initial="hidden"
-                      animate="visible"
-                      transition={{ delay: i * 0.05 }}
-                    >
+                       <motion.div 
+                        key={order.id}
+                        variants={scaleIn as any}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: i * 0.05 } as any}
+                      >
                       <Link href={`/dashboard/orders/${order.id}`}>
                         <div className="group relative flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:border-border hover:bg-muted/30 transition-all duration-300">
                           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
@@ -396,22 +424,26 @@ export default function DashboardPage() {
                   <div className="flex items-end justify-between">
                     <div>
                       <h3 className="text-3xl font-black px-0.5 tracking-tighter">
-                        {(session?.user as any)?.tier || 'Standard'}
+                        {userStats?.tier || 'Standard'}
                       </h3>
-                      <p className="text-xs text-muted-foreground font-medium">Next tier at 20 orders</p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {completedOrders >= (userStats?.nextTierRequirement || 10) 
+                          ? "Max tier reached" 
+                          : `${completedOrders}/${userStats?.nextTierRequirement || 10} orders to Gold`}
+                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-2xl font-black italic opacity-20 uppercase">
-                        {(session?.user as any)?.tier === 'Gold' ? 'PRO' : 'USER'}
+                        {userStats?.tier === 'Gold' ? 'PRO' : 'USER'}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      <span>Performance</span>
-                      <span>{successRate}%</span>
+                      <span>Requirement Progress</span>
+                      <span>{userStats?.tierProgress || 0}%</span>
                     </div>
-                    <Progress value={successRate} className="h-2.5 bg-primary/20" />
+                    <Progress value={userStats?.tierProgress || 0} className="h-2.5 bg-primary/20" />
                   </div>
                   <Button className="w-full h-8 text-xs font-bold rounded-lg border-2 border-primary/20 bg-transparent text-primary hover:bg-primary hover:text-white transition-all shadow-none">
                     View Benefits
@@ -432,28 +464,22 @@ export default function DashboardPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Total Referrals</p>
-                      <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-300">{referralData?.referralCount || 0}</h3>
-                    </div>
                     <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                       <TrendingUp className="h-5 w-5 text-emerald-600" />
+                       <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-300">{userStats?.referralCount || 0}</h3>
                     </div>
-                  </div>
                   
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Share & Earn</p>
                     <div className="flex gap-2">
-                      <code className="flex-1 bg-white dark:bg-black/40 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-[11px] font-mono font-black flex items-center justify-center tracking-wider overflow-hidden">
-                        {referralData?.referralCode || (session?.user as any)?.referralCode || '-------'}
+                      <code className="flex-1 bg-white dark:bg-black/40 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-[11px] font-mono font-black flex items-center justify-center tracking-wider overflow-hidden text-emerald-700 dark:text-emerald-300">
+                        {userStats?.referralCode || '-------'}
                       </code>
                       <Button 
                         size="icon" 
                         variant="outline" 
                         className="h-10 w-10 shrink-0 rounded-xl border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                         onClick={() => {
-                          const code = referralData?.referralCode || (session?.user as any)?.referralCode
+                          const code = userStats?.referralCode
                           if (code) {
                             navigator.clipboard.writeText(`${window.location.origin}/refer/${code}`)
                             toast.success("Link copied! Share it to earn rewards.")
