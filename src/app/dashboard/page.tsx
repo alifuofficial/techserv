@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -13,174 +12,92 @@ import {
   DollarSign,
   ArrowRight,
   Package,
-  Loader2,
-  Eye,
+  Zap,
+  TrendingUp,
+  Layers,
+  ArrowUpRight,
+  ChevronRight,
+  Activity,
+  Star,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table'
+import { Progress } from '@/components/ui/progress'
 
-/* ────────────────────────────────────────────
-   Types
-   ──────────────────────────────────────────── */
+/* ─── Types ─── */
 interface Order {
   id: string
   status: string
   duration: string
   amount: number
   createdAt: string
-  service: {
-    id: string
-    title: string
-    slug: string
-    shortDescription: string
-    icon: string
-  }
+  service: { id: string; title: string; slug: string; icon: string }
 }
 
-/* ────────────────────────────────────────────
-   Animation Variants
-   ──────────────────────────────────────────── */
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
+/* ─── Animation ─── */
+const reveal = {
+  hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.06, duration: 0.5, ease: [0.25, 0.4, 0.25, 1] },
   }),
 }
 
-/* ────────────────────────────────────────────
-   Status badge helper
-   ──────────────────────────────────────────── */
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: (i: number) => ({
+    opacity: 1, scale: 1,
+    transition: { delay: i * 0.08, duration: 0.4, ease: [0.25, 0.4, 0.25, 1] },
+  }),
+}
+
+/* ─── Helpers ─── */
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-    approved: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-    completed: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-    rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    approved: 'bg-sky-100 text-sky-700 border-sky-200',
+    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    rejected: 'bg-red-100 text-red-700 border-red-200',
   }
-
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
-
+  const icons: Record<string, string> = {
+    pending: '⏳', approved: '✓', completed: '✅', rejected: '✕',
+  }
   return (
-    <Badge variant="outline" className={config[status] || ''}>
-      {label}
-    </Badge>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${config[status] || ''}`}>
+      <span>{icons[status] || '•'}</span>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
   )
 }
 
-/* ────────────────────────────────────────────
-   Duration label helper
-   ──────────────────────────────────────────── */
 function durationLabel(d: string) {
-  switch (d) {
-    case '3months': return '3 Months'
-    case '6months': return '6 Months'
-    case '1year': return '12 Months'
-    default: return d
+  const map: Record<string, string> = {
+    '3months': '3 Months', '6months': '6 Months', '1year': '12 Months',
+    '1month': '1 Month', 'one_time': 'One-Time',
   }
+  return map[d] || d
 }
 
-/* ────────────────────────────────────────────
-   Skeleton Loaders
-   ──────────────────────────────────────────── */
-function StatsSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-12 w-12 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-7 w-16" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-function RecentOrdersSkeleton() {
-  return (
-    <Card>
-      <CardHeader className="pb-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-4 w-56" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-4 flex-1">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/* ────────────────────────────────────────────
-   Stat Card Component
-   ──────────────────────────────────────────── */
+/* ─── Stat Card ─── */
 function StatCard({
-  title,
-  value,
-  icon: Icon,
-  accent,
-  delay,
+  title, value, icon: Icon, gradient, delay,
 }: {
-  title: string
-  value: string | number
-  icon: React.ElementType
-  accent?: string
-  delay: number
+  title: string; value: string | number; icon: React.ElementType; gradient: string; delay: number
 }) {
   return (
-    <motion.div variants={fadeUp} custom={delay}>
-      <Card className="relative overflow-hidden">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                accent || 'bg-primary/10 text-primary'
-              }`}
-            >
-              <Icon className="h-6 w-6" />
+    <motion.div variants={reveal} custom={delay}>
+      <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-0">
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.07] group-hover:opacity-[0.12] transition-opacity duration-500`} />
+        <CardContent className="relative p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">{title}</p>
+              <p className="text-3xl font-extrabold tracking-tight mt-1">{value}</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground">{title}</p>
-              <p className="text-2xl font-bold tracking-tight">{value}</p>
+            <div className={`h-11 w-11 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg`}>
+              <Icon className="h-5 w-5 text-white" />
             </div>
           </div>
         </CardContent>
@@ -189,51 +106,81 @@ function StatCard({
   )
 }
 
-/* ────────────────────────────────────────────
-   Main Page Component
-   ──────────────────────────────────────────── */
+/* ─── Skeletons ─── */
+function StatsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="border-0">
+          <CardContent className="p-6 space-y-3">
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-11 w-11 rounded-2xl" />
+            </div>
+            <Skeleton className="h-9 w-16" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+function ActivitySkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-4">
+        <Skeleton className="h-5 w-40" />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ═══════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════ */
 export default function DashboardPage() {
-  const router = useRouter()
   const { data: session, status } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Auth check
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin')
-    }
-  }, [status, router])
-
-  // Fetch orders
   useEffect(() => {
     if (status !== 'authenticated') return
-
+    let cancelled = false
     async function fetchOrders() {
       try {
         const res = await fetch('/api/orders')
-        if (res.ok) {
-          const data = await res.json()
-          setOrders(data)
-        }
-      } catch {
-        // silently handle
-      } finally {
-        setLoading(false)
+        if (res.ok && !cancelled) setOrders(await res.json())
+      } catch { /* silent */ } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     fetchOrders()
+    return () => { cancelled = true }
   }, [status])
 
-  // Auth loading
-  if (status === 'loading') {
+  if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-5 w-72" />
-          <StatsSkeleton />
-          <RecentOrdersSkeleton />
+      <div className="p-6 lg:p-8 space-y-6 max-w-6xl">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-80" />
+        </div>
+        <StatsSkeleton />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2"><ActivitySkeleton /></div>
+          <Skeleton className="h-[400px] rounded-xl" />
         </div>
       </div>
     )
@@ -241,250 +188,199 @@ export default function DashboardPage() {
 
   if (!session) return null
 
-  // Calculate stats
   const totalOrders = orders.length
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length
-  const approvedOrders = orders.filter((o) => o.status === 'approved' || o.status === 'completed').length
-  const totalSpent = orders
-    .filter((o) => o.status === 'completed' || o.status === 'approved')
-    .reduce((sum, o) => sum + o.amount, 0)
-
+  const pendingOrders = orders.filter(o => o.status === 'pending').length
+  const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'approved').length
+  const totalSpent = orders.filter(o => o.status === 'completed' || o.status === 'approved').reduce((s, o) => s + o.amount, 0)
   const recentOrders = orders.slice(0, 5)
+  const completionRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0
 
   return (
-    <div className="min-h-screen">
-      <section className="border-b bg-muted/30">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10">
-          <motion.div initial="hidden" animate="visible">
-            <motion.div variants={fadeUp} custom={0}>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                My Dashboard
-              </h1>
-              <p className="text-muted-foreground mt-1.5">
-                Welcome back, {session.user?.name}!
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+    <div className="p-6 lg:p-8 max-w-6xl space-y-8">
+      {/* ─── Welcome Header ─── */}
+      <motion.div initial="hidden" animate="visible" className="space-y-1">
+        <motion.div variants={reveal} custom={0}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            Welcome back, {session.user?.name?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-muted-foreground">
+            Here&apos;s what&apos;s happening with your orders today.
+          </p>
+        </motion.div>
+      </motion.div>
 
-      <section className="py-8 sm:py-10">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 space-y-8">
-          {/* ── Stats Cards ── */}
-          {loading ? (
-            <StatsSkeleton />
-          ) : (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-            >
-              <StatCard
-                title="Total Orders"
-                value={totalOrders}
-                icon={ShoppingCart}
-                delay={0}
-              />
-              <StatCard
-                title="Pending Orders"
-                value={pendingOrders}
-                icon={Clock}
-                accent="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"
-                delay={1}
-              />
-              <StatCard
-                title="Approved Orders"
-                value={approvedOrders}
-                icon={CheckCircle2}
-                accent="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                delay={2}
-              />
-              <StatCard
-                title="Total Spent"
-                value={`$${totalSpent.toFixed(2)}`}
-                icon={DollarSign}
-                delay={3}
-              />
-            </motion.div>
-          )}
+      {/* ─── Stats Grid ─── */}
+      <motion.div initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard title="Total Orders" value={totalOrders} icon={ShoppingCart} gradient="from-violet-500 to-purple-600" delay={0} />
+        <StatCard title="Pending" value={pendingOrders} icon={Clock} gradient="from-amber-500 to-orange-500" delay={1} />
+        <StatCard title="Completed" value={completedOrders} icon={CheckCircle2} gradient="from-emerald-500 to-green-600" delay={2} />
+        <StatCard title="Total Spent" value={`$${totalSpent.toFixed(2)}`} icon={DollarSign} gradient="from-sky-500 to-blue-600" delay={3} />
+      </motion.div>
 
-          {/* ── Recent Orders ── */}
-          {loading ? (
-            <RecentOrdersSkeleton />
-          ) : (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              custom={4}
-            >
-              <Card>
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                      <CardTitle className="text-lg">Recent Orders</CardTitle>
-                      <CardDescription>
-                        Your latest order activity
-                      </CardDescription>
-                    </div>
-                    {orders.length > 5 && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/dashboard/orders">
-                          View All Orders
-                          <ArrowRight className="h-4 w-4 ml-1" />
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {recentOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                        <Package className="h-7 w-7 text-muted-foreground" />
-                      </div>
-                      <h3 className="font-medium mb-1">No orders yet</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Start by browsing our services
-                      </p>
-                      <Button asChild>
-                        <Link href="/services">
-                          Browse Services
-                          <ArrowRight className="h-4 w-4 ml-1" />
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Desktop table */}
-                      <div className="hidden md:block">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Order ID</TableHead>
-                              <TableHead>Service</TableHead>
-                              <TableHead>Duration</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {recentOrders.map((order) => (
-                              <TableRow key={order.id}>
-                                <TableCell className="font-mono text-xs text-muted-foreground">
-                                  #{order.id.slice(0, 8)}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {order.service.title}
-                                </TableCell>
-                                <TableCell>{durationLabel(order.duration)}</TableCell>
-                                <TableCell className="font-medium">
-                                  ${order.amount.toFixed(2)}
-                                </TableCell>
-                                <TableCell>
-                                  <StatusBadge status={order.status} />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {format(new Date(order.createdAt), 'MMM d, yyyy')}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button variant="ghost" size="sm" asChild>
-                                    <Link href={`/dashboard/orders/${order.id}`}>
-                                      <Eye className="h-4 w-4" />
-                                    </Link>
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+      {/* ─── Main Content Grid ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                      {/* Mobile cards */}
-                      <div className="md:hidden space-y-3">
-                        {recentOrders.map((order) => (
-                          <Link
-                            key={order.id}
-                            href={`/dashboard/orders/${order.id}`}
-                            className="block"
-                          >
-                            <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/30 transition-all">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-sm truncate">
-                                    {order.service.title}
-                                  </p>
-                                  <StatusBadge status={order.status} />
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                  <span className="font-mono">
-                                    #{order.id.slice(0, 8)}
-                                  </span>
-                                  <span>{durationLabel(order.duration)}</span>
-                                  <span>{format(new Date(order.createdAt), 'MMM d, yyyy')}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 ml-4">
-                                <span className="font-semibold text-sm">
-                                  ${order.amount.toFixed(2)}
-                                </span>
-                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-
-                      {orders.length > 5 && (
-                        <div className="mt-4 pt-4 border-t md:hidden">
-                          <Button variant="outline" className="w-full" asChild>
-                            <Link href="/dashboard/orders">
-                              View All Orders
-                              <ArrowRight className="h-4 w-4 ml-1" />
-                            </Link>
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* ── Quick Action ── */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            custom={5}
-          >
-            <Card className="border-primary/20 bg-primary/5 dark:bg-primary/10">
-              <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Package className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Need more services?</p>
-                    <p className="text-sm text-muted-foreground">
-                      Browse our full catalog and find the perfect plan for you.
-                    </p>
-                  </div>
+        {/* ─── Recent Activity ─── */}
+        <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={4} className="lg:col-span-2">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-bold">Recent Activity</h2>
+                  <p className="text-sm text-muted-foreground">Your latest orders</p>
                 </div>
-                <Button asChild className="shrink-0">
-                  <Link href="/services">
-                    Browse Services
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Link>
+                {orders.length > 5 && (
+                  <Button variant="ghost" size="sm" className="gap-1 text-sm" asChild>
+                    <Link href="/dashboard/orders">
+                      View All
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
+              </div>
+
+              {recentOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold mb-1">No orders yet</h3>
+                  <p className="text-sm text-muted-foreground mb-5">Start by browsing our services</p>
+                  <Button asChild className="rounded-xl">
+                    <Link href="/services">
+                      <Zap className="h-4 w-4 mr-2" />
+                      Browse Services
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentOrders.map((order, i) => (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + i * 0.05 }}
+                    >
+                      <Link href={`/dashboard/orders/${order.id}`} className="block">
+                        <div className="group flex items-center gap-4 p-3 -mx-3 rounded-xl hover:bg-muted/50 transition-all duration-200">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <Activity className="h-4.5 w-4.5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold truncate">{order.service.title}</p>
+                              <StatusBadge status={order.status} />
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                              <span>{durationLabel(order.duration)}</span>
+                              <span>·</span>
+                              <span>{format(new Date(order.createdAt), 'MMM d, yyyy')}</span>
+                              <span className="hidden sm:inline">·</span>
+                              <span className="hidden sm:inline font-mono">#{order.id.slice(0, 8)}</span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-bold">${order.amount.toFixed(2)}</p>
+                          </div>
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ─── Right Sidebar Cards ─── */}
+        <div className="space-y-6">
+          {/* Completion Rate */}
+          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={5}>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">Order Completion Rate</h3>
+                <div className="flex items-end gap-3 mb-4">
+                  <span className="text-4xl font-extrabold tracking-tight">{completionRate}%</span>
+                  {completionRate > 0 && (
+                    <span className="text-sm font-medium text-emerald-600 flex items-center gap-1 mb-1">
+                      <TrendingUp className="h-3.5 w-3.5" /> On track
+                    </span>
+                  )}
+                </div>
+                <Progress value={completionRate} className="h-2.5" />
+                <p className="text-xs text-muted-foreground mt-3">
+                  {completedOrders} of {totalOrders} orders completed
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={6}>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">Quick Actions</h3>
+                <div className="space-y-2">
+                  <Button variant="outline" asChild className="w-full justify-between rounded-xl h-12 px-4 group">
+                    <Link href="/services" className="flex items-center justify-between w-full">
+                      <span className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Zap className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="font-medium text-sm">New Order</span>
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full justify-between rounded-xl h-12 px-4 group">
+                    <Link href="/dashboard/orders" className="flex items-center justify-between w-full">
+                      <span className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
+                          <ShoppingCart className="h-4 w-4 text-sky-600" />
+                        </div>
+                        <span className="font-medium text-sm">All Orders</span>
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-sky-600 transition-colors" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full justify-between rounded-xl h-12 px-4 group">
+                    <Link href="/services" className="flex items-center justify-between w-full">
+                      <span className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                          <Star className="h-4 w-4 text-amber-600" />
+                        </div>
+                        <span className="font-medium text-sm">Explore Services</span>
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-600 transition-colors" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Pro Tip Card */}
+          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={7}>
+            <Card className="border-0 shadow-sm overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary to-emerald-500 opacity-[0.06]" />
+              <CardContent className="relative p-6">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                  <Layers className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm mb-1.5">Need a custom solution?</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                  We offer custom development services including web apps, mobile apps, and bots tailored to your needs.
+                </p>
+                <Button size="sm" asChild className="rounded-lg text-xs h-8">
+                  <Link href="/services/web-development">Learn More <ArrowRight className="h-3 w-3 ml-1" /></Link>
                 </Button>
               </CardContent>
             </Card>
           </motion.div>
         </div>
-      </section>
+      </div>
     </div>
   )
 }
