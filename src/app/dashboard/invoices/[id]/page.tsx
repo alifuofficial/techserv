@@ -24,6 +24,8 @@ import {
   Zap,
   MessageCircle,
   ExternalLink,
+  Printer,
+  QrCode,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -169,6 +171,7 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   const id = params.id as string
 
@@ -185,6 +188,13 @@ export default function InvoiceDetailPage() {
           if (data.status === 'pending') {
             const pmRes = await fetch('/api/payment-methods')
             if (pmRes.ok && !cancelled) setPaymentMethods(await pmRes.json())
+          }
+          // Generate QR code
+          const origin = typeof window !== 'undefined' ? window.location.origin : ''
+          const qrRes = await fetch(`/api/qr?data=${encodeURIComponent(`${origin}/invoice/${data.invoiceNumber}`)}&size=180&margin=1`)
+          if (qrRes.ok && !cancelled) {
+            const qrData = await qrRes.json()
+            setQrDataUrl(qrData.qr)
           }
         } else if (!cancelled) {
           setNotFound(true)
@@ -264,6 +274,39 @@ export default function InvoiceDetailPage() {
                   ${invoice.amount.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">Total Amount</p>
+              </div>
+            </div>
+
+            {/* QR Code + Print Actions */}
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/40">
+              {qrDataUrl && (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={qrDataUrl}
+                    alt="Invoice QR Code"
+                    className="h-20 w-20 rounded-lg border border-border/60 bg-white"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <QrCode className="h-3 w-3" />
+                      Scan to Verify
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                      Scan to view invoice status
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-lg text-xs"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -471,6 +514,14 @@ export default function InvoiceDetailPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+        }
+      `}</style>
     </div>
   )
 }
