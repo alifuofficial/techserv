@@ -110,6 +110,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Generate unique invoice number and create invoice
+    const count = await db.invoice.count();
+    const d = new Date();
+    const invoiceNumber = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}-${String(count + 1).padStart(4, '0')}`;
+    await db.invoice.create({
+      data: {
+        invoiceNumber,
+        orderId: order.id,
+        userId,
+        amount: order.amount,
+        status: 'pending',
+      },
+    });
+
     return NextResponse.json(order, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal server error";

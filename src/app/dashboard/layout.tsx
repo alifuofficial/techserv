@@ -27,6 +27,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard,
   ShoppingCart,
+  FileText,
   ArrowLeft,
   LogOut,
   Zap,
@@ -62,6 +63,7 @@ export default function DashboardLayout({
   const navItems = [
     { title: 'Overview', href: '/dashboard', icon: LayoutDashboard, exact: true },
     { title: 'My Orders', href: '/dashboard/orders', icon: ShoppingCart },
+    { title: 'Invoices', href: '/dashboard/invoices', icon: FileText },
     { title: 'Account', href: '/dashboard/account', icon: User },
   ]
 

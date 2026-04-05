@@ -18,6 +18,7 @@ import {
   FileText,
   Info,
   ArrowRight,
+  ArrowUpRight,
   Copy,
   ExternalLink,
   Zap,
@@ -359,6 +360,29 @@ export default function OrderDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <InfoRow icon={MessageCircle} label="Telegram" value={order.telegramUsername ? `@${order.telegramUsername}` : 'Not provided'} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Invoice Card */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
+            <Card className="border-border/50">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold">Invoice</h3>
+                    <p className="text-[11px] text-muted-foreground">View payment details</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs shrink-0" asChild>
+                    <Link href="/dashboard/invoices">
+                      View
+                      <ArrowUpRight className="h-3 w-3" />
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

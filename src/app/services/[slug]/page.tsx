@@ -528,14 +528,14 @@ export default function ServiceDetailPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {tiers.map((tier) => {
+                      {tiers.map((tier, idx) => {
                         const monthly = isSubscription ? getMonthlyPrice(tier) : null
                         const savings = isSubscription ? getSavings(tier, tiers) : ''
-                        const isSelected = selectedTier?.duration === tier.duration
+                        const isSelected = selectedTier?.duration === tier.duration && selectedTier?.label === tier.label
 
                         return (
                           <button
-                            key={tier.duration}
+                            key={`${tier.duration}-${idx}`}
                             onClick={() => setSelectedTier(tier)}
                             className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
                               isSelected
@@ -614,11 +614,11 @@ export default function ServiceDetailPage() {
             {tiers.map((tier, i) => {
               const monthly = isSubscription ? getMonthlyPrice(tier) : null
               const savings = isSubscription ? getSavings(tier, tiers) : ''
-              const isSelected = selectedTier?.duration === tier.duration
+              const isSelected = selectedTier?.duration === tier.duration && selectedTier?.label === tier.label
 
               return (
                 <motion.div
-                  key={tier.duration}
+                  key={`${tier.duration}-${i}`}
                   variants={fadeUp}
                   custom={i}
                 >

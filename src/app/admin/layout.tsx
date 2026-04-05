@@ -34,6 +34,8 @@ import {
   Settings,
   ArrowLeft,
   Zap,
+  FileText,
+  CreditCard,
 } from 'lucide-react'
 
 /* ────────────────────────────────────────────
@@ -101,6 +103,8 @@ export default function AdminLayout({
     { title: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { title: 'Services', href: '/admin/services', icon: Package },
     { title: 'Customers', href: '/admin/customers', icon: Users },
+    { title: 'Invoices', href: '/admin/invoices', icon: FileText },
+    { title: 'Payment Methods', href: '/admin/payment-methods', icon: CreditCard },
     { title: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 

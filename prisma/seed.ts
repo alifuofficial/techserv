@@ -234,6 +234,110 @@ async function seed() {
   });
   console.log("✅ Bot order created:", botOrder.id);
 
+  // ── Payment Methods ──
+  const telebirr = await db.paymentMethod.upsert({
+    where: { id: "pm_telebirr_001" },
+    update: {},
+    create: {
+      id: "pm_telebirr_001",
+      name: "Telebirr",
+      type: "mobile_money",
+      isActive: true,
+      sortOrder: 1,
+      details: JSON.stringify({ accountName: "TechServ", accountNumber: "0911000000" }),
+      instructions: "Open Telebirr app → Send Money → Enter the number above → Send the exact amount → Take a screenshot",
+    },
+  });
+  console.log("✅ Payment method created:", telebirr.name);
+
+  const cbeBirr = await db.paymentMethod.upsert({
+    where: { id: "pm_cbe_001" },
+    update: {},
+    create: {
+      id: "pm_cbe_001",
+      name: "CBE Birr (Commercial Bank of Ethiopia)",
+      type: "bank",
+      isActive: true,
+      sortOrder: 2,
+      details: JSON.stringify({ bankName: "Commercial Bank of Ethiopia", accountName: "TechServ", accountNumber: "1000123456789", branch: "Bole Branch" }),
+      instructions: "Open CBE Birr app or visit any CBE branch → Transfer to the account above → Send the exact amount → Take a screenshot",
+    },
+  });
+  console.log("✅ Payment method created:", cbeBirr.name);
+
+  const awashBank = await db.paymentMethod.upsert({
+    where: { id: "pm_awash_001" },
+    update: {},
+    create: {
+      id: "pm_awash_001",
+      name: "Awash Bank",
+      type: "bank",
+      isActive: true,
+      sortOrder: 3,
+      details: JSON.stringify({ bankName: "Awash International Bank", accountName: "TechServ", accountNumber: "0987654321", branch: "Mexico Branch" }),
+      instructions: "Transfer to the account above via Awash Bank mobile app or branch → Send the exact amount → Take a screenshot of the receipt",
+    },
+  });
+  console.log("✅ Payment method created:", awashBank.name);
+
+  const usdtTrc20 = await db.paymentMethod.upsert({
+    where: { id: "pm_usdt_001" },
+    update: {},
+    create: {
+      id: "pm_usdt_001",
+      name: "USDT (TRC20)",
+      type: "crypto",
+      isActive: true,
+      sortOrder: 4,
+      details: JSON.stringify({ network: "TRC20 (Tron)", walletAddress: "TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }),
+      instructions: "Send USDT via TRC20 network to the wallet address above. Minimum transaction: $5. Take a screenshot after sending.",
+    },
+  });
+  console.log("✅ Payment method created:", usdtTrc20.name);
+
+  // ── Invoices for sample orders ──
+  function generateInvoiceNumber(i: number): string {
+    const d = new Date();
+    const prefix = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${prefix}-${String(i).padStart(4, '0')}`;
+  }
+
+  await db.invoice.create({
+    data: {
+      invoiceNumber: generateInvoiceNumber(1),
+      orderId: sampleOrder.id,
+      userId: testUser.id,
+      amount: sampleOrder.amount,
+      status: "pending",
+      paymentMethodId: telebirr.id,
+    },
+  });
+  console.log("✅ Invoice created for sample order");
+
+  await db.invoice.create({
+    data: {
+      invoiceNumber: generateInvoiceNumber(2),
+      orderId: completedOrder.id,
+      userId: testUser.id,
+      amount: completedOrder.amount,
+      status: "paid",
+      paymentMethodId: cbeBirr.id,
+      paidAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+  });
+  console.log("✅ Invoice created for completed order");
+
+  await db.invoice.create({
+    data: {
+      invoiceNumber: generateInvoiceNumber(3),
+      orderId: botOrder.id,
+      userId: testUser.id,
+      amount: botOrder.amount,
+      status: "pending",
+    },
+  });
+  console.log("✅ Invoice created for bot order");
+
   // Seed system settings
   const defaultSettings = [
     { key: "site_name", value: "TechServ", label: "Site Name", type: "text", group: "general" },

@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  email     String   @unique
+  email     String    @unique
   password  String
-  role      String   @default("user")
+  role      String    @default("user")
   phone     String?
   telegram  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   orders    Order[]
+  invoices  Invoice[]
 }
 
 model Service {
@@ -62,4 +63,34 @@ model Order {
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   service          Service  @relation(fields: [serviceId], references: [id])
+  invoices         Invoice[]
+}
+
+model PaymentMethod {
+  id           String   @id @default(cuid())
+  name         String
+  type         String   @default("other")
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  details      String   @default("{}")
+  instructions String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  invoices     Invoice[]
+}
+
+model Invoice {
+  id              String         @id @default(cuid())
+  invoiceNumber   String         @unique
+  orderId         String
+  userId          String
+  amount          Float
+  status          String         @default("pending")
+  paymentMethodId String?
+  paidAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  order           Order          @relation(fields: [orderId], references: [id])
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 }

@@ -366,3 +366,127 @@ Stage Summary:
 - New account page added to sidebar navigation
 - API route bug fixed preventing potential Prisma errors
 - 6 files changed, 952 insertions, 501 deletions
+
+---
+## Task ID: 3-a - api-routes-agent
+### Work Task
+Create all API routes for the invoice and payment methods system, and update the orders POST handler to auto-create invoices.
+
+### Work Summary
+Created 7 new API route files and updated 1 existing file for the invoice and payment methods system:
+
+**1. `/api/payment-methods/route.ts` — Public GET**
+- Returns all active payment methods ordered by sortOrder
+- Only selects `id`, `name`, `type`, `details`, `instructions` (no auth required)
+
+**2. `/api/admin/payment-methods/route.ts` — Admin GET/POST**
+- GET: Returns all payment methods (including inactive) with `_count.invoices`, ordered by sortOrder
+- POST: Creates payment method with validation (name required, type must be bank/mobile_money/crypto/other). Auto-generates sortOrder as max+1. Defaults: details="{}", instructions=""
+
+**3. `/api/admin/payment-methods/[id]/route.ts` — Admin GET/PATCH/DELETE**
+- GET: Returns single payment method with `_count.invoices`. 404 if not found
+- PATCH: Partial update of any fields. Returns updated payment method
+- DELETE: Checks invoice count; returns 400 with descriptive error if invoices exist; deletes otherwise
+- Uses `params: Promise<{ id: string }>` with `await params` (Next.js 16 pattern)
+
+**4. `/api/invoices/route.ts` — Authenticated GET**
+- Returns all invoices for the current user, ordered by createdAt desc
+- Includes order (id, service: title, icon) and paymentMethod (id, name)
+
+**5. `/api/invoices/[id]/route.ts` — Authenticated GET**
+- Returns single invoice with full order (including service), paymentMethod, and user (name, email)
+- Non-admin users can only access their own invoices (403 if forbidden)
+
+**6. `/api/admin/invoices/route.ts` — Admin GET**
+- Returns all invoices with user (name, email), order (id, service: title), paymentMethod (name)
+- Supports `?status=` query param filter (pending/paid/cancelled)
+
+**7. `/api/admin/invoices/[id]/route.ts` — Admin PATCH**
+- Accepts `{ status, paymentMethodId }` for partial update
+- Validates status is one of: pending, paid, cancelled
+- Auto-sets `paidAt = new Date()` when status changes to "paid", clears when changing away from paid
+
+**8. Updated `/api/orders/route.ts` — POST handler**
+- After creating an order, auto-generates a unique invoice number (`INV-YYYYMM-NNNN`) and creates a pending invoice
+- Invoice creation is fire-and-forget; order is returned as before (existing API contract preserved)
+
+All routes follow established patterns: `getServerSession(authOptions)` for auth, `(session.user as Record<string, unknown>).id` for user ID, admin role checks, proper error handling with TypeScript strict typing, named exports. Lint passes clean with 0 errors.
+
+---
+## Task ID: 3-c - frontend-agent
+### Work Task
+Create user-facing invoice pages (list and detail), add Invoices navigation item to dashboard sidebar, and add Invoice card to order detail page.
+
+### Work Summary
+Created/modified 6 files total (3 API routes, 2 frontend pages, 1 layout update, 1 order page update):
+
+**API Routes Created:**
+- `/api/invoices/route.ts` — GET: Returns all invoices for authenticated user with order (service) and paymentMethod relations, ordered by createdAt desc
+- `/api/invoices/[id]/route.ts` — GET: Returns single invoice by ID scoped to current user, with full order details and paymentMethod (including details/instructions)
+- `/api/payment-methods/route.ts` — GET: Public endpoint returning all active payment methods (no auth required), ordered by sortOrder
+
+**Dashboard Layout Update:**
+- Added `FileText` import from lucide-react
+- Added Invoices nav item `{ title: 'Invoices', href: '/dashboard/invoices', icon: FileText }` between 'My Orders' and 'Account' in `navItems` array
+
+**Invoice List Page (`/dashboard/invoices/page.tsx`):**
+- 'use client' page with header showing FileText icon + title + dynamic count subtitle
+- Filter tabs: Desktop uses pill-style buttons (All/Pending/Paid/Cancelled) with counts; mobile uses Select dropdown
+- Client-side filtering via `useMemo` on `activeFilter` state
+- Responsive card grid (1/2/3 columns) with each card showing: service icon + name, invoice number (mono/truncated), amount (bold primary green), status badge (pending=amber Clock, paid=emerald CheckCircle2, cancelled=red XCircle), payment method name, created date, hover arrow link
+- Empty state with FileText icon + contextual messaging + "Browse Services" link (only for 'all' filter)
+- Skeleton loading state with matching layout
+- Framer Motion container + fadeUp staggered animations
+
+**Invoice Detail Page (`/dashboard/invoices/[id]/page.tsx`):**
+- Back button to /dashboard/invoices
+- Header card with gradient top border: invoice number (large mono), status badge, amount (large bold primary), created date, paid date (if applicable)
+- Two-column grid (lg:3):
+  - Left (2/3): Order Details card with service name, duration, amount, order status, telegram username (conditional), "View Order →" link
+  - Right (1/3): Payment Info card with method name + type icon + parsed JSON details + instructions. Status notices: amber "Awaiting Payment" (pending), green "Payment Confirmed" with date (paid), red "Payment Cancelled" (cancelled)
+- "How to Pay" section (pending only): Fetches active payment methods from `/api/payment-methods`, renders each method as a card with type icon, name, type badge, account details from JSON, instructions. Note at bottom linking to order page for screenshot upload
+- Not found state with AlertCircle + back button
+- Skeleton loading matching page layout
+- Uses `parseJsonSafe()` helper for JSON detail parsing, `typeIcon()` helper for payment type icons
+
+**Order Detail Page Update (`/dashboard/orders/[id]/page.tsx`):**
+- Added `ArrowUpRight` import from lucide-react
+- Added Invoice card before the "Need help?" card in the sidebar: FileText icon in primary box, "Invoice" title, "View payment details" subtitle, ghost "View" button with ArrowUpRight linking to /dashboard/invoices
+
+All pages use consistent patterns: p-6 lg:p-8 padding, framer-motion fadeUp animations, shadcn/ui components, date-fns format, dark mode support. Lint passes clean with 0 errors/0 warnings.
+
+---
+## Task ID: 3-b - admin-invoices-payments-agent
+### Work Task
+Build admin pages for managing invoices and payment methods, including API routes and 5 frontend pages.
+
+### Work Summary
+Modified 1 file and created 9 new files (4 API routes + 5 frontend pages):
+
+**1. Updated `/admin/layout.tsx`**
+- Added `FileText` and `CreditCard` imports from lucide-react
+- Added 2 new nav items to navItems array: Invoices (`/admin/invoices`) and Payment Methods (`/admin/payment-methods`)
+- Nav structure now: Main (Overview, Orders) + Management (Services, Customers, Invoices, Payment Methods, Settings)
+
+**2. Created 4 API Routes:**
+
+- `/api/admin/invoices/route.ts` — GET: Returns all invoices with user (name, email), order (service title/icon), paymentMethod (name/type), ordered by createdAt desc
+- `/api/admin/invoices/[id]/route.ts` — GET: Single invoice with full relations (user, order+service, paymentMethod+details). PATCH: Update status (pending/paid/cancelled) with auto paidAt timestamp, and paymentMethodId. Uses `params: Promise<{ id: string }>` (Next.js 16 pattern)
+- `/api/admin/payment-methods/route.ts` — GET: All methods with `_count.invoices` ordered by sortOrder. POST: Create with validation (name required, type validated against bank/mobile_money/crypto/other)
+- `/api/admin/payment-methods/[id]/route.ts` — GET/PATCH/DELETE with invoice count check on delete (400 if invoices exist)
+
+**3. Created 5 Frontend Pages:**
+
+- `/admin/invoices/page.tsx` — Invoice list with header + search (client-side by invoice#/customer), status filter tabs (All/Pending/Paid/Cancelled with counts), desktop table (Invoice # mono, Customer name+email, Service, Amount green primary, Payment Method, Status badge with amber/emerald/red colors, Date, View action), mobile cards, Mark as Paid inline button for pending invoices, skeleton loading, empty state, Framer Motion animations
+
+- `/admin/invoices/[id]/page.tsx` — Invoice detail with breadcrumb (Admin > Invoices > Invoice#), header (invoice number mono, status badge lg, amount large green primary), 2-column grid: left (Order Details card with service/duration/amount/status/dates, Customer Information card with name/email/phone/telegram), right (Payment Information card with method name/type/paid date/status summary, Actions card with Mark as Paid + Mark as Cancelled buttons for pending invoices). Toast notifications on status changes. Skeleton + not found states.
+
+- `/admin/payment-methods/page.tsx` — Payment methods as cards (not table) in 2-column grid. Each card shows: type-based icon (Landmark for bank, Smartphone for mobile_money, Wallet for crypto, CreditCard for other via React.createElement), name, type badge (Bank/Mobile Money/Crypto/Other), parsed JSON account details (key-value pairs), truncated instructions with expand toggle, active/inactive switch, edit/delete buttons. Add Method header button. Skeleton loading, empty state with CTA. Toast notifications on toggle/delete.
+
+- `/admin/payment-methods/new/page.tsx` — Create form with breadcrumb (Payment Methods > New), form sections: Basic Info (Name required, Type select), Account Details (dynamic key-value pair editor with add/remove fields), Payment Instructions (textarea), Settings (Sort Order number, Active switch). Submit POST to API, toast + redirect on success.
+
+- `/admin/payment-methods/[id]/page.tsx` — Edit form (same structure as create) pre-filled from API, with delete section at bottom (disabled when invoices exist with count display), AlertDialog confirmation. Loading skeleton + not found state.
+
+**Design Consistency**: All pages follow existing admin patterns — Framer Motion container/fadeUp/staggered animations, `p-4 md:p-6 space-y-5/6` containers, shadcn/ui components throughout, status badge pattern with dot indicators, dark mode support via dark: prefixes, responsive design (desktop table → mobile cards).
+- Lint passes clean with 0 errors/0 warnings
+- Dev server compiles successfully
