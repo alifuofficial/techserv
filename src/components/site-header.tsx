@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Menu, X, ChevronDown, LogOut, LayoutDashboard, Shield, Zap, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { useState, useSyncExternalStore, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,11 +26,8 @@ export function SiteHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [open, setOpen] = useState(false);
 
   const isAdmin = (session?.user as any)?.role === "admin";
