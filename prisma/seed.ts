@@ -296,18 +296,17 @@ async function seed() {
   console.log("✅ Payment method created:", usdtTrc20.name);
 
   // ── Invoices for sample orders ──
-  function generateInvoiceNumber(i: number): string {
-    const d = new Date();
-    const prefix = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return `${prefix}-${String(i).padStart(4, '0')}`;
-  }
+  // Use fixed invoice numbers so upsert works idempotently across re-seeds
+  const invNum1 = "INV-SEED-0001";
+  const invNum2 = "INV-SEED-0002";
+  const invNum3 = "INV-SEED-0003";
 
   await db.invoice.upsert({
-    where: { id: "inv_sample_001" },
-    update: {},
+    where: { invoiceNumber: invNum1 },
+    update: { orderId: sampleOrder.id, userId: testUser.id, amount: sampleOrder.amount, paymentMethodId: telebirr.id },
     create: {
       id: "inv_sample_001",
-      invoiceNumber: generateInvoiceNumber(1),
+      invoiceNumber: invNum1,
       orderId: sampleOrder.id,
       userId: testUser.id,
       amount: sampleOrder.amount,
@@ -318,11 +317,11 @@ async function seed() {
   console.log("✅ Invoice created for sample order");
 
   await db.invoice.upsert({
-    where: { id: "inv_sample_002" },
-    update: {},
+    where: { invoiceNumber: invNum2 },
+    update: { orderId: completedOrder.id, userId: testUser.id, amount: completedOrder.amount, paymentMethodId: cbeBirr.id },
     create: {
       id: "inv_sample_002",
-      invoiceNumber: generateInvoiceNumber(2),
+      invoiceNumber: invNum2,
       orderId: completedOrder.id,
       userId: testUser.id,
       amount: completedOrder.amount,
@@ -334,11 +333,11 @@ async function seed() {
   console.log("✅ Invoice created for completed order");
 
   await db.invoice.upsert({
-    where: { id: "inv_sample_003" },
-    update: {},
+    where: { invoiceNumber: invNum3 },
+    update: { orderId: botOrder.id, userId: testUser.id, amount: botOrder.amount },
     create: {
       id: "inv_sample_003",
-      invoiceNumber: generateInvoiceNumber(3),
+      invoiceNumber: invNum3,
       orderId: botOrder.id,
       userId: testUser.id,
       amount: botOrder.amount,
