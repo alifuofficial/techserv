@@ -29,9 +29,8 @@ export async function GET(
             shortDescription: true,
             longDescription: true,
             icon: true,
-            price3m: true,
-            price6m: true,
-            price12m: true,
+            pricingType: true,
+            pricingTiers: true,
           },
         },
         user: {

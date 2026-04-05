@@ -20,13 +20,22 @@ import {
   ArrowRight,
   Copy,
   ExternalLink,
+  Zap,
+  Globe,
+  Shield,
+  Code,
+  Star,
+  Layers,
+  Package,
+  Activity,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 
+/* ─── Types ─── */
 interface Order {
   id: string
   status: string
@@ -42,19 +51,11 @@ interface Order {
 }
 
 /* ─── Animation ─── */
-const reveal = {
-  hidden: { opacity: 0, y: 20 },
+const fadeUp = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
   visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.5, ease: [0.25, 0.4, 0.25, 1] },
-  }),
-}
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: (i: number) => ({
-    opacity: 1, scale: 1,
-    transition: { delay: i * 0.06, duration: 0.4, ease: [0.25, 0.4, 0.25, 1] },
+    opacity: 1, y: 0, scale: 1,
+    transition: { delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
   }),
 }
 
@@ -68,64 +69,72 @@ function durationLabel(d: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-700 border-amber-200',
-    approved: 'bg-sky-100 text-sky-700 border-sky-200',
-    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    rejected: 'bg-red-100 text-red-700 border-red-200',
+  const config: Record<string, { cls: string; icon: React.ElementType }> = {
+    pending: { cls: 'bg-amber-50 text-amber-700 ring-amber-200/60', icon: Clock },
+    approved: { cls: 'bg-sky-50 text-sky-700 ring-sky-200/60', icon: CheckCircle2 },
+    completed: { cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200/60', icon: CheckCircle2 },
+    rejected: { cls: 'bg-red-50 text-red-700 ring-red-200/60', icon: XCircle },
   }
-  const emojis: Record<string, string> = { pending: '⏳', approved: '✓', completed: '✅', rejected: '✕' }
+  const { cls, icon: Icon } = config[status] || config.pending
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${config[status] || ''}`}>
-      <span>{emojis[status] || '•'}</span>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ring-1 ${cls}`}>
+      <Icon className="h-3.5 w-3.5" />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   )
 }
 
-/* ─── Timeline ─── */
-interface Step { label: string; desc: string; icon: React.ElementType; active: boolean; done: boolean; failed?: boolean }
+function serviceIcon(iconName: string, className: string = "h-5 w-5") {
+  const icons: Record<string, React.ElementType> = {
+    Zap, Globe, Shield, Code, Star, Layers,
+    Package, Activity,
+  }
+  const Icon = icons[iconName] || Zap
+  return <Icon className={className} />
+}
 
+/* ─── Order Timeline ─── */
 function OrderTimeline({ status }: { status: string }) {
-  const steps: Step[] = [
-    { label: 'Order Placed', desc: 'Your order has been submitted', icon: FileText, active: true, done: true },
-    { label: 'Payment Review', desc: 'Verifying your payment proof', icon: DollarSign, active: status === 'pending', done: ['approved', 'completed'].includes(status) },
-    { label: 'Processing', desc: 'Our team is working on your order', icon: Clock, active: status === 'approved', done: status === 'completed' },
+  const steps = [
+    { label: 'Order Placed', desc: 'Your order has been submitted', icon: FileText, done: true, failed: false },
+    { label: 'Payment Review', desc: 'Verifying your payment proof', icon: DollarSign, active: status === 'pending', done: ['approved', 'completed'].includes(status), failed: false },
+    { label: 'Processing', desc: 'Our team is working on your order', icon: Clock, active: status === 'approved', done: status === 'completed', failed: false },
     { label: 'Completed', desc: 'Your service has been delivered', icon: CheckCircle2, active: status === 'completed', done: status === 'completed', failed: status === 'rejected' },
   ]
 
   return (
     <div className="relative">
-      {/* Vertical line */}
-      <div className="absolute left-5 top-6 bottom-6 w-0.5 bg-border" />
-
+      <div className="absolute left-5 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/20 via-primary/10 to-transparent" />
       <div className="space-y-0">
         {steps.map((step, i) => {
           const StepIcon = step.failed ? XCircle : step.done ? CheckCircle2 : step.icon
           return (
-            <div key={step.label} className="relative flex gap-4 pb-8 last:pb-0">
-              {/* Circle */}
+            <motion.div
+              key={step.label}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 + i * 0.12, duration: 0.4 }}
+              className="relative flex gap-4 pb-8 last:pb-0"
+            >
               <div className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                 step.done
-                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                   : step.failed
-                  ? 'bg-red-500 border-red-500 text-white'
+                  ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20'
                   : step.active
                   ? 'bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/30'
-                  : 'bg-background border-border text-muted-foreground'
+                  : 'bg-background border-border/80 text-muted-foreground'
               }`}>
                 <StepIcon className="h-4.5 w-4.5" />
               </div>
-
-              {/* Content */}
-              <div className="pt-1">
-                <p className={`text-sm font-semibold ${step.active ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <div className="pt-1.5">
+                <p className={`text-sm font-semibold transition-colors ${step.active || step.done ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {step.label}
                   {step.failed && <span className="text-red-500 ml-2">(Rejected)</span>}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </div>
@@ -137,11 +146,11 @@ function OrderTimeline({ status }: { status: string }) {
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
         <p className="text-sm font-medium mt-0.5">{value || '—'}</p>
       </div>
     </div>
@@ -151,7 +160,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 /* ─── Skeleton ─── */
 function DetailSkeleton() {
   return (
-    <div className="p-6 lg:p-8 max-w-4xl space-y-6">
+    <div className="p-6 lg:p-8 max-w-5xl space-y-6">
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-10 rounded-xl" />
         <div className="space-y-2 flex-1">
@@ -160,13 +169,13 @@ function DetailSkeleton() {
         </div>
         <Skeleton className="h-9 w-24 rounded-xl" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="md:col-span-3 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3 space-y-4">
           <Skeleton className="h-[300px] rounded-xl" />
         </div>
-        <div className="md:col-span-2 space-y-4">
-          <Skeleton className="h-[200px] rounded-xl" />
-          <Skeleton className="h-[100px] rounded-xl" />
+        <div className="lg:col-span-2 space-y-4">
+          <Skeleton className="h-[250px] rounded-xl" />
+          <Skeleton className="h-[150px] rounded-xl" />
         </div>
       </div>
     </div>
@@ -209,13 +218,16 @@ export default function OrderDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center px-4">
-          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-5">
-            <AlertCircle className="h-8 w-8 text-muted-foreground" />
+          <div className="h-16 w-16 rounded-2xl bg-muted/80 flex items-center justify-center mx-auto mb-5">
+            <AlertCircle className="h-8 w-8 text-muted-foreground/60" />
           </div>
           <h2 className="text-xl font-bold mb-2">Order Not Found</h2>
           <p className="text-muted-foreground mb-5 text-sm">This order doesn&apos;t exist or you don&apos;t have access.</p>
-          <Button variant="outline" asChild className="rounded-xl">
-            <Link href="/dashboard/orders"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Orders</Link>
+          <Button variant="outline" className="rounded-xl gap-2" asChild>
+            <Link href="/dashboard/orders">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Orders
+            </Link>
           </Button>
         </motion.div>
       </div>
@@ -223,20 +235,24 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl space-y-6">
+    <div className="p-6 lg:p-8 max-w-5xl space-y-6">
       {/* ─── Back + Header ─── */}
-      <motion.div initial="hidden" animate="visible" variants={reveal} custom={0}>
-        <Button variant="ghost" size="sm" asChild className="mb-4 gap-1 text-muted-foreground hover:text-foreground -ml-2">
-          <Link href="/dashboard/orders"><ArrowLeft className="h-4 w-4" /> Back</Link>
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+        <Button variant="ghost" size="sm" asChild className="mb-4 gap-1.5 text-muted-foreground hover:text-foreground -ml-2 text-sm">
+          <Link href="/dashboard/orders">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Orders
+          </Link>
         </Button>
 
+        {/* Order Header Card */}
         <Card className="border-0 shadow-sm overflow-hidden">
-          <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-400 to-teal-400" />
+          <div className="h-1 bg-gradient-to-r from-primary via-emerald-400 to-teal-400" />
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-primary" />
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center">
+                  {serviceIcon(order.service.icon, 'h-6 w-6 text-primary')}
                 </div>
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
@@ -245,10 +261,10 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                     <span>{order.service.title}</span>
-                    <span>·</span>
+                    <span className="text-border">·</span>
                     <span>{durationLabel(order.duration)}</span>
-                    <span>·</span>
-                    <span>${order.amount.toFixed(2)}</span>
+                    <span className="text-border">·</span>
+                    <span className="font-semibold text-foreground">${order.amount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -263,7 +279,7 @@ export default function OrderDetailPage() {
                   setTimeout(() => setCopied(false), 2000)
                 }}
               >
-                {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? 'Copied!' : 'Copy ID'}
               </Button>
             </div>
@@ -272,29 +288,41 @@ export default function OrderDetailPage() {
       </motion.div>
 
       {/* ─── Main Grid ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Timeline (3 cols) */}
-        <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={1} className="md:col-span-3">
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <h2 className="text-base font-bold mb-6">Order Progress</h2>
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="lg:col-span-3 space-y-6">
+          <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Order Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
               <OrderTimeline status={order.status} />
             </CardContent>
           </Card>
 
           {/* Admin Note */}
           {order.adminNote && (
-            <motion.div initial="hidden" animate="visible" variants={reveal} custom={4} className="mt-6">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
               <Card className="border-primary/20 shadow-sm overflow-hidden">
-                <div className="h-1 bg-primary/40" />
+                <div className="h-1 bg-gradient-to-r from-primary to-emerald-400" />
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-3">
-                    <Info className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-bold text-primary">Admin Note</h3>
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Info className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-primary">Admin Note</h3>
+                      <p className="text-[11px] text-muted-foreground">Message from our team</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                    {order.adminNote}
-                  </p>
+                  <div className="bg-muted/40 rounded-xl p-4 mt-2">
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                      {order.adminNote}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -302,43 +330,52 @@ export default function OrderDetailPage() {
         </motion.div>
 
         {/* Sidebar (2 cols) */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Order Details */}
-          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={2}>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-bold mb-2">Details</h3>
-                <Separator className="mb-1" />
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+            <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold">Order Details</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
                 <InfoRow icon={FileText} label="Service" value={order.service.title} />
+                <Separator />
                 <InfoRow icon={Clock} label="Duration" value={durationLabel(order.duration)} />
+                <Separator />
                 <InfoRow icon={DollarSign} label="Amount" value={`$${order.amount.toFixed(2)}`} />
+                <Separator />
                 <InfoRow icon={Calendar} label="Created" value={format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')} />
-                <InfoRow icon={Calendar} label="Updated" value={format(new Date(order.updatedAt), 'MMM d, yyyy h:mm a')} />
+                <Separator />
+                <InfoRow icon={Calendar} label="Last Updated" value={format(new Date(order.updatedAt), 'MMM d, yyyy h:mm a')} />
               </CardContent>
             </Card>
           </motion.div>
 
           {/* Contact */}
-          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={3}>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-bold mb-2">Contact</h3>
-                <Separator className="mb-1" />
-                <InfoRow icon={MessageCircle} label="Telegram" value={order.telegramUsername || 'Not provided'} />
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+            <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold">Contact Info</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <InfoRow icon={MessageCircle} label="Telegram" value={order.telegramUsername ? `@${order.telegramUsername}` : 'Not provided'} />
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Quick actions */}
-          <motion.div initial="hidden" animate="visible" variants={scaleIn} custom={5}>
+          {/* Need Help Card */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}>
             <Card className="border-0 shadow-sm overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary to-emerald-500 opacity-[0.05]" />
-              <CardContent className="relative p-6">
-                <h3 className="text-base font-bold mb-3">Need help?</h3>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-emerald-500/5" />
+              <CardContent className="relative p-5">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm mb-1.5">Need help with this order?</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                  Contact our support team via Telegram if you have any questions about your order.
+                  Contact our support team if you have any questions about your order status or delivery.
                 </p>
-                <Button size="sm" variant="outline" className="w-full rounded-xl gap-2" asChild>
+                <Button size="sm" variant="outline" className="w-full rounded-xl gap-2 text-xs" asChild>
                   <Link href="/services">
                     <ExternalLink className="h-3.5 w-3.5" />
                     Contact Support
