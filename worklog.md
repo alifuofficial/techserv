@@ -341,3 +341,28 @@ Stage Summary:
 - All lint checks pass (0 errors)
 - Dev server compiles and serves correctly
 
+
+---
+Task ID: 25
+Agent: Main Orchestrator
+Task: Modernize and redesign user dashboard
+
+Work Log:
+- Fixed API bug in /api/orders/[id]/route.ts: removed old schema fields (price3m, price6m, price12m), replaced with pricingType and pricingTiers
+- Redesigned dashboard layout.tsx: upgraded from custom sidebar to shadcn/ui Sidebar component (matching admin pattern)
+- Added Toaster support, online status indicator, New Order header button, proper auth guard with useEffect
+- Redesigned dashboard overview page (page.tsx): gradient welcome banner with time-based greeting, 4 animated stat cards, spending trend mini bar chart, service recommendations section, completion rate card
+- Redesigned orders list page: improved filter design with icons, better search layout, service icon display, refined card hover states
+- Redesigned order detail page: gradient timeline with animated steps, improved info cards, refined admin note display
+- Created new Account page: profile display with avatar, user info rows, role badge, join date
+- All pages use consistent animation patterns (framer-motion fadeUp, stagger)
+- Lint passes clean (0 errors)
+- All pages compile and serve with 200 status
+- Pushed to GitHub: commit cacb45a
+
+Stage Summary:
+- User dashboard fully modernized with creative design
+- shadcn/ui Sidebar now used consistently across admin and user dashboards
+- New account page added to sidebar navigation
+- API route bug fixed preventing potential Prisma errors
+- 6 files changed, 952 insertions, 501 deletions
