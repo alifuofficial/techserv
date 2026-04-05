@@ -23,7 +23,8 @@ import {
   PackageOpen,
   Eye,
   LayoutList,
-  Globe,
+  Package,
+  Settings,
   Home,
   TrendingUp,
 } from 'lucide-react'
@@ -314,12 +315,28 @@ const quickActions = [
     accentBg: 'bg-green-100 dark:bg-green-900/30',
   },
   {
-    title: 'View Services',
-    description: 'Browse all available services',
-    icon: Globe,
-    href: '/services',
+    title: 'Manage Services',
+    description: 'Add, edit or update services & pricing',
+    icon: Package,
+    href: '/admin/services',
+    accent: 'text-purple-600 dark:text-purple-400',
+    accentBg: 'bg-purple-100 dark:bg-purple-900/30',
+  },
+  {
+    title: 'View Customers',
+    description: 'See all registered users and activity',
+    icon: Users,
+    href: '/admin/customers',
     accent: 'text-blue-600 dark:text-blue-400',
     accentBg: 'bg-blue-100 dark:bg-blue-900/30',
+  },
+  {
+    title: 'System Settings',
+    description: 'Configure platform preferences',
+    icon: Settings,
+    href: '/admin/settings',
+    accent: 'text-orange-600 dark:text-orange-400',
+    accentBg: 'bg-orange-100 dark:bg-orange-900/30',
   },
   {
     title: 'Back to Site',
@@ -337,7 +354,7 @@ function QuickActions() {
       <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
         Quick Actions
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {quickActions.map((action) => (
           <Link key={action.href} href={action.href} className="group">
             <Card className="h-full border-border/60 hover:border-primary/30 transition-all cursor-pointer group-hover:shadow-sm">

@@ -29,8 +29,10 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard,
   ShoppingCart,
+  Package,
+  Users,
+  Settings,
   ArrowLeft,
-  LogOut,
   Zap,
 } from 'lucide-react'
 
@@ -97,6 +99,9 @@ export default function AdminLayout({
   const navItems = [
     { title: 'Overview', href: '/admin', icon: LayoutDashboard },
     { title: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { title: 'Services', href: '/admin/services', icon: Package },
+    { title: 'Customers', href: '/admin/customers', icon: Users },
+    { title: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 
   return (
@@ -125,10 +130,10 @@ export default function AdminLayout({
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel>Main</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => (
+                {navItems.slice(0, 2).map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
@@ -137,6 +142,27 @@ export default function AdminLayout({
                           ? pathname === '/admin'
                           : pathname.startsWith(item.href)
                       }
+                      tooltip={item.title}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.slice(2).map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith(item.href)}
                       tooltip={item.title}
                     >
                       <Link href={item.href}>

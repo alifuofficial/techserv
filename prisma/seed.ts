@@ -155,6 +155,30 @@ async function seed() {
   });
   console.log("✅ Completed sample order created:", completedOrder.id);
 
+  // Seed system settings
+  const defaultSettings = [
+    { key: "site_name", value: "TechServ", label: "Site Name", type: "text", group: "general" },
+    { key: "site_description", value: "Premium Tech Services", label: "Site Description", type: "textarea", group: "general" },
+    { key: "site_email", value: "support@techserv.com", label: "Support Email", type: "text", group: "general" },
+    { key: "site_phone", value: "+251-XXX-XXX-XXXX", label: "Support Phone", type: "text", group: "general" },
+    { key: "currency", value: "USD", label: "Currency", type: "select", group: "general" },
+    { key: "currency_symbol", value: "$", label: "Currency Symbol", type: "text", group: "general" },
+    { key: "telegram_channel", value: "@techserv", label: "Telegram Channel", type: "text", group: "general" },
+    { key: "maintenance_mode", value: "false", label: "Maintenance Mode", type: "toggle", group: "system" },
+    { key: "auto_approve_orders", value: "false", label: "Auto Approve Orders", type: "toggle", group: "orders" },
+    { key: "order_confirmation_message", value: "Thank you for your order! We will process it shortly.", label: "Order Confirmation Message", type: "textarea", group: "orders" },
+    { key: "welcome_message", value: "Welcome to TechServ! Browse our services and get started.", label: "Welcome Message", type: "textarea", group: "general" },
+  ];
+
+  for (const setting of defaultSettings) {
+    await db.setting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: setting,
+    });
+  }
+  console.log("✅ System settings seeded");
+
   console.log("\n🎉 Seeding complete!");
   console.log("\n📋 Test Accounts:");
   console.log("   Admin: admin@techserv.com / admin123");
