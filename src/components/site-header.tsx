@@ -21,7 +21,7 @@ const navLinks = [
   { href: "/services", label: "Services" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ logoUrl, siteName = "TechServ" }: { logoUrl?: string; siteName?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
@@ -33,12 +33,18 @@ export function SiteHeader() {
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg transition-all group-hover:shadow-lg group-hover:shadow-primary/25">
-            T
-          </div>
-          <span className="text-xl font-bold tracking-tight">
-            Tech<span className="text-primary">Serv</span>
-          </span>
+          {logoUrl ? (
+            <img src={logoUrl} alt={`${siteName} Logo`} className="h-9 w-auto max-w-[120px] object-contain" />
+          ) : (
+            <>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg transition-all group-hover:shadow-lg group-hover:shadow-primary/25">
+                {siteName.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xl font-bold tracking-tight">
+                {siteName}
+              </span>
+            </>
+          )}
         </Link>
 
         {/* Desktop Nav */}

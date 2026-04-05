@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,13 +9,58 @@ import { Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TelegramLogin } from "@/components/telegram-login";
+
+function TelegramLoginWrapper() {
+  const [botName, setBotName] = useState<string | null>(null);
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const res = await fetch("/api/settings/public");
+        const data = await res.json();
+        if (data.telegram_bot_username) {
+          // Remove @ if present
+          setBotName(data.telegram_bot_username.replace("@", ""));
+        }
+        setIsEnabled(data.telegram_enabled === "true");
+      } catch (error) {
+        console.error("Failed to load telegram settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSettings();
+  }, []);
+
+  const handleAuth = async (user: any) => {
+    try {
+      await signIn("telegram", {
+        ...user,
+        callbackUrl: "/dashboard",
+      });
+    } catch (error) {
+      console.error("Telegram auth failed:", error);
+    }
+  };
+
+  if (isLoading || !isEnabled || !botName) return null;
+
+  return (
+    <div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <TelegramLogin botName={botName} onAuth={handleAuth} />
+    </div>
+  );
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
+    transition: { delay: i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
@@ -172,7 +217,18 @@ export default function SignInPage() {
 
           {/* Footer Links */}
           <motion.div custom={3} variants={fadeUp} className="mt-6 space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+
+            <TelegramLoginWrapper />
+
+            <p className="text-center text-sm text-muted-foreground pt-2">
               Don&apos;t have an account?{" "}
               <Link
                 href="/auth/signup"

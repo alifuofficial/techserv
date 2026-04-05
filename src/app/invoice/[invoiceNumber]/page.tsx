@@ -165,9 +165,9 @@ export default function PublicInvoicePage() {
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4" id="printable-invoice">
-      <motion.div initial="hidden" animate="visible" className="w-full max-w-2xl space-y-6">
+      <motion.div initial="hidden" animate="visible" className="w-full max-w-2xl space-y-6 motion-div-wrapper">
         {/* ─── Invoice Card ─── */}
-        <Card className="border-0 shadow-lg overflow-hidden print:shadow-none print:border print:border-border">
+        <Card className="border-0 shadow-lg overflow-hidden print:shadow-none print:border print:border-border invoice-card">
           {/* Header strip */}
           <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-400 to-teal-400" />
 
@@ -297,14 +297,64 @@ export default function PublicInvoicePage() {
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
-          body {
+          
+          @page {
+            size: A4;
+            margin: 1cm;
+          }
+
+          body, html {
+            background-color: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+
+          /* Hide everything by default, then show our container */
+          #printable-invoice {
             background: white !important;
             padding: 0 !important;
             margin: 0 !important;
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            min-height: 0 !important;
+            height: auto !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
           }
-          #printable-invoice {
-            padding: 20px !important;
-            display: block !important;
+
+          .motion-div-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+          }
+
+          .invoice-card {
+            border: 1px solid #e5e7eb !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            page-break-inside: avoid;
+            margin: 0 !important;
+          }
+
+          .invoice-card :global(.p-6),
+          .invoice-card :global(.pb-4),
+          .invoice-card :global(.space-y-5) {
+            padding: 1rem !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+          }
+
+          /* Force colors for printing */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
         }
       `}</style>

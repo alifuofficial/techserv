@@ -12,6 +12,8 @@ import {
   Save,
   AlertTriangle,
   Info,
+  Send,
+  Bot,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -99,6 +101,13 @@ const groupMeta: Record<
     accent: 'text-green-600 dark:text-green-400',
     accentBg: 'bg-green-100 dark:bg-green-900/30',
   },
+  telegram: {
+    label: 'Telegram',
+    description: 'Bot configuration and notification settings',
+    icon: Send,
+    accent: 'text-sky-500',
+    accentBg: 'bg-sky-50 dark:bg-sky-900/20',
+  },
 }
 
 /* ────────────────────────────────────────────
@@ -117,16 +126,23 @@ const settingDescriptions: Record<string, string> = {
     'Maximum number of new orders accepted per day (0 = unlimited)',
   order_confirmation_email: 'Enable automatic order confirmation emails to customers',
   telegram_channel: 'Default Telegram channel for order notifications',
-  telegram_bot_token: 'Telegram bot token for sending automated notifications',
   webhook_url: 'Endpoint URL for receiving order status webhook callbacks',
   api_rate_limit: 'Maximum API requests allowed per minute per user',
   session_timeout: 'User session duration in minutes before auto-logout',
   enable_registration: 'Allow new users to register on the platform',
-  logo_url: 'URL for the site logo image displayed in the header',
   currency: 'Default currency used for displaying prices and payments',
   timezone: 'Platform timezone used for scheduling and display purposes',
   email_notifications: 'Enable email notifications for important system events',
   sms_notifications: 'Enable SMS notifications for order updates',
+  logo_url: 'URL or path to your company logo (e.g., https://example.com/logo.png)',
+  seo_title: 'Title tag optimized for Google Search Engines',
+  seo_description: 'Meta description snippet shown in Google search results',
+  seo_keywords: 'Comma separated keywords to help Google understand your specific niche',
+  seo_author: 'The author meta tag of the application',
+  telegram_bot_token: 'The unique HTTP API token from @BotFather',
+  telegram_bot_username: 'Your bot handle (e.g. @TechServBot)',
+  telegram_enabled: 'Allow users to register and sign in using their Telegram account',
+  telegram_notifications: 'Send automated order status updates via the bot',
 }
 
 function getDescription(key: string, label: string): string {
@@ -627,7 +643,7 @@ export default function AdminSettingsPage() {
     if (!originalData) return []
     const keys = Object.keys(originalData.groups)
     // Maintain a consistent order: general, orders, system, then any others
-    const preferredOrder = ['general', 'orders', 'system']
+    const preferredOrder = ['general', 'telegram', 'orders', 'system']
     const ordered: string[] = []
     for (const pk of preferredOrder) {
       if (keys.includes(pk)) ordered.push(pk)

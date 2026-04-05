@@ -18,6 +18,13 @@ export async function GET(
     const userId = sessionUser.id as string;
     const userRole = sessionUser.role as string;
 
+    const user = (await db.user.findUnique({
+      where: { id: userId },
+      select: { telegramId: true },
+    })) as any;
+
+    if (!user || !user.telegramId) return;
+
     const order = await db.order.findUnique({
       where: { id },
       include: {
@@ -111,30 +118,38 @@ export async function PATCH(
     if (status) updateData.status = status;
     if (adminNote !== undefined) updateData.adminNote = adminNote;
 
-    const updatedOrder = await db.order.update({
+    const fadeUp = {
+      hidden: { opacity: 0, y: 20 },
+      visible: (i: number) => ({
+        opacity: 1,
+        y: 0,
+        transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" as any },
+      }),
+    };
+
+    const updatedOrder = (await db.order.update({
       where: { id },
       data: updateData,
       include: {
-        service: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            shortDescription: true,
-            icon: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            telegram: true,
-          },
-        },
+        service: true,
+        user: true,
       },
-    });
+    })) as any;
+
+    // Send Telegram notification if the status has changed
+    if (status && updatedOrder.user?.telegramId) {
+      const { sendTelegramNotification } = await import("@/lib/telegram-notifications");
+      const statusEmoji = {
+        pending: "⏳",
+        approved: "✅",
+        completed: "🎉",
+        rejected: "❌",
+      }[status] || "ℹ️";
+
+      const message = `<b>Order Update ${statusEmoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> is now <b>${status.toUpperCase()}</b>.\n\nOrder ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing TechServ!`;
+      
+      await sendTelegramNotification(updatedOrder.userId, message);
+    }
 
     return NextResponse.json(updatedOrder);
   } catch (error: unknown) {

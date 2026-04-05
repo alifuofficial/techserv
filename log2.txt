@@ -1,0 +1,10 @@
+﻿acda1c3 fix: make seed fully idempotent - use upsert with fixed IDs for orders and invoices
+799387d fix: use fixed invoice numbers and upsert on invoiceNumber for idempotent seed
+0b3ebf6 fix: use upsert for invoice seed to prevent unique constraint error on re-seed
+aa70cc0 feat: invoice QR codes, public invoice page, print support, user settings
+876edf6 fix: add missing icon imports (Globe, Code, Star, Layers, Package) in invoices page
+47e27dd 9dec5e77-1a7b-4a30-a094-3477fd7a2f69
+4ccaa24 feat: add invoice system and payment methods management
+3d2745f 1220d0f5-42b4-429d-b53b-82a7bc01bd8a
+cacb45a feat: modernize user dashboard with creative redesign
+d967eeb 9d41335d-0fd7-4da9-b9c4-4ff4e9bd9e10
