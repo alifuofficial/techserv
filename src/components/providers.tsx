@@ -1,6 +1,5 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
@@ -21,14 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
-        <NextThemesProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </NextThemesProvider>
+        {children}
       </QueryClientProvider>
     </SessionProvider>
   );

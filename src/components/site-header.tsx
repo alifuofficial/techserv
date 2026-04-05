@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X, ChevronDown, LogOut, LayoutDashboard, Shield, Zap, Moon, Sun } from "lucide-react";
+import { Menu, ChevronDown, LogOut, LayoutDashboard, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "next-themes";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,12 +24,6 @@ const navLinks = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { theme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
   const [open, setOpen] = useState(false);
 
   const isAdmin = (session?.user as any)?.role === "admin";
@@ -91,17 +84,6 @@ export function SiteHeader() {
 
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-3">
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="h-9 w-9"
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-          )}
-
           {session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -154,16 +136,6 @@ export function SiteHeader() {
 
         {/* Mobile Menu */}
         <div className="md:hidden flex items-center gap-2">
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="h-9 w-9"
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-          )}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
