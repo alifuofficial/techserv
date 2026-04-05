@@ -65,6 +65,8 @@ export const authOptions: NextAuthOptions = {
               password: await bcrypt.hash(Math.random().toString(36), 12),
               telegramId: id,
               telegram: credentials.username ? `@${credentials.username}` : null,
+              referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
+              tier: "Standard",
             },
           });
         }
@@ -74,6 +76,8 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          tier: user.tier,
+          referralCode: user.referralCode,
         };
       },
     }),
@@ -98,6 +102,8 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          tier: user.tier,
+          referralCode: user.referralCode,
         };
       },
     }),
@@ -107,6 +113,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = user.id;
+        token.tier = (user as any).tier;
+        token.referralCode = (user as any).referralCode;
       }
       return token;
     },
@@ -114,6 +122,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).tier = token.tier;
+        (session.user as any).referralCode = token.referralCode;
       }
       return session;
     },

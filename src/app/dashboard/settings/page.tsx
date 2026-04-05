@@ -24,6 +24,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Calendar } from 'lucide-react'
 
 /* ─── Types ─── */
 interface UserProfile {
@@ -176,15 +179,51 @@ export default function SettingsPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
         <div className="flex items-center gap-3 mb-1">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Settings className="h-5 w-5 text-primary" />
+            <User className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Account & Settings</h1>
             <p className="text-sm text-muted-foreground">
-              Manage your account preferences
+              Manage your profile and account preferences
             </p>
           </div>
         </div>
+      </motion.div>
+
+      {/* ─── Profile Hero ─── */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+        <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300 overflow-hidden">
+          <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-400 to-teal-400" />
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <Avatar className="h-24 w-24 rounded-2xl ring-4 ring-muted">
+                <AvatarFallback className="rounded-2xl bg-gradient-to-br from-primary/10 to-emerald-500/10 text-primary text-3xl font-bold">
+                  {name.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 text-center sm:text-left space-y-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <h2 className="text-2xl font-extrabold tracking-tight">{name}</h2>
+                  <Badge variant="secondary" className="w-fit mx-auto sm:mx-0 px-2.5 py-0.5 rounded-full bg-primary/8 text-primary border-primary/10 font-bold text-[10px] uppercase tracking-wider">
+                    {(session.user as any).role === 'admin' ? 'Administrator' : 'Verified Client'}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground font-medium">{profile?.email}</p>
+                <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Calendar className="h-3.5 w-3.5 text-primary/60" />
+                    Joined {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', d: 'numeric', year: 'numeric' }) : 'Recently'}
+                  </div>
+                  <div className="h-1 w-1 rounded-full bg-border md:block hidden" />
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Shield className="h-3.5 w-3.5 text-emerald-500/60" />
+                    Account Status: <span className="text-emerald-600">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* ─── Profile Information ─── */}
@@ -432,19 +471,6 @@ export default function SettingsPage() {
         </Card>
       </motion.div>
 
-      {/* ─── Account Info ─── */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
-        <Card className="border-border/50">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Member since</span>
-              <span className="font-medium">
-                {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   ArrowRight,
   ChevronDown,
   PackageSearch,
+  Briefcase,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +54,7 @@ interface Order {
     title: string
     slug: string
   }
+  progress: number
 }
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'completed' | 'rejected'
@@ -64,18 +66,18 @@ const container = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06 },
+    transition: { staggerChildren: 0.05 },
   },
-}
+} as any
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
   },
-}
+} as any
 
 const rowVariants = {
   hidden: { opacity: 0, y: 8 },
@@ -192,13 +194,14 @@ function TableSkeleton() {
   return (
     <div className="rounded-lg border border-border/60 overflow-hidden">
       {/* Header row skeleton */}
-      <div className="hidden md:grid grid-cols-[40px_1fr_1.2fr_1fr_0.8fr_0.8fr_1fr_0.8fr_70px] items-center gap-4 px-4 py-3 bg-muted/30 border-b border-border/60">
+      <div className="hidden md:grid grid-cols-[40px_1fr_1.2fr_1fr_0.8fr_0.8fr_0.8fr_1fr_0.8fr_70px] items-center gap-4 px-4 py-3 bg-muted/30 border-b border-border/60">
         <Skeleton className="h-4 w-4" />
         <Skeleton className="h-3.5 w-20" />
         <Skeleton className="h-3.5 w-28" />
         <Skeleton className="h-3.5 w-24" />
         <Skeleton className="h-3.5 w-16" />
         <Skeleton className="h-3.5 w-18" />
+        <Skeleton className="h-4 w-20" />
         <Skeleton className="h-3.5 w-20" />
         <Skeleton className="h-3.5 w-16" />
         <Skeleton className="h-3.5 w-12 ml-auto" />
@@ -207,7 +210,7 @@ function TableSkeleton() {
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="hidden md:grid grid-cols-[40px_1fr_1.2fr_1fr_0.8fr_0.8fr_1fr_0.8fr_70px] items-center gap-4 px-4 py-3.5 border-b border-border/40 last:border-0"
+          className="hidden md:grid grid-cols-[40px_1fr_1.2fr_1fr_0.8fr_0.8fr_0.8fr_1fr_0.8fr_70px] items-center gap-4 px-4 py-3.5 border-b border-border/40 last:border-0"
         >
           <Skeleton className="h-4 w-4 rounded" />
           <Skeleton className="h-4 w-16 font-mono" />
@@ -218,6 +221,7 @@ function TableSkeleton() {
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-4 w-12" />
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-8 w-16 rounded-md ml-auto" />
@@ -328,10 +332,20 @@ function MobileOrderCard({
 
           {/* Bottom row: Duration + Date + Amount */}
           <div className="flex items-center justify-between pt-1 border-t border-border/40">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
               <span>{durationLabel(order.duration)}</span>
               <span className="text-border">·</span>
               <span>{format(new Date(order.createdAt), 'MMM d, yyyy')}</span>
+            </div>
+            {/* Mobile Progress Bar */}
+            <div className="flex items-center gap-2 flex-1 max-w-[80px]">
+              <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary" 
+                  style={{ width: `${order.progress}%` }} 
+                />
+              </div>
+              <span className="text-[10px] font-medium">{order.progress}%</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm text-primary">
@@ -372,8 +386,10 @@ export default function AdminOrdersPage() {
         const res = await fetch(url)
         if (res.ok && !cancelled) {
           const data = await res.json()
-          setOrders(data)
-          setAllOrders(data)
+          // Only show 'pending' and 'rejected' here (or 'all' non-projects)
+          const nonProjects = data.filter((o: Order) => !['approved', 'completed'].includes(o.status))
+          setOrders(nonProjects)
+          setAllOrders(nonProjects)
         }
       } catch {
         // silently handle
@@ -437,11 +453,9 @@ export default function AdminOrdersPage() {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Order Queue</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {loading
-              ? 'Loading orders…'
-              : `${filteredOrders.length} order${filteredOrders.length !== 1 ? 's' : ''}${searchQuery.trim() ? ' found' : statusFilter !== 'all' ? ` · ${statusConfig[statusFilter]?.label}` : ' total'}`}
+            Manage incoming orders and payments (Pending Approval).
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -468,46 +482,24 @@ export default function AdminOrdersPage() {
           >
             <TabsList className="bg-muted/50">
               <TabsTrigger value="all" className="text-sm">
-                All
-                {!loading && allOrders.length > 0 && (
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {allOrders.length}
-                  </span>
-                )}
+                All Orders
               </TabsTrigger>
               <TabsTrigger value="pending" className="text-sm">
                 Pending
-                {!loading && (
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {allOrders.filter((o) => o.status === 'pending').length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="approved" className="text-sm">
-                Approved
-                {!loading && (
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {allOrders.filter((o) => o.status === 'approved').length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="text-sm">
-                Completed
-                {!loading && (
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {allOrders.filter((o) => o.status === 'completed').length}
-                  </span>
-                )}
               </TabsTrigger>
               <TabsTrigger value="rejected" className="text-sm">
                 Rejected
-                {!loading && (
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {allOrders.filter((o) => o.status === 'rejected').length}
-                  </span>
-                )}
               </TabsTrigger>
             </TabsList>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-2">
+               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Accepted orders move to:</span>
+               <Button size="sm" variant="outline" asChild className="h-7 text-[10px] px-2 rounded-lg gap-1.5 border-primary/20 hover:bg-primary/5">
+                  <Link href="/admin/projects">
+                     <Briefcase className="h-3 w-3 text-primary" />
+                     Projects
+                  </Link>
+               </Button>
+            </div>
           </Tabs>
         </div>
 
@@ -532,12 +524,6 @@ export default function AdminOrdersPage() {
               </SelectItem>
               <SelectItem value="pending">
                 Pending ({allOrders.filter((o) => o.status === 'pending').length})
-              </SelectItem>
-              <SelectItem value="approved">
-                Approved ({allOrders.filter((o) => o.status === 'approved').length})
-              </SelectItem>
-              <SelectItem value="completed">
-                Completed ({allOrders.filter((o) => o.status === 'completed').length})
               </SelectItem>
               <SelectItem value="rejected">
                 Rejected ({allOrders.filter((o) => o.status === 'rejected').length})
@@ -595,6 +581,9 @@ export default function AdminOrdersPage() {
                         Status
                       </TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Progress
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Date
                       </TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right pr-4">
@@ -648,6 +637,19 @@ export default function AdminOrdersPage() {
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={order.status} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="w-24 space-y-1.5">
+                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all duration-500" 
+                                style={{ width: `${order.progress}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] font-medium text-muted-foreground">
+                              {order.progress}% complete
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">

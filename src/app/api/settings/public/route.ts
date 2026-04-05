@@ -6,7 +6,7 @@ export async function GET() {
     const settings = await db.setting.findMany({
       where: {
         key: {
-          in: ["telegram_bot_username", "telegram_enabled", "site_name"],
+          in: ["telegram_bot_username", "telegram_enabled", "site_name", "account_tier_enabled", "referral_system_enabled", "ease_opacity", "ease_y", "ease_duration", "ease_type"],
         },
       },
     });

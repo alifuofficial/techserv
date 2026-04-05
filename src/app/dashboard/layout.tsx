@@ -33,6 +33,8 @@ import {
   Zap,
   Settings,
   User,
+  Activity,
+  Briefcase,
 } from 'lucide-react'
 
 export default function DashboardLayout({
@@ -62,10 +64,10 @@ export default function DashboardLayout({
 
   const navItems = [
     { title: 'Overview', href: '/dashboard', icon: LayoutDashboard, exact: true },
+    { title: 'My Projects', href: '/dashboard/projects', icon: Briefcase },
     { title: 'My Orders', href: '/dashboard/orders', icon: ShoppingCart },
     { title: 'Invoices', href: '/dashboard/invoices', icon: FileText },
-    { title: 'Settings', href: '/dashboard/settings', icon: Settings },
-    { title: 'Account', href: '/dashboard/account', icon: User },
+    { title: 'Account & Settings', href: '/dashboard/settings', icon: Settings },
   ]
 
   return (

@@ -84,6 +84,7 @@ interface Order {
     title: string
     slug: string
   }
+  progress: number
 }
 
 /* ────────────────────────────────────────────
@@ -720,6 +721,7 @@ export default function AdminDashboardPage() {
                           <TableHead>Service</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Progress</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead className="text-right pr-2">
                             Actions
@@ -750,6 +752,19 @@ export default function AdminDashboardPage() {
                             </TableCell>
                             <TableCell>
                               <StatusBadge status={order.status} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="w-24 space-y-1">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="font-medium">{order.progress}%</span>
+                                </div>
+                                <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-primary transition-all duration-500" 
+                                    style={{ width: `${order.progress}%` }}
+                                  />
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {format(new Date(order.createdAt), 'MMM d, yyyy')}

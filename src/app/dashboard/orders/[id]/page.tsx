@@ -48,9 +48,13 @@ interface Order {
   adminNote: string | null
   createdAt: string
   updatedAt: string
+  progress: number
+  statusMessage: string | null
   service: { id: string; title: string; slug: string; icon: string }
   user: { id: string; name: string; email: string; phone: string | null; telegram: string | null }
 }
+
+import { Progress } from '@/components/ui/progress'
 
 /* ─── Animation ─── */
 const fadeUp = {
@@ -294,15 +298,50 @@ export default function OrderDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Timeline (3 cols) */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="lg:col-span-3 space-y-6">
-          <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300">
+          <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300 overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Order Progress
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Service Fulfillment
+                </CardTitle>
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  {order.progress}% Ready
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="pt-4">
-              <OrderTimeline status={order.status} />
+            <CardContent className="pt-4 space-y-8">
+              {/* Progress Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <span>Current Progress</span>
+                  <span>{order.progress}%</span>
+                </div>
+                <Progress value={order.progress} className="h-2.5 bg-primary/10" />
+                
+                {order.statusMessage && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-4 rounded-2xl bg-primary/5 border border-primary/10"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">Latest Update</span>
+                    </div>
+                    <p className="text-sm font-bold text-foreground leading-snug">
+                      {order.statusMessage}
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+
+              <Separator className="opacity-50" />
+
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Milestone Roadmap</h4>
+                <OrderTimeline status={order.status} />
+              </div>
             </CardContent>
           </Card>
 

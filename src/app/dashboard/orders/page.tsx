@@ -40,10 +40,13 @@ interface Order {
   status: string
   duration: string
   amount: number
+  progress: number
   createdAt: string
   serviceId: string
   service: { id: string; title: string; slug: string; icon: string }
 }
+
+import { Progress } from '@/components/ui/progress'
 
 /* ─── Helpers ─── */
 function StatusBadge({ status }: { status: string }) {
@@ -156,7 +159,7 @@ export default function OrdersPage() {
   return (
     <div className="p-6 lg:p-8 max-w-6xl space-y-6">
       {/* ─── Header ─── */}
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" className="space-y-1">
+      <motion.div variants={fadeUp as any} initial="hidden" animate="visible" className="space-y-1">
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Orders</h1>
         <p className="text-muted-foreground text-sm">
           {orders.length} order{orders.length !== 1 ? 's' : ''} total · Track and manage your service orders
@@ -164,7 +167,7 @@ export default function OrdersPage() {
       </motion.div>
 
       {/* ─── Search & Filter ─── */}
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.1 }} className="space-y-4">
+      <motion.div variants={fadeUp as any} initial="hidden" animate="visible" transition={{ delay: 0.1 }} className="space-y-4">
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -235,9 +238,9 @@ export default function OrdersPage() {
           </Card>
         </motion.div>
       ) : (
-        <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-3">
+        <motion.div variants={stagger as any} initial="hidden" animate="visible" className="space-y-3">
           {filtered.map((order) => (
-            <motion.div key={order.id} variants={fadeUp}>
+            <motion.div key={order.id} variants={fadeUp as any}>
               <Link href={`/dashboard/orders/${order.id}`} className="block group">
                 <Card className="border border-border/50 hover:border-primary/20 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300 overflow-hidden">
                   <CardContent className="p-0">
@@ -248,21 +251,33 @@ export default function OrdersPage() {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <h3 className="font-semibold text-sm truncate">{order.service.title}</h3>
-                          <StatusBadge status={order.status} />
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
+                            <h3 className="font-semibold text-sm truncate">{order.service.title}</h3>
+                            <StatusBadge status={order.status} />
+                          </div>
+                          
+                          {/* Progress Indicator */}
+                          {['approved', 'completed'].includes(order.status) && (
+                            <div className="mb-2 max-w-[200px] space-y-1">
+                              <div className="flex justify-between text-[10px] font-medium text-muted-foreground">
+                                <span>Fulfillment</span>
+                                <span>{order.progress}%</span>
+                              </div>
+                              <Progress value={order.progress} className="h-1 bg-primary/20" />
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2.5 text-xs text-muted-foreground flex-wrap">
+                            <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded text-[11px]">
+                              #{order.id.slice(0, 8)}
+                            </span>
+                            <span className="hidden sm:inline text-border">·</span>
+                            <span className="hidden sm:inline">{durationLabel(order.duration)}</span>
+                            <span className="text-border">·</span>
+                            <span>{format(new Date(order.createdAt), 'MMM d, yyyy')}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2.5 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                          <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded text-[11px]">
-                            #{order.id.slice(0, 8)}
-                          </span>
-                          <span className="text-border">·</span>
-                          <span>{durationLabel(order.duration)}</span>
-                          <span className="text-border">·</span>
-                          <span>{format(new Date(order.createdAt), 'MMM d, yyyy')}</span>
-                        </div>
-                      </div>
 
                       {/* Amount & Arrow */}
                       <div className="flex items-center gap-3 shrink-0">

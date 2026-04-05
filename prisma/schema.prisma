@@ -8,18 +8,23 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  name       String
-  email      String    @unique
-  password   String
-  role       String    @default("user")
-  phone      String?
-  telegram   String?
-  telegramId String?   @unique
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  orders     Order[]
-  invoices   Invoice[]
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  password     String
+  role         String    @default("user")
+  tier         String    @default("Standard")
+  phone        String?
+  telegram     String?
+  telegramId   String?   @unique
+  referralCode String?   @unique
+  referredById String?
+  referredBy   User?     @relation("ReferralRelation", fields: [referredById], references: [id])
+  referrals    User[]    @relation("ReferralRelation")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]
+  invoices     Invoice[]
 }
 
 model Service {
@@ -55,6 +60,8 @@ model Order {
   userId           String
   serviceId        String
   status           String   @default("pending")
+  progress         Int      @default(0)
+  statusMessage    String?
   duration         String
   amount           Float
   telegramUsername String?

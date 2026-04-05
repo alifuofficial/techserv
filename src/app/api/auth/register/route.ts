@@ -29,6 +29,21 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Generate a simple unique referral code
+    const referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    // Check for referral code if provided
+    let referredById = null;
+    if (body.referralCode) {
+      const referrer = await db.user.findUnique({
+        where: { referralCode: body.referralCode },
+        select: { id: true },
+      });
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
     // Create user
     const user = await db.user.create({
       data: {
@@ -36,6 +51,9 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         role: "user",
+        tier: "Standard",
+        referralCode,
+        referredById,
       },
     });
 

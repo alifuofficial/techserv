@@ -18,12 +18,6 @@ export async function GET(
     const userId = sessionUser.id as string;
     const userRole = sessionUser.role as string;
 
-    const user = (await db.user.findUnique({
-      where: { id: userId },
-      select: { telegramId: true },
-    })) as any;
-
-    if (!user || !user.telegramId) return;
 
     const order = await db.order.findUnique({
       where: { id },
@@ -90,13 +84,26 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, adminNote } = body as { status?: string; adminNote?: string };
+    const { status, adminNote, progress, statusMessage } = body as { 
+      status?: string; 
+      adminNote?: string;
+      progress?: number;
+      statusMessage?: string;
+    };
 
     // Validate status if provided
     const validStatuses = ["pending", "approved", "completed", "rejected"];
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json(
         { error: "Invalid status. Must be pending, approved, completed, or rejected" },
+        { status: 400 }
+      );
+    }
+
+    // Validate progress if provided
+    if (progress !== undefined && (progress < 0 || progress > 100)) {
+      return NextResponse.json(
+        { error: "Progress must be between 0 and 100" },
         { status: 400 }
       );
     }
@@ -114,18 +121,11 @@ export async function PATCH(
     }
 
     // Build update data
-    const updateData: { status?: string; adminNote?: string } = {};
+    const updateData: any = {};
     if (status) updateData.status = status;
     if (adminNote !== undefined) updateData.adminNote = adminNote;
-
-    const fadeUp = {
-      hidden: { opacity: 0, y: 20 },
-      visible: (i: number) => ({
-        opacity: 1,
-        y: 0,
-        transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" as any },
-      }),
-    };
+    if (progress !== undefined) updateData.progress = progress;
+    if (statusMessage !== undefined) updateData.statusMessage = statusMessage;
 
     const updatedOrder = (await db.order.update({
       where: { id },
@@ -136,19 +136,31 @@ export async function PATCH(
       },
     })) as any;
 
-    // Send Telegram notification if the status has changed
-    if (status && updatedOrder.user?.telegramId) {
+    // Send Telegram notification
+    if (updatedOrder.user?.telegramId) {
       const { sendTelegramNotification } = await import("@/lib/telegram-notifications");
-      const statusEmoji = {
-        pending: "⏳",
-        approved: "✅",
-        completed: "🎉",
-        rejected: "❌",
-      }[status] || "ℹ️";
-
-      const message = `<b>Order Update ${statusEmoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> is now <b>${status.toUpperCase()}</b>.\n\nOrder ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing TechServ!`;
       
-      await sendTelegramNotification(updatedOrder.userId, message);
+      let message = "";
+      if (status && status !== existingOrder.status) {
+        const statusEmoji = {
+          pending: "⏳",
+          approved: "✅",
+          completed: "🎉",
+          rejected: "❌",
+        }[status] || "ℹ️";
+        message = `<b>Order Status Update ${statusEmoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> is now <b>${status.toUpperCase()}</b>.\n\n`;
+      } else if (progress !== undefined) {
+        message = `<b>Order Progress Update 📊</b>\n\nYour <b>${updatedOrder.service.title}</b> project is now <b>${progress}%</b> complete.\n\n`;
+      }
+
+      if (statusMessage) {
+        message += `<b>Current Milestone:</b> <i>${statusMessage}</i>\n\n`;
+      }
+
+      if (message) {
+        message += `Order ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing TechServ!`;
+        await sendTelegramNotification(updatedOrder.userId, message);
+      }
     }
 
     return NextResponse.json(updatedOrder);

@@ -36,6 +36,8 @@ import {
   Zap,
   FileText,
   CreditCard,
+  Briefcase,
+  Activity,
 } from 'lucide-react'
 
 /* ────────────────────────────────────────────
@@ -101,6 +103,7 @@ export default function AdminLayout({
   const navItems = [
     { title: 'Overview', href: '/admin', icon: LayoutDashboard },
     { title: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { title: 'Projects', href: '/admin/projects', icon: Briefcase },
     { title: 'Services', href: '/admin/services', icon: Package },
     { title: 'Customers', href: '/admin/customers', icon: Users },
     { title: 'Invoices', href: '/admin/invoices', icon: FileText },
@@ -137,7 +140,7 @@ export default function AdminLayout({
             <SidebarGroupLabel>Main</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.slice(0, 2).map((item) => (
+                {navItems.slice(0, 3).map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
@@ -162,7 +165,7 @@ export default function AdminLayout({
             <SidebarGroupLabel>Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.slice(2).map((item) => (
+                {navItems.slice(3).map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild

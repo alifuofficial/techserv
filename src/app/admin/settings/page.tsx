@@ -14,6 +14,7 @@ import {
   Info,
   Send,
   Bot,
+  Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -65,11 +66,10 @@ const container = {
 }
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.45, ease: "easeOut" },
   },
 }
 
@@ -108,6 +108,13 @@ const groupMeta: Record<
     accent: 'text-sky-500',
     accentBg: 'bg-sky-50 dark:bg-sky-900/20',
   },
+  features: {
+    label: 'Feature Toggles',
+    description: 'Enable or disable platform features',
+    icon: Zap,
+    accent: 'text-amber-600',
+    accentBg: 'bg-amber-100 dark:bg-amber-900/30',
+  },
 }
 
 /* ────────────────────────────────────────────
@@ -143,6 +150,8 @@ const settingDescriptions: Record<string, string> = {
   telegram_bot_username: 'Your bot handle (e.g. @TechServBot)',
   telegram_enabled: 'Allow users to register and sign in using their Telegram account',
   telegram_notifications: 'Send automated order status updates via the bot',
+  account_tier_enabled: 'Display user account tiers (Standard, Gold, etc.) and related benefits',
+  referral_system_enabled: 'Activate the user referral program with unique links and tracking',
 }
 
 function getDescription(key: string, label: string): string {
@@ -714,7 +723,7 @@ export default function AdminSettingsPage() {
                     key={groupKey}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
                   >
                     <GroupSettingsCard
                       groupKey={groupKey}
