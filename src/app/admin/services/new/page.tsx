@@ -13,11 +13,14 @@ import {
   ChevronRight,
   DollarSign,
   Tag,
-  Info,
-  AlignLeft,
   Layers,
   Sparkles,
   BarChart3,
+  Plus,
+  X,
+  Repeat,
+  CreditCard,
+  Star,
   Zap,
   Crown,
   Bot,
@@ -40,7 +43,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Card,
   CardHeader,
@@ -53,6 +62,14 @@ import { Separator } from '@/components/ui/separator'
 /* ────────────────────────────────────────────
    Types
    ──────────────────────────────────────────── */
+interface PricingTier {
+  label: string
+  duration: string
+  price: number
+  popular?: boolean
+  description?: string
+}
+
 interface ServiceFormData {
   title: string
   slug: string
@@ -60,12 +77,20 @@ interface ServiceFormData {
   longDescription: string
   features: string
   icon: string
-  price3m: number
-  price6m: number
-  price12m: number
   sortOrder: number
   isActive: boolean
 }
+
+/* ────────────────────────────────────────────
+   Constants
+   ──────────────────────────────────────────── */
+const SUBSCRIPTION_DURATIONS = [
+  { value: '1month', label: '1 Month' },
+  { value: '3months', label: '3 Months' },
+  { value: '6months', label: '6 Months' },
+  { value: '1year', label: '1 Year' },
+  { value: '2years', label: '2 Years' },
+]
 
 /* ────────────────────────────────────────────
    Icon Options
@@ -120,12 +145,155 @@ function generateSlug(title: string): string {
     .replace(/[^a-z0-9\-]/g, '')
 }
 
+function createEmptyTier(pricingType: string): PricingTier {
+  return {
+    label: '',
+    duration: pricingType === 'one_time' ? 'one_time' : '3months',
+    price: 0,
+    popular: false,
+    description: '',
+  }
+}
+
+/* ────────────────────────────────────────────
+   Tier Editor Component
+   ──────────────────────────────────────────── */
+function TierEditor({
+  tier,
+  index,
+  pricingType,
+  totalTiers,
+  onUpdate,
+  onRemove,
+}: {
+  tier: PricingTier
+  index: number
+  pricingType: string
+  totalTiers: number
+  onUpdate: (index: number, field: keyof PricingTier, value: string | number | boolean) => void
+  onRemove: (index: number) => void
+}) {
+  return (
+    <div className="relative rounded-lg border border-border/60 bg-muted/20 p-4 space-y-3">
+      {/* Tier header with number + remove */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Tier {index + 1}
+        </span>
+        {totalTiers > 1 && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            title="Remove tier"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Tier inputs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Label */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Label</Label>
+          <Input
+            placeholder={pricingType === 'subscription' ? 'e.g., 3 Months' : 'e.g., Basic Bot'}
+            value={tier.label}
+            onChange={(e) => onUpdate(index, 'label', e.target.value)}
+            className="h-8 text-sm bg-muted/30 border-border/60 focus-visible:bg-background"
+          />
+        </div>
+
+        {/* Duration */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Duration</Label>
+          {pricingType === 'subscription' ? (
+            <Select
+              value={tier.duration}
+              onValueChange={(val) => onUpdate(index, 'duration', val)}
+            >
+              <SelectTrigger className="h-8 text-sm bg-muted/30 border-border/60 w-full">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBSCRIPTION_DURATIONS.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value="One-Time"
+              disabled
+              className="h-8 text-sm bg-muted/50 border-border/60 text-muted-foreground cursor-not-allowed"
+            />
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Price</Label>
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+              $
+            </span>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={tier.price || ''}
+              onChange={(e) => onUpdate(index, 'price', parseFloat(e.target.value) || 0)}
+              className="h-8 text-sm pl-6 pr-2 bg-muted/30 border-border/60 focus-visible:bg-background tabular-nums"
+            />
+          </div>
+        </div>
+
+        {/* Popular toggle */}
+        <div className="flex items-end pb-0.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <Switch
+              checked={tier.popular || false}
+              onCheckedChange={(checked) => onUpdate(index, 'popular', checked)}
+              className="data-[state=checked]:bg-amber-500"
+            />
+            <div className="flex items-center gap-1">
+              <Star className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-medium text-muted-foreground">Popular</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Description (more prominent for one-time) */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">
+          Description {pricingType === 'one_time' && <span className="text-primary">(recommended)</span>}
+        </Label>
+        <Input
+          placeholder={pricingType === 'one_time' ? "What's included in this plan?" : 'Optional description'}
+          value={tier.description || ''}
+          onChange={(e) => onUpdate(index, 'description', e.target.value)}
+          className="h-8 text-sm bg-muted/30 border-border/60 focus-visible:bg-background"
+        />
+      </div>
+    </div>
+  )
+}
+
 /* ────────────────────────────────────────────
    Main Page Component
    ──────────────────────────────────────────── */
 export default function CreateServicePage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const [pricingType, setPricingType] = useState<string>('subscription')
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([
+    createEmptyTier('subscription'),
+  ])
 
   const {
     register,
@@ -141,9 +309,6 @@ export default function CreateServicePage() {
       longDescription: '',
       features: '',
       icon: 'Zap',
-      price3m: 0,
-      price6m: 0,
-      price12m: 0,
       sortOrder: 0,
       isActive: true,
     },
@@ -158,9 +323,45 @@ export default function CreateServicePage() {
     setValue('slug', slug)
   }, [title, setValue])
 
+  /* ── Tier management ── */
+  const addTier = useCallback(() => {
+    setPricingTiers((prev) => [...prev, createEmptyTier(pricingType)])
+  }, [pricingType])
+
+  const removeTier = useCallback((index: number) => {
+    setPricingTiers((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== index)
+    })
+  }, [])
+
+  const updateTier = useCallback(
+    (index: number, field: keyof PricingTier, value: string | number | boolean) => {
+      setPricingTiers((prev) =>
+        prev.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier))
+      )
+    },
+    []
+  )
+
+  /* ── Handle pricing type change ── */
+  const handlePricingTypeChange = useCallback((newType: string) => {
+    setPricingType(newType)
+    setPricingTiers([createEmptyTier(newType)])
+  }, [])
+
   /* ── Submit handler ── */
   const onSubmit = useCallback(
     async (data: ServiceFormData) => {
+      // Validate tiers
+      const validTiers = pricingTiers.filter((t) => t.label.trim() && t.price > 0)
+      if (validTiers.length === 0) {
+        toast.error('Validation Error', {
+          description: 'At least one tier with a label and price is required.',
+        })
+        return
+      }
+
       setSubmitting(true)
       try {
         const res = await fetch('/api/admin/services', {
@@ -168,9 +369,14 @@ export default function CreateServicePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...data,
-            price3m: Number(data.price3m),
-            price6m: Number(data.price6m),
-            price12m: Number(data.price12m),
+            pricingType,
+            pricingTiers: validTiers.map((t) => ({
+              label: t.label.trim(),
+              duration: pricingType === 'one_time' ? 'one_time' : t.duration,
+              price: Number(t.price),
+              popular: !!t.popular,
+              description: (t.description || '').trim(),
+            })),
             sortOrder: Number(data.sortOrder),
           }),
         })
@@ -194,7 +400,7 @@ export default function CreateServicePage() {
         setSubmitting(false)
       }
     },
-    [router]
+    [pricingType, pricingTiers, router]
   )
 
   return (
@@ -368,53 +574,85 @@ export default function CreateServicePage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   Pricing
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[
-                    {
-                      key: 'price3m' as const,
-                      label: '3 Months Price',
-                      desc: 'Price for 3-month subscription',
-                    },
-                    {
-                      key: 'price6m' as const,
-                      label: '6 Months Price',
-                      desc: 'Price for 6-month subscription',
-                    },
-                    {
-                      key: 'price12m' as const,
-                      label: '12 Months Price',
-                      desc: 'Price for 12-month subscription',
-                    },
-                  ].map((field) => (
-                    <div key={field.key} className="space-y-2">
-                      <Label htmlFor={field.key}>
-                        {field.label} <span className="text-destructive">*</span>
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                          $
-                        </span>
-                        <Input
-                          id={field.key}
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          {...register(field.key, {
-                            required: `${field.label} is required`,
-                            min: { value: 0, message: 'Price must be at least $0' },
-                          })}
-                          className="pl-7 bg-muted/30 border-border/60 focus-visible:bg-background tabular-nums"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">{field.desc}</p>
-                      {errors[field.key] && (
-                        <p className="text-xs text-destructive">
-                          {errors[field.key]?.message}
-                        </p>
-                      )}
+
+                {/* Pricing Type Toggle */}
+                <div className="grid grid-cols-2 gap-3 max-w-md">
+                  <button
+                    type="button"
+                    onClick={() => handlePricingTypeChange('subscription')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                      pricingType === 'subscription'
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                        : 'border-border/60 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <Repeat className="h-4 w-4" />
+                    Recurring Subscription
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePricingTypeChange('one_time')}
+                    className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                      pricingType === 'one_time'
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                        : 'border-border/60 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    One-Time Payment
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {pricingType === 'subscription'
+                    ? 'Customers will be charged periodically for the selected duration.'
+                    : 'Customers pay once for the selected plan. No recurring billing.'}
+                </p>
+
+                {/* Pricing Tiers Editor */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Pricing Tiers</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addTier}
+                      className="h-7 text-xs gap-1.5"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Tier
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    {pricingTiers.map((tier, index) => (
+                      <TierEditor
+                        key={index}
+                        tier={tier}
+                        index={index}
+                        pricingType={pricingType}
+                        totalTiers={pricingTiers.length}
+                        onUpdate={updateTier}
+                        onRemove={removeTier}
+                      />
+                    ))}
+                  </div>
+
+                  {pricingTiers.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-border/80 py-8 flex flex-col items-center text-center">
+                      <p className="text-sm text-muted-foreground">No pricing tiers yet</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={addTier}
+                        className="mt-2 text-xs gap-1.5"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add your first tier
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

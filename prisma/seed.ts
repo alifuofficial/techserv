@@ -38,7 +38,7 @@ async function seed() {
   });
   console.log("✅ Test user created:", testUser.email);
 
-  // Create services
+  // ── Subscription Service: Telegram Premium ──
   const telegramPremium = await db.service.upsert({
     where: { slug: "telegram-premium" },
     update: {},
@@ -52,15 +52,19 @@ async function seed() {
       features:
         "Boosted channels up to 4000 members,Exclusive stickers and emoji,Voice-to-text for messages,4GB file upload limit,Faster download speeds,Premium profile badge,Custom chat backgrounds,Animated profile pictures,Unique emoji reactions,Advanced chat management",
       icon: "Crown",
-      price3m: 15.99,
-      price6m: 28.99,
-      price12m: 49.99,
+      pricingType: "subscription",
+      pricingTiers: JSON.stringify([
+        { label: "3 Months", duration: "3months", price: 15.99 },
+        { label: "6 Months", duration: "6months", price: 28.99, popular: true },
+        { label: "12 Months", duration: "1year", price: 49.99 },
+      ]),
       isActive: true,
       sortOrder: 1,
     },
   });
   console.log("✅ Service created:", telegramPremium.title);
 
+  // ── One-Time Service: Telegram Bot Development ──
   const botDevelopment = await db.service.upsert({
     where: { slug: "telegram-bot-development" },
     update: {},
@@ -74,15 +78,45 @@ async function seed() {
       features:
         "Custom bot development,API integration,Payment processing bots,Community management bots,Automated notifications,Database integration,Multi-language support,24/7 bot hosting,Post-launch support,Full documentation",
       icon: "Bot",
-      price3m: 99.99,
-      price6m: 179.99,
-      price12m: 299.99,
+      pricingType: "one_time",
+      pricingTiers: JSON.stringify([
+        { label: "Basic Bot", duration: "one_time", price: 199.99, description: "Simple bot with basic features" },
+        { label: "Pro Bot", duration: "one_time", price: 499.99, popular: true, description: "Advanced bot with integrations" },
+        { label: "Enterprise Bot", duration: "one_time", price: 999.99, description: "Full custom solution with support" },
+      ]),
       isActive: true,
       sortOrder: 2,
     },
   });
   console.log("✅ Service created:", botDevelopment.title);
 
+  // ── One-Time Service: Web Development ──
+  const webDevelopment = await db.service.upsert({
+    where: { slug: "web-development" },
+    update: {},
+    create: {
+      title: "Web Development",
+      slug: "web-development",
+      shortDescription:
+        "Professional website and web application development. From landing pages to full-stack applications.",
+      longDescription:
+        "We create modern, responsive websites and web applications using the latest technologies. Whether you need a simple landing page, a business website, an e-commerce store, or a complex web application — we deliver high-quality solutions that look great and perform exceptionally. All projects include responsive design, SEO optimization, and deployment support.",
+      features:
+        "Responsive design,Modern UI/UX,SEO optimization,Performance optimized,Mobile-first approach,Custom functionality,E-commerce integration,CMS integration,API development,Deployment & hosting",
+      icon: "Globe",
+      pricingType: "one_time",
+      pricingTiers: JSON.stringify([
+        { label: "Landing Page", duration: "one_time", price: 299.99, description: "Single-page responsive site" },
+        { label: "Business Website", duration: "one_time", price: 799.99, popular: true, description: "Multi-page business site" },
+        { label: "Web Application", duration: "one_time", price: 2499.99, description: "Full-stack web application" },
+      ]),
+      isActive: true,
+      sortOrder: 3,
+    },
+  });
+  console.log("✅ Service created:", webDevelopment.title);
+
+  // ── Subscription Service: Telegram Channel Promotion ──
   const channelPromotion = await db.service.upsert({
     where: { slug: "telegram-channel-promotion" },
     update: {},
@@ -96,15 +130,19 @@ async function seed() {
       features:
         "Real active subscribers,Organic growth methods,No bots or fake accounts,Targeted by niche,Gradual safe delivery,Engagement boost,Analytics dashboard,Retry guarantee",
       icon: "TrendingUp",
-      price3m: 39.99,
-      price6m: 69.99,
-      price12m: 119.99,
+      pricingType: "subscription",
+      pricingTiers: JSON.stringify([
+        { label: "1 Month", duration: "1month", price: 39.99 },
+        { label: "3 Months", duration: "3months", price: 99.99, popular: true },
+        { label: "6 Months", duration: "6months", price: 169.99 },
+      ]),
       isActive: true,
-      sortOrder: 3,
+      sortOrder: 4,
     },
   });
   console.log("✅ Service created:", channelPromotion.title);
 
+  // ── One-Time Service: Telegram Account Services ──
   const accountVerification = await db.service.upsert({
     where: { slug: "telegram-account-verification" },
     update: {},
@@ -118,16 +156,43 @@ async function seed() {
       features:
         "Account verification help,Account recovery assistance,Two-factor auth setup,Security audit,Privacy configuration,Spam protection setup,Channel verification,Group management setup",
       icon: "ShieldCheck",
-      price3m: 24.99,
-      price6m: 44.99,
-      price12m: 79.99,
+      pricingType: "one_time",
+      pricingTiers: JSON.stringify([
+        { label: "Standard", duration: "one_time", price: 24.99, description: "Basic account service" },
+        { label: "Premium", duration: "one_time", price: 49.99, popular: true, description: "Full security & verification" },
+      ]),
       isActive: true,
-      sortOrder: 4,
+      sortOrder: 5,
     },
   });
   console.log("✅ Service created:", accountVerification.title);
 
-  // Create a sample order for testing
+  // ── One-Time Service: Mobile App Development ──
+  const mobileDev = await db.service.upsert({
+    where: { slug: "mobile-app-development" },
+    update: {},
+    create: {
+      title: "Mobile App Development",
+      slug: "mobile-app-development",
+      shortDescription:
+        "Cross-platform mobile applications for Android and iOS. Built with modern frameworks for performance.",
+      longDescription:
+        "We develop high-quality cross-platform mobile applications that run smoothly on both Android and iOS. From concept to deployment, we handle the entire development lifecycle. Our apps are built with performance, scalability, and user experience in mind.",
+      features:
+        "Cross-platform (Android & iOS),Modern UI design,Performance optimized,Push notifications,Offline support,API integration,App store deployment,Maintenance & updates",
+      icon: "Smartphone",
+      pricingType: "one_time",
+      pricingTiers: JSON.stringify([
+        { label: "Simple App", duration: "one_time", price: 1499.99, description: "Basic functionality app" },
+        { label: "Full App", duration: "one_time", price: 3999.99, popular: true, description: "Feature-rich application" },
+      ]),
+      isActive: true,
+      sortOrder: 6,
+    },
+  });
+  console.log("✅ Service created:", mobileDev.title);
+
+  // Create sample orders
   const sampleOrder = await db.order.create({
     data: {
       userId: testUser.id,
@@ -154,6 +219,20 @@ async function seed() {
     },
   });
   console.log("✅ Completed sample order created:", completedOrder.id);
+
+  const botOrder = await db.order.create({
+    data: {
+      userId: testUser.id,
+      serviceId: botDevelopment.id,
+      status: "approved",
+      duration: "one_time",
+      amount: 499.99,
+      telegramUsername: "@testuser",
+      screenshot: "bot_payment.jpg",
+      adminNote: "Requirements collected. Development in progress.",
+    },
+  });
+  console.log("✅ Bot order created:", botOrder.id);
 
   // Seed system settings
   const defaultSettings = [

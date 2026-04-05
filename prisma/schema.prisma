@@ -28,9 +28,8 @@ model Service {
   longDescription  String   @default("")
   features         String   @default("")
   icon             String   @default("Zap")
-  price3m          Float
-  price6m          Float
-  price12m         Float
+  pricingType      String   @default("one_time")
+  pricingTiers     String   @default("[]")
   isActive         Boolean  @default(true)
   sortOrder        Int      @default(0)
   createdAt        DateTime @default(now())

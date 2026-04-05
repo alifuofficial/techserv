@@ -58,6 +58,14 @@ import { useToast } from '@/hooks/use-toast'
 /* ────────────────────────────────────────────
    Types
    ──────────────────────────────────────────── */
+interface PricingTier {
+  label: string
+  duration: string
+  price: number
+  popular?: boolean
+  description?: string
+}
+
 interface Service {
   id: string
   title: string
@@ -66,14 +74,37 @@ interface Service {
   longDescription: string
   features: string
   icon: string
-  price3m: number
-  price6m: number
-  price12m: number
+  pricingType: string
+  pricingTiers: string
   isActive: boolean
   sortOrder: number
 }
 
-type DurationKey = '3months' | '6months' | '1year'
+function getParsedTiers(tiersJson: string): PricingTier[] {
+  try { return JSON.parse(tiersJson || '[]') } catch { return [] }
+}
+
+/* ────────────────────────────────────────────
+   Pricing helpers
+   ──────────────────────────────────────────── */
+function getMonthlyPrice(tier: PricingTier): number | null {
+  const match = tier.duration.match(/(\d+)/)
+  if (!match) return null
+  const months = parseInt(match[1])
+  return months > 0 ? tier.price / months : null
+}
+
+function getSavings(tier: PricingTier, allTiers: PricingTier[]): string {
+  const monthly = getMonthlyPrice(tier)
+  if (!monthly) return ''
+  // Find cheapest monthly rate across all tiers
+  const allMonthly = allTiers.map((t) => getMonthlyPrice(t)).filter((m): m is number => m !== null)
+  if (allMonthly.length === 0) return ''
+  const cheapest = Math.min(...allMonthly)
+  if (monthly >= cheapest) return ''
+  const savings = Math.round(((cheapest - monthly) / cheapest) * 100)
+  return `Save ${savings}%`
+}
 
 /* ────────────────────────────────────────────
    Animation Variants
@@ -132,22 +163,6 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 /* ────────────────────────────────────────────
-   Pricing data
-   ──────────────────────────────────────────── */
-interface PricingOption {
-  key: DurationKey
-  label: string
-  duration: string
-  popular?: boolean
-}
-
-const pricingOptions: PricingOption[] = [
-  { key: '3months', label: '3 Months', duration: '3 months' },
-  { key: '6months', label: '6 Months', duration: '6 months', popular: true },
-  { key: '1year', label: '12 Months', duration: '12 months' },
-]
-
-/* ────────────────────────────────────────────
    Skeleton loader
    ──────────────────────────────────────────── */
 function DetailSkeleton() {
@@ -202,7 +217,7 @@ export default function ServiceDetailPage() {
   const [service, setService] = useState<Service | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [selectedDuration, setSelectedDuration] = useState<DurationKey | null>(null)
+  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null)
   const [telegramUsername, setTelegramUsername] = useState('')
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
@@ -227,36 +242,6 @@ export default function ServiceDetailPage() {
     }
     fetchService()
   }, [slug])
-
-  // Get price for a duration
-  const getPrice = (key: DurationKey): number => {
-    if (!service) return 0
-    switch (key) {
-      case '3months':
-        return service.price3m
-      case '6months':
-        return service.price6m
-      case '1year':
-        return service.price12m
-    }
-  }
-
-  // Get monthly price
-  const getMonthlyPrice = (key: DurationKey): number => {
-    if (!service) return 0
-    const months = key === '3months' ? 3 : key === '6months' ? 6 : 12
-    return getPrice(key) / months
-  }
-
-  // Get savings percentage compared to 3-month plan
-  const getSavings = (key: DurationKey): string => {
-    if (!service) return ''
-    const monthlyBase = service.price3m / 3
-    const monthlyTarget = getMonthlyPrice(key)
-    if (monthlyTarget >= monthlyBase) return ''
-    const savings = Math.round(((monthlyBase - monthlyTarget) / monthlyBase) * 100)
-    return `Save ${savings}%`
-  }
 
   // Handle screenshot selection
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,7 +276,7 @@ export default function ServiceDetailPage() {
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!service || !selectedDuration) return
+    if (!service || !selectedTier) return
 
     // Validate telegram username
     const tg = telegramUsername.trim()
@@ -314,7 +299,7 @@ export default function ServiceDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceId: service.id,
-          duration: selectedDuration,
+          duration: selectedTier.duration,
           telegramUsername: formattedTg,
           screenshot: screenshotFile?.name || null,
         }),
@@ -345,10 +330,12 @@ export default function ServiceDetailPage() {
     }
   }
 
-  // Parse features from comma-separated string
+  // Parse features and tiers
   const featuresList = service?.features
     ? service.features.split(',').map((f) => f.trim()).filter(Boolean)
     : []
+  const tiers = service ? getParsedTiers(service.pricingTiers) : []
+  const isSubscription = service?.pricingType === 'subscription'
 
   // ── Loading state ──
   if (loading) {
@@ -486,7 +473,9 @@ export default function ServiceDetailPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Features</CardTitle>
                       <CardDescription>
-                        Everything included with your subscription
+                        {isSubscription
+                          ? 'Everything included with your subscription'
+                          : 'Everything included with this service'}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -524,19 +513,30 @@ export default function ServiceDetailPage() {
                 >
                   <Card className="border-primary/20">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Pricing</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Pricing</CardTitle>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            isSubscription
+                              ? 'border-primary/30 text-primary'
+                              : 'border-amber-500/30 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {isSubscription ? 'Subscription' : 'One-Time'}
+                        </Badge>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {pricingOptions.map((option) => {
-                        const price = getPrice(option.key)
-                        const monthly = getMonthlyPrice(option.key)
-                        const savings = getSavings(option.key)
-                        const isSelected = selectedDuration === option.key
+                      {tiers.map((tier) => {
+                        const monthly = isSubscription ? getMonthlyPrice(tier) : null
+                        const savings = isSubscription ? getSavings(tier, tiers) : ''
+                        const isSelected = selectedTier?.duration === tier.duration
 
                         return (
                           <button
-                            key={option.key}
-                            onClick={() => setSelectedDuration(option.key)}
+                            key={tier.duration}
+                            onClick={() => setSelectedTier(tier)}
                             className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
                               isSelected
                                 ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
@@ -545,13 +545,20 @@ export default function ServiceDetailPage() {
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-sm font-medium">{option.label}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  ${monthly.toFixed(2)}/mo
-                                </p>
+                                <p className="text-sm font-medium">{tier.label}</p>
+                                {monthly !== null && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ${monthly.toFixed(2)}/mo
+                                  </p>
+                                )}
+                                {!isSubscription && tier.description && (
+                                  <p className="text-xs text-muted-foreground truncate max-w-[160px]">
+                                    {tier.description}
+                                  </p>
+                                )}
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-bold">${price.toFixed(2)}</p>
+                                <p className="text-sm font-bold">${tier.price.toFixed(2)}</p>
                                 {savings && (
                                   <p className="text-xs text-primary font-medium">{savings}</p>
                                 )}
@@ -570,7 +577,7 @@ export default function ServiceDetailPage() {
       </section>
 
       {/* ================================================================
-          PRICING SECTION (3 cards)
+          PRICING SECTION (dynamic cards)
           ================================================================ */}
       <section className="pb-10 md:pb-14 bg-muted/30 py-10 md:py-14">
         <div className="container mx-auto max-w-5xl px-4 sm:px-6">
@@ -583,10 +590,14 @@ export default function ServiceDetailPage() {
             className="text-center mb-10"
           >
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
-              Choose Your <span className="text-primary">Plan</span>
+              {isSubscription
+                ? <>Choose Your <span className="text-primary">Plan</span></>
+                : <>Choose Your <span className="text-primary">Package</span></>}
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Select the subscription duration that works best for you. Longer plans save more!
+              {isSubscription
+                ? 'Select the subscription duration that works best for you.'
+                : 'Select the package that fits your needs.'}
             </p>
           </motion.div>
 
@@ -594,23 +605,26 @@ export default function ServiceDetailPage() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-50px' }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className={`grid grid-cols-1 gap-6 ${
+              tiers.length <= 2
+                ? 'md:grid-cols-2'
+                : 'md:grid-cols-3'
+            }`}
           >
-            {pricingOptions.map((option, i) => {
-              const price = getPrice(option.key)
-              const monthly = getMonthlyPrice(option.key)
-              const savings = getSavings(option.key)
-              const isSelected = selectedDuration === option.key
+            {tiers.map((tier, i) => {
+              const monthly = isSubscription ? getMonthlyPrice(tier) : null
+              const savings = isSubscription ? getSavings(tier, tiers) : ''
+              const isSelected = selectedTier?.duration === tier.duration
 
               return (
                 <motion.div
-                  key={option.key}
+                  key={tier.duration}
                   variants={fadeUp}
                   custom={i}
                 >
                   <Card
                     className={`relative h-full transition-all duration-300 cursor-pointer ${
-                      option.popular
+                      tier.popular
                         ? 'border-primary glow-green'
                         : 'border-border'
                     } ${
@@ -618,10 +632,10 @@ export default function ServiceDetailPage() {
                         ? 'ring-2 ring-primary shadow-lg shadow-primary/10'
                         : 'hover:border-primary/30 hover:shadow-md'
                     }`}
-                    onClick={() => setSelectedDuration(option.key)}
+                    onClick={() => setSelectedTier(tier)}
                   >
                     {/* Popular badge */}
-                    {option.popular && (
+                    {tier.popular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <Badge className="bg-primary text-primary-foreground shadow-md shadow-primary/25 px-3">
                           Popular
@@ -629,18 +643,25 @@ export default function ServiceDetailPage() {
                       </div>
                     )}
 
-                    <CardHeader className={`text-center ${option.popular ? 'pt-8' : ''}`}>
-                      <CardTitle className="text-lg">{option.label}</CardTitle>
-                      <CardDescription>{option.duration} subscription</CardDescription>
+                    <CardHeader className={`text-center ${tier.popular ? 'pt-8' : ''}`}>
+                      <CardTitle className="text-lg">{tier.label}</CardTitle>
+                      {isSubscription && monthly !== null && (
+                        <CardDescription>${monthly.toFixed(2)}/month</CardDescription>
+                      )}
+                      {!isSubscription && tier.description && (
+                        <CardDescription>{tier.description}</CardDescription>
+                      )}
                     </CardHeader>
 
                     <CardContent className="text-center space-y-4">
                       {/* Price */}
                       <div>
-                        <span className="text-4xl font-extrabold">${price.toFixed(2)}</span>
-                        <span className="text-sm text-muted-foreground ml-1">
-                          (${monthly.toFixed(2)}/mo)
-                        </span>
+                        <span className="text-4xl font-extrabold">${tier.price.toFixed(2)}</span>
+                        {isSubscription && monthly !== null && (
+                          <span className="text-sm text-muted-foreground ml-1">
+                            (${monthly.toFixed(2)}/mo)
+                          </span>
+                        )}
                       </div>
 
                       {savings && (
@@ -657,10 +678,17 @@ export default function ServiceDetailPage() {
                           <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                           Full access to all features
                         </li>
-                        <li className="flex items-center gap-2 text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                          {option.duration} validity
-                        </li>
+                        {isSubscription ? (
+                          <li className="flex items-center gap-2 text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            {tier.label.toLowerCase()} validity
+                          </li>
+                        ) : (
+                          <li className="flex items-center gap-2 text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            One-time purchase
+                          </li>
+                        )}
                         <li className="flex items-center gap-2 text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                           Priority support
@@ -673,11 +701,11 @@ export default function ServiceDetailPage() {
                         className={`w-full ${
                           isSelected
                             ? 'bg-primary text-primary-foreground'
-                            : option.popular
+                            : tier.popular
                               ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
                               : ''
                         }`}
-                        variant={isSelected || option.popular ? 'default' : 'outline'}
+                        variant={isSelected || tier.popular ? 'default' : 'outline'}
                       >
                         {isSelected ? (
                           <>
@@ -698,12 +726,12 @@ export default function ServiceDetailPage() {
       </section>
 
       {/* ================================================================
-          ORDER FORM (appears when duration selected)
+          ORDER FORM (appears when tier selected)
           ================================================================ */}
       <section className="py-10 md:py-14">
         <div className="container mx-auto max-w-2xl px-4 sm:px-6">
           <AnimatePresence>
-            {selectedDuration && (
+            {selectedTier && (
               <motion.div
                 variants={slideDown}
                 initial="hidden"
@@ -719,7 +747,7 @@ export default function ServiceDetailPage() {
                       <div>
                         <CardTitle className="text-lg">Place Your Order</CardTitle>
                         <CardDescription>
-                          {pricingOptions.find((o) => o.key === selectedDuration)?.label} plan — ${getPrice(selectedDuration).toFixed(2)}
+                          {selectedTier.label} — ${selectedTier.price.toFixed(2)}
                         </CardDescription>
                       </div>
                     </div>
@@ -859,14 +887,14 @@ export default function ServiceDetailPage() {
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Duration</span>
                             <span className="font-medium">
-                              {pricingOptions.find((o) => o.key === selectedDuration)?.label}
+                              {selectedTier.label}
                             </span>
                           </div>
                           <Separator />
                           <div className="flex items-center justify-between">
                             <span className="font-medium">Total</span>
                             <span className="text-xl font-bold text-primary">
-                              ${getPrice(selectedDuration).toFixed(2)}
+                              ${selectedTier.price.toFixed(2)}
                             </span>
                           </div>
                         </div>

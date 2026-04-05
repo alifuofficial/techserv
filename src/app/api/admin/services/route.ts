@@ -51,9 +51,8 @@ export async function POST(request: NextRequest) {
       longDescription,
       features,
       icon,
-      price3m,
-      price6m,
-      price12m,
+      pricingType,
+      pricingTiers,
       isActive,
       sortOrder,
     } = body as {
@@ -63,9 +62,8 @@ export async function POST(request: NextRequest) {
       longDescription?: string;
       features?: string;
       icon?: string;
-      price3m?: number;
-      price6m?: number;
-      price12m?: number;
+      pricingType?: string;
+      pricingTiers?: unknown;
       isActive?: boolean;
       sortOrder?: number;
     };
@@ -78,11 +76,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (price3m === undefined || price6m === undefined || price12m === undefined) {
+    // Validate pricing type
+    if (pricingType !== "subscription" && pricingType !== "one_time") {
       return NextResponse.json(
-        { error: "All pricing fields (price3m, price6m, price12m) are required" },
+        { error: "pricingType must be 'subscription' or 'one_time'" },
         { status: 400 }
       );
+    }
+
+    // Validate pricing tiers
+    if (!Array.isArray(pricingTiers) || pricingTiers.length === 0) {
+      return NextResponse.json(
+        { error: "At least one pricing tier is required" },
+        { status: 400 }
+      );
+    }
+
+    for (const tier of pricingTiers) {
+      if (!tier.label || typeof tier.label !== "string") {
+        return NextResponse.json(
+          { error: "Each tier must have a label" },
+          { status: 400 }
+        );
+      }
+      if (typeof tier.price !== "number" || tier.price < 0) {
+        return NextResponse.json(
+          { error: `Tier "${tier.label}" must have a valid price` },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate slug from title if not provided
@@ -114,9 +136,8 @@ export async function POST(request: NextRequest) {
         longDescription: longDescription ?? "",
         features: features ?? "",
         icon: icon ?? "Zap",
-        price3m,
-        price6m,
-        price12m,
+        pricingType: pricingType ?? "one_time",
+        pricingTiers: JSON.stringify(pricingTiers),
         isActive: isActive ?? true,
         sortOrder: sortOrder ?? 0,
       },

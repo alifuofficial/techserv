@@ -71,9 +71,8 @@ export async function PATCH(
       longDescription,
       features,
       icon,
-      price3m,
-      price6m,
-      price12m,
+      pricingType,
+      pricingTiers,
       isActive,
       sortOrder,
     } = body as {
@@ -83,12 +82,59 @@ export async function PATCH(
       longDescription?: string;
       features?: string;
       icon?: string;
-      price3m?: number;
-      price6m?: number;
-      price12m?: number;
+      pricingType?: string;
+      pricingTiers?: unknown;
       isActive?: boolean;
       sortOrder?: number;
     };
+
+    // Validate pricing type if provided
+    if (pricingType !== undefined && pricingType !== "subscription" && pricingType !== "one_time") {
+      return NextResponse.json(
+        { error: "pricingType must be 'subscription' or 'one_time'" },
+        { status: 400 }
+      );
+    }
+
+    // Validate pricing tiers if provided
+    if (pricingTiers !== undefined) {
+      if (!Array.isArray(pricingTiers) || pricingTiers.length === 0) {
+        return NextResponse.json(
+          { error: "pricingTiers must be a non-empty JSON array" },
+          { status: 400 }
+        );
+      }
+
+      const resolvedPricingType = pricingType ?? existing.pricingType;
+
+      for (let i = 0; i < pricingTiers.length; i++) {
+        const tier = pricingTiers[i] as Record<string, unknown>;
+        if (typeof tier.label !== 'string' || !tier.label.trim()) {
+          return NextResponse.json(
+            { error: `Tier ${i + 1}: label is required and must be a non-empty string` },
+            { status: 400 }
+          );
+        }
+        if (typeof tier.duration !== 'string' || !tier.duration.trim()) {
+          return NextResponse.json(
+            { error: `Tier ${i + 1}: duration is required and must be a non-empty string` },
+            { status: 400 }
+          );
+        }
+        if (typeof tier.price !== 'number' || tier.price < 0) {
+          return NextResponse.json(
+            { error: `Tier ${i + 1}: price is required and must be a non-negative number` },
+            { status: 400 }
+          );
+        }
+        if (resolvedPricingType === 'one_time' && tier.duration !== 'one_time') {
+          return NextResponse.json(
+            { error: `Tier ${i + 1}: duration must be "one_time" for one_time pricing` },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     // If slug is being updated, check for duplicates
     if (slug && slug !== existing.slug) {
@@ -110,9 +156,8 @@ export async function PATCH(
         ...(longDescription !== undefined && { longDescription }),
         ...(features !== undefined && { features }),
         ...(icon !== undefined && { icon }),
-        ...(price3m !== undefined && { price3m }),
-        ...(price6m !== undefined && { price6m }),
-        ...(price12m !== undefined && { price12m }),
+        ...(pricingType !== undefined && { pricingType }),
+        ...(pricingTiers !== undefined && { pricingTiers: JSON.stringify(pricingTiers) }),
         ...(isActive !== undefined && { isActive }),
         ...(sortOrder !== undefined && { sortOrder }),
       },

@@ -227,3 +227,117 @@ Created `/home/z/my-project/src/app/admin/settings/page.tsx` as a "use client" c
 - **Dark Mode**: Full dark mode support with dark: prefixed classes on all interactive elements
 - Lint passes clean with 0 errors/0 warnings, dev server compiles and serves /admin/settings with 200 status
 - Page renders inside SidebarInset with p-4 md:p-6 space-y-6 container
+
+---
+## Task ID: 23 - flexible-pricing-forms
+### Work Task
+Update admin service create and edit forms to support the new flexible pricing model with `pricingType` (subscription/one_time) and dynamic `pricingTiers` JSON array.
+
+### Work Summary
+Updated 4 files to replace the old fixed 3-price model (price3m/price6m/price12m) with the new flexible pricing system:
+
+**1. `/api/admin/services/route.ts` — Updated POST handler**
+- Replaced price3m/price6m/price12m validation with pricingType + pricingTiers validation
+- Validates pricingType is "subscription" or "one_time"
+- Validates pricingTiers is a non-empty array with each tier having a label (string) and price (number >= 0)
+- Stores pricingTiers as JSON.stringify() in the database
+- Removed old price field references
+
+**2. `/api/admin/services/[id]/route.ts` — Updated PATCH handler**
+- Same pricingType/pricingTiers validation as POST
+- Uses conditional spread for pricingType and pricingTiers (JSON.stringify) fields
+- Removed old price field references
+
+**3. `/admin/services/new/page.tsx` — Create Service (rewritten)**
+- **PricingTier type**: `{ label, duration, price, popular?, description? }`
+- **Pricing Type Toggle**: Two styled toggle buttons (not radio buttons) with Repeat icon for "Recurring Subscription" and CreditCard icon for "One-Time Payment". Active state uses primary color border + bg + text. Max-width constraint (max-w-md).
+- **Dynamic Pricing Tiers Editor**: Interactive list of tier cards managed via useState (not react-hook-form since it's complex array state)
+  - Each tier card has: Label input, Duration dropdown (Select from shadcn/ui with 5 predefined durations for subscription, disabled "One-Time" input for one_time), Price input with $ prefix, Popular toggle with amber Star icon, Description input
+  - "+ Add Tier" button adds new empty tier
+  - X delete button on each tier (disabled when only 1 tier remains)
+  - Scrollable container (max-h-500px overflow-y-auto) for many tiers
+  - Empty state with dashed border when all tiers removed
+- **Pricing type change**: Resets all tiers to a single empty tier with appropriate default duration
+- **Form submission**: Filters valid tiers (label + price > 0), serializes to JSON, sends pricingType + pricingTiers array to API
+- All other sections preserved: Basic Info, Icon Selection, Features, Settings, breadcrumb, back button, cancel/submit
+
+**4. `/admin/services/[id]/page.tsx` — Edit Service (rewritten)**
+- Same pricing UI as create page
+- **Pre-population**: Parses pricingTiers JSON string from API response into PricingTier[] array with safe try/catch fallback to single empty tier
+- Preserves pricingType from API response
+- All other features preserved: loading skeleton, not-found state, delete functionality with order count warning, breadcrumb, back button
+
+**TierEditor Component**: Shared inline component in both pages with consistent props interface, renders a card-like row with responsive grid layout (sm:2-col, lg:4-col for main inputs + full-width description).
+
+**Design**: Green/primary theme consistent with existing admin pages. shadcn/ui components (Card, Input, Button, Switch, Select, Label, Separator). Dark mode support via dark: prefixes. Framer Motion animations preserved.
+- Lint passes clean with 0 errors/0 warnings
+- Dev server compiles and serves /admin/services/new with 200 status
+
+---
+## Task ID: 24 - flexible-pricing-marketing-pages
+### Work Task
+Update the marketing (public-facing) service catalog and detail pages to support the new flexible pricing model with `pricingType` (subscription/one_time) and dynamic `pricingTiers` JSON data.
+
+### Work Summary
+Updated 2 marketing-facing service pages to replace the hardcoded 3-tier pricing model with dynamic flexible pricing:
+
+**1. `/src/app/services/page.tsx` — Service Catalog**
+- **Service interface**: Replaced `price3m`, `price6m`, `price12m` with `pricingType` (string) and `pricingTiers` (string). Added `orderCount`.
+- **PricingTier interface + helper**: Added `PricingTier` type and `getParsedTiers()` helper function to safely parse JSON tiers.
+- **Price display on cards**: 
+  - Subscription services: Shows "From $X.XX/mo" using the cheapest computed monthly rate across all tiers
+  - One-time services: Shows "From $X.XX" using the cheapest one-time price (no /mo suffix)
+- **Pricing type badge**: Added a small `Badge` on each card below the description:
+  - Subscription: primary-colored outline badge reading "Subscription"
+  - One-time: amber-colored outline badge reading "One-Time"
+- All existing patterns preserved: search, framer-motion animations, skeleton loading, empty state, grid layout
+
+**2. `/src/app/services/[slug]/page.tsx` — Service Detail (biggest change)**
+- **Service interface**: Replaced `price3m`, `price6m`, `price12m` with `pricingType` and `pricingTiers`
+- **Removed all hardcoded pricing logic**: Removed `DurationKey` type, `pricingOptions` constant array, `getPrice()`, `getMonthlyPrice()`, `getSavings()` old functions
+- **New pricing helpers**:
+  - `getParsedTiers()`: Safe JSON parse with fallback to empty array
+  - `getMonthlyPrice(tier)`: Extracts month count from duration regex, returns per-month price or null
+  - `getSavings(tier, allTiers)`: Computes savings % by comparing monthly rate against cheapest across all tiers
+- **State change**: `selectedDuration: DurationKey | null` → `selectedTier: PricingTier | null` (tier comparison by `duration` field)
+- **Sidebar Pricing Summary**: 
+  - Dynamic tier buttons from parsed data instead of hardcoded 3 options
+  - Subscription tiers: shows label + monthly rate + savings percentage
+  - One-time tiers: shows label + price + description (if any)
+  - Added pricing type badge next to "Pricing" title
+- **Pricing Section (cards)**:
+  - Title: "Choose Your Plan" (subscription) / "Choose Your Package" (one-time)
+  - Subtitle: "Select the subscription duration..." / "Select the package that fits your needs."
+  - Responsive grid: 2 columns for ≤2 tiers, 3 columns for 3+ tiers
+  - Each card: tier label, price with monthly breakdown (subscription), description (one-time), popular badge, feature hints with type-appropriate text, select button
+- **Order Form**:
+  - Duration label uses tier label (e.g. "Basic Bot" or "6 Months") instead of hardcoded "3 Months plan"
+  - Total uses `selectedTier.price`
+  - Everything else preserved (telegram username, screenshot upload, submit)
+- **Features section**: CardDescription changes based on pricingType — "Everything included with your subscription" vs "Everything included with this service"
+- All existing UI patterns preserved: framer-motion, shadcn/ui, breadcrumbs, skeletons, toast, AnimatePresence
+- Lint passes clean with 0 errors/0 warnings
+- Verified Prisma client has correct fields (pricingType, pricingTiers) via direct test
+---
+Task ID: 1
+Agent: Main Agent
+Task: Update pricing model to support both subscription and one-time payment services
+
+Work Log:
+- Updated Prisma schema: removed price3m/price6m/price12m, added pricingType (string) and pricingTiers (JSON string)
+- Reset database and reseeded with 6 services: 2 subscription (Telegram Premium, Channel Promotion) and 4 one-time (Bot Dev, Web Dev, Account Services, Mobile App Dev)
+- Updated all 5 API routes (admin services CRUD, public services, orders) to handle new pricing model
+- Updated admin services list page: single pricing column with type badge + computed display price
+- Updated admin service create/edit forms: pricing type toggle + dynamic tier editor with add/remove
+- Updated marketing service catalog: pricing type badges + appropriate price display
+- Updated marketing service detail: dynamic pricing cards, adaptive layout for subscription vs one-time
+- Updated landing page: dynamic price calculation from parsed tiers
+
+Stage Summary:
+- Services now support two pricing types: "subscription" (recurring) and "one_time" (one-time payment)
+- Admin can create services with custom pricing tiers via interactive tier editor
+- Each tier has: label, duration, price, optional popular flag, optional description
+- Subscription services show monthly rates; one-time services show flat prices
+- All lint checks pass (0 errors)
+- Dev server compiles and serves correctly
+

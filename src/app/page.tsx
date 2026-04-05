@@ -35,6 +35,14 @@ import { Separator } from '@/components/ui/separator'
 /* ────────────────────────────────────────────
    Types
    ──────────────────────────────────────────── */
+interface PricingTier {
+  label: string
+  duration: string
+  price: number
+  popular?: boolean
+  description?: string
+}
+
 interface Service {
   id: string
   title: string
@@ -43,12 +51,18 @@ interface Service {
   longDescription: string
   features: string
   icon: string
-  price3m: number
-  price6m: number
-  price12m: number
+  pricingType: string
+  pricingTiers: string
   isActive: boolean
   sortOrder: number
   orderCount: number
+}
+
+/* ────────────────────────────────────────────
+   Helpers
+   ──────────────────────────────────────────── */
+function getParsedTiers(tiersJson: string): PricingTier[] {
+  try { return JSON.parse(tiersJson || '[]') } catch { return [] }
 }
 
 /* ────────────────────────────────────────────
@@ -460,7 +474,8 @@ export default function Home() {
             ) : (
               services.map((service, i) => {
                 const IconComp = iconMap[service.icon] || Zap
-                const lowestPrice = Math.min(service.price3m, service.price6m, service.price12m)
+                const tiers = getParsedTiers(service.pricingTiers)
+                const lowestPrice = tiers.length > 0 ? Math.min(...tiers.map(t => t.price)) : 0
 
                 return (
                   <motion.div
@@ -494,9 +509,12 @@ export default function Home() {
 
                       <CardFooter className="flex items-center justify-between mt-auto">
                         <div>
-                          <span className="text-xs text-muted-foreground">Starting from</span>
+                          <span className="text-xs text-muted-foreground">
+                            Starting from
+                          </span>
                           <p className="text-lg font-bold text-primary">
                             ${lowestPrice.toFixed(2)}
+                            {service.pricingType === 'subscription' && <span className="text-xs font-normal text-muted-foreground ml-1">/mo</span>}
                           </p>
                         </div>
                         <Button variant="outline" size="sm" asChild className="group/btn">

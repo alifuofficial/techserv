@@ -40,6 +40,14 @@ import { Input } from '@/components/ui/input'
 /* ────────────────────────────────────────────
    Types
    ──────────────────────────────────────────── */
+interface PricingTier {
+  label: string
+  duration: string
+  price: number
+  popular?: boolean
+  description?: string
+}
+
 interface Service {
   id: string
   title: string
@@ -48,12 +56,15 @@ interface Service {
   longDescription: string
   features: string
   icon: string
-  price3m: number
-  price6m: number
-  price12m: number
+  pricingType: string
+  pricingTiers: string
   isActive: boolean
   sortOrder: number
   orderCount: number
+}
+
+function getParsedTiers(tiersJson: string): PricingTier[] {
+  try { return JSON.parse(tiersJson || '[]') } catch { return [] }
 }
 
 /* ────────────────────────────────────────────
@@ -93,6 +104,34 @@ const iconMap: Record<string, React.ElementType> = {
   Sparkles,
   Users,
   Star,
+}
+
+/* ────────────────────────────────────────────
+   Helper to get cheapest display price
+   ──────────────────────────────────────────── */
+function getCheapestPrice(service: Service): { price: number; isMonthly: boolean } {
+  const tiers = getParsedTiers(service.pricingTiers)
+  if (tiers.length === 0) return { price: 0, isMonthly: false }
+
+  if (service.pricingType === 'subscription') {
+    // For subscription, compute monthly rates and find cheapest
+    let cheapestMonthly = Infinity
+    for (const tier of tiers) {
+      const match = tier.duration.match(/(\d+)/)
+      if (match) {
+        const months = parseInt(match[1])
+        if (months > 0) {
+          const monthly = tier.price / months
+          if (monthly < cheapestMonthly) cheapestMonthly = monthly
+        }
+      }
+    }
+    return { price: cheapestMonthly === Infinity ? 0 : cheapestMonthly, isMonthly: true }
+  } else {
+    // For one-time, find the cheapest price
+    const cheapest = Math.min(...tiers.map((t) => t.price))
+    return { price: cheapest, isMonthly: false }
+  }
 }
 
 /* ────────────────────────────────────────────
@@ -272,13 +311,7 @@ export default function ServicesPage() {
               >
                 {filteredServices.map((service, i) => {
                   const IconComp = iconMap[service.icon] || Zap
-                  // Calculate cheapest monthly price
-                  const monthlyPrices = [
-                    service.price3m / 3,
-                    service.price6m / 6,
-                    service.price12m / 12,
-                  ]
-                  const cheapestMonthly = Math.min(...monthlyPrices)
+                  const { price: cheapest, isMonthly } = getCheapestPrice(service)
 
                   return (
                     <motion.div
@@ -310,17 +343,30 @@ export default function ServicesPage() {
                         </CardHeader>
 
                         <CardContent className="flex-1">
-                          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-3">
                             {service.shortDescription}
                           </p>
+                          {/* Pricing type badge */}
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              service.pricingType === 'subscription'
+                                ? 'border-primary/30 text-primary'
+                                : 'border-amber-500/30 text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {service.pricingType === 'subscription' ? 'Subscription' : 'One-Time'}
+                          </Badge>
                         </CardContent>
 
                         <CardFooter className="flex items-center justify-between mt-auto pt-0">
                           <div>
                             <span className="text-xs text-muted-foreground">Starting from</span>
                             <p className="text-lg font-bold text-primary">
-                              ${cheapestMonthly.toFixed(2)}
-                              <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                              ${cheapest.toFixed(2)}
+                              {isMonthly && (
+                                <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                              )}
                             </p>
                           </div>
                           <Button variant="outline" size="sm" asChild className="group/btn">

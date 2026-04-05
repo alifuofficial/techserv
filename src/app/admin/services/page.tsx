@@ -60,6 +60,14 @@ import {
 /* ────────────────────────────────────────────
    Types
    ──────────────────────────────────────────── */
+interface PricingTier {
+  label: string
+  duration: string
+  price: number
+  popular?: boolean
+  description?: string
+}
+
 interface Service {
   id: string
   title: string
@@ -68,9 +76,8 @@ interface Service {
   longDescription: string
   features: string
   icon: string
-  price3m: number
-  price6m: number
-  price12m: number
+  pricingType: string // "subscription" | "one_time"
+  pricingTiers: string // JSON string of PricingTier[]
   isActive: boolean
   sortOrder: number
   createdAt: string
@@ -144,6 +151,31 @@ function formatPrice(amount: number) {
   }).format(amount)
 }
 
+function getParsedTiers(service: Service): PricingTier[] {
+  try {
+    return JSON.parse(service.pricingTiers || '[]')
+  } catch {
+    return []
+  }
+}
+
+function getDisplayPrice(service: Service): string {
+  const tiers = getParsedTiers(service)
+  if (tiers.length === 0) return 'N/A'
+  const cheapest = Math.min(...tiers.map(t => t.price))
+
+  if (service.pricingType === 'subscription') {
+    const monthlyPrices = tiers.map(t => {
+      const monthsMatch = t.duration.match(/(\d+)/)
+      const months = monthsMatch ? parseInt(monthsMatch[1]) : 1
+      return t.price / months
+    })
+    const cheapestMonthly = Math.min(...monthlyPrices)
+    return `$${cheapestMonthly.toFixed(2)}/mo`
+  }
+  return `$${cheapest.toFixed(2)}`
+}
+
 /* ────────────────────────────────────────────
    Skeleton Loaders
    ──────────────────────────────────────────── */
@@ -163,12 +195,10 @@ function TableSkeleton() {
   return (
     <div className="rounded-lg border border-border/60 overflow-hidden">
       {/* Header row skeleton */}
-      <div className="hidden md:grid grid-cols-[48px_1.5fr_0.8fr_0.8fr_0.8fr_80px_90px_100px] items-center gap-4 px-4 py-3 bg-muted/30 border-b border-border/60">
+      <div className="hidden md:grid grid-cols-[48px_1.5fr_1.2fr_80px_90px_100px] items-center gap-4 px-4 py-3 bg-muted/30 border-b border-border/60">
         <Skeleton className="h-3.5 w-10" />
         <Skeleton className="h-3.5 w-24" />
-        <Skeleton className="h-3.5 w-16" />
-        <Skeleton className="h-3.5 w-16" />
-        <Skeleton className="h-3.5 w-16" />
+        <Skeleton className="h-3.5 w-24" />
         <Skeleton className="h-3.5 w-14" />
         <Skeleton className="h-3.5 w-16" />
         <Skeleton className="h-3.5 w-20" />
@@ -177,16 +207,14 @@ function TableSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="hidden md:grid grid-cols-[48px_1.5fr_0.8fr_0.8fr_0.8fr_80px_90px_100px] items-center gap-4 px-4 py-3.5 border-b border-border/40 last:border-0"
+          className="hidden md:grid grid-cols-[48px_1.5fr_1.2fr_80px_90px_100px] items-center gap-4 px-4 py-3.5 border-b border-border/40 last:border-0"
         >
           <Skeleton className="h-8 w-8 rounded-lg" />
           <div className="space-y-1">
             <Skeleton className="h-3.5 w-32" />
             <Skeleton className="h-3 w-40" />
           </div>
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-28" />
           <Skeleton className="h-5 w-12 rounded-full" />
           <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-8 w-20 rounded-md ml-auto" />
@@ -206,10 +234,9 @@ function TableSkeleton() {
               </div>
               <Skeleton className="h-5 w-16 rounded-full" />
             </div>
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-16" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
             </div>
           </div>
         ))}
@@ -308,23 +335,21 @@ function MobileServiceCard({
           </Badge>
         </div>
 
-        {/* Prices */}
+        {/* Pricing */}
         <div className="flex items-center gap-2">
-          {[
-            { label: '3mo', price: service.price3m },
-            { label: '6mo', price: service.price6m },
-            { label: '12mo', price: service.price12m },
-          ].map((p) => (
-            <div
-              key={p.label}
-              className="flex-1 rounded-md bg-muted/50 px-2.5 py-1.5 text-center"
-            >
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                {p.label}
-              </p>
-              <p className="text-xs font-semibold tabular-nums">{formatPrice(p.price)}</p>
-            </div>
-          ))}
+          <Badge
+            variant="outline"
+            className={
+              service.pricingType === 'subscription'
+                ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 shrink-0'
+                : 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800 shrink-0'
+            }
+          >
+            {service.pricingType === 'subscription' ? 'Subscription' : 'One-Time'}
+          </Badge>
+          <span className="text-sm font-medium tabular-nums text-primary">
+            From {getDisplayPrice(service)}
+          </span>
         </div>
 
         {/* Bottom: orders + actions */}
@@ -541,13 +566,7 @@ export default function AdminServicesPage() {
                         Service
                       </TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                        3 Months
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                        6 Months
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                        12 Months
+                        Pricing
                       </TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
                         Orders
@@ -587,21 +606,23 @@ export default function AdminServicesPage() {
                             </div>
                           </TableCell>
 
-                          {/* Prices */}
+                          {/* Pricing */}
                           <TableCell className="text-right">
-                            <span className="text-sm tabular-nums font-medium">
-                              {formatPrice(service.price3m)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm tabular-nums font-medium">
-                              {formatPrice(service.price6m)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm tabular-nums font-semibold text-primary">
-                              {formatPrice(service.price12m)}
-                            </span>
+                            <div className="flex items-center justify-end gap-2">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  service.pricingType === 'subscription'
+                                    ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                                    : 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+                                }
+                              >
+                                {service.pricingType === 'subscription' ? 'Sub' : 'One-Time'}
+                              </Badge>
+                              <span className="text-sm tabular-nums font-semibold text-primary">
+                                From {getDisplayPrice(service)}
+                              </span>
+                            </div>
                           </TableCell>
 
                           {/* Orders */}

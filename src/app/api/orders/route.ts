@@ -53,14 +53,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validDurations = ["3months", "6months", "1year"];
-    if (!validDurations.includes(duration)) {
-      return NextResponse.json(
-        { error: "Invalid duration. Must be 3months, 6months, or 1year" },
-        { status: 400 }
-      );
-    }
-
     // Validate service exists and is active
     const service = await db.service.findUnique({
       where: { id: serviceId },
@@ -73,19 +65,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate amount based on duration
-    let amount = 0;
-    switch (duration) {
-      case "3months":
-        amount = service.price3m;
-        break;
-      case "6months":
-        amount = service.price6m;
-        break;
-      case "1year":
-        amount = service.price12m;
-        break;
+    // Parse pricing tiers and find the matching tier for the selected duration
+    let tiers: Array<{ label: string; duration: string; price: number }>;
+    try {
+      tiers = JSON.parse(service.pricingTiers) as Array<{ label: string; duration: string; price: number }>;
+    } catch {
+      return NextResponse.json(
+        { error: "Service pricing data is corrupted" },
+        { status: 500 }
+      );
     }
+
+    const selectedTier = tiers.find((t) => t.duration === duration);
+    if (!selectedTier) {
+      return NextResponse.json(
+        { error: `Invalid duration "${duration}". Available durations: ${tiers.map((t) => t.duration).join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const amount = selectedTier.price;
 
     // Create order
     const order = await db.order.create({
