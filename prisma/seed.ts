@@ -192,9 +192,12 @@ async function seed() {
   });
   console.log("✅ Service created:", mobileDev.title);
 
-  // Create sample orders
-  const sampleOrder = await db.order.create({
-    data: {
+  // Create sample orders (use upsert with fixed IDs for idempotency)
+  const sampleOrder = await db.order.upsert({
+    where: { id: "order_seed_001" },
+    update: {},
+    create: {
+      id: "order_seed_001",
       userId: testUser.id,
       serviceId: telegramPremium.id,
       status: "pending",
@@ -206,8 +209,11 @@ async function seed() {
   });
   console.log("✅ Sample order created:", sampleOrder.id);
 
-  const completedOrder = await db.order.create({
-    data: {
+  const completedOrder = await db.order.upsert({
+    where: { id: "order_seed_002" },
+    update: {},
+    create: {
+      id: "order_seed_002",
       userId: testUser.id,
       serviceId: telegramPremium.id,
       status: "completed",
@@ -220,8 +226,11 @@ async function seed() {
   });
   console.log("✅ Completed sample order created:", completedOrder.id);
 
-  const botOrder = await db.order.create({
-    data: {
+  const botOrder = await db.order.upsert({
+    where: { id: "order_seed_003" },
+    update: {},
+    create: {
+      id: "order_seed_003",
       userId: testUser.id,
       serviceId: botDevelopment.id,
       status: "approved",
@@ -303,7 +312,7 @@ async function seed() {
 
   await db.invoice.upsert({
     where: { invoiceNumber: invNum1 },
-    update: { orderId: sampleOrder.id, userId: testUser.id, amount: sampleOrder.amount, paymentMethodId: telebirr.id },
+    update: { orderId: sampleOrder.id, userId: testUser.id, amount: sampleOrder.amount, status: "pending", paymentMethodId: telebirr.id },
     create: {
       id: "inv_sample_001",
       invoiceNumber: invNum1,
@@ -318,7 +327,7 @@ async function seed() {
 
   await db.invoice.upsert({
     where: { invoiceNumber: invNum2 },
-    update: { orderId: completedOrder.id, userId: testUser.id, amount: completedOrder.amount, paymentMethodId: cbeBirr.id },
+    update: { orderId: completedOrder.id, userId: testUser.id, amount: completedOrder.amount, status: "paid", paymentMethodId: cbeBirr.id },
     create: {
       id: "inv_sample_002",
       invoiceNumber: invNum2,
@@ -334,7 +343,7 @@ async function seed() {
 
   await db.invoice.upsert({
     where: { invoiceNumber: invNum3 },
-    update: { orderId: botOrder.id, userId: testUser.id, amount: botOrder.amount },
+    update: { orderId: botOrder.id, userId: testUser.id, amount: botOrder.amount, status: "pending" },
     create: {
       id: "inv_sample_003",
       invoiceNumber: invNum3,
