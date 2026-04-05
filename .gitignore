@@ -59,10 +59,14 @@ db/*.db-journal
 # OS
 Thumbs.db
 
-# temp
+# temp / dev environment
 local-*
 .claude
 .z-ai-config
+.zscripts/
 test/
 prompt
 skills/
+mini-services/
+Caddyfile
+worklog.md
