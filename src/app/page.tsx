@@ -325,7 +325,7 @@ export default function Home() {
             
             {/* Left Image */}
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={reveal} custom={0} className="relative h-[400px] lg:h-[500px] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-xl order-2 lg:order-1">
-              <Image src="/images/feature-light.png" alt="Growth and Quality" fill className="object-cover" />
+              <Image src="/images/feature-light-v2.png" alt="Growth and Quality" fill className="object-cover" />
             </motion.div>
 
             {/* Right Content */}
