@@ -294,6 +294,32 @@ export default function ServiceDetailPage() {
 
     try {
       setSubmitting(true)
+
+      // Upload screenshot first if provided
+      let screenshotUrl: string | null = null
+      if (screenshotFile) {
+        const uploadForm = new FormData()
+        uploadForm.append('file', screenshotFile)
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadForm,
+        })
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          screenshotUrl = uploadData.url
+        } else {
+          const uploadErr = await uploadRes.json()
+          toast({
+            title: 'Failed to upload screenshot',
+            description: uploadErr.error || 'Please try again.',
+            variant: 'destructive',
+          })
+          setSubmitting(false)
+          return
+        }
+      }
+
+      // Create the order
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +327,7 @@ export default function ServiceDetailPage() {
           serviceId: service.id,
           duration: selectedTier.duration,
           telegramUsername: formattedTg,
-          screenshot: screenshotFile?.name || null,
+          screenshot: screenshotUrl,
         }),
       })
 

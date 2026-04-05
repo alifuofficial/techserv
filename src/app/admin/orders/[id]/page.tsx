@@ -285,6 +285,7 @@ export default function AdminOrderDetailPage() {
   const [statusLoading, setStatusLoading] = useState(false)
   const [noteLoading, setNoteLoading] = useState(false)
   const [adminNote, setAdminNote] = useState('')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const id = params.id as string
 
@@ -707,18 +708,33 @@ export default function AdminOrderDetailPage() {
               </CardHeader>
               <CardContent>
                 {order.screenshot ? (
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800">
                       <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
                       <span className="text-sm font-medium text-green-700 dark:text-green-300">
                         Payment proof received
                       </span>
                     </div>
-                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-muted/50">
-                      <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <p className="text-xs text-muted-foreground truncate font-mono">
-                        {order.screenshot}
-                      </p>
+                    {/* Screenshot image preview */}
+                    <div
+                      className="relative group cursor-pointer rounded-lg overflow-hidden border border-border/60 bg-muted/30"
+                      onClick={() => setLightboxOpen(true)}
+                    >
+                      <img
+                        src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`}
+                        alt="Payment proof"
+                        className="w-full max-h-48 object-contain bg-muted/20"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-black/70 rounded-full p-2.5 shadow-lg">
+                          <ImageIcon className="h-5 w-5 text-foreground" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] bg-black/60 text-white px-2 py-1 rounded-full">
+                          Click to enlarge
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -732,6 +748,32 @@ export default function AdminOrderDetailPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Lightbox overlay for full-size screenshot view */}
+          {lightboxOpen && order.screenshot && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <div className="relative max-w-4xl max-h-[90vh] w-full">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setLightboxOpen(false)
+                  }}
+                  className="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+                <img
+                  src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`}
+                  alt="Payment proof full size"
+                  className="w-full h-full object-contain rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

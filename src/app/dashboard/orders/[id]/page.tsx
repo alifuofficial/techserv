@@ -29,6 +29,7 @@ import {
   Layers,
   Package,
   Activity,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -194,6 +195,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const id = params.id as string
 
@@ -363,6 +365,68 @@ export default function OrderDetailPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Payment Proof (screenshot) */}
+          {order.screenshot && (
+            <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
+              <Card className="border-border/50 hover:shadow-lg hover:shadow-black/[0.02] transition-all duration-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    Payment Proof
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className="relative group cursor-pointer rounded-lg overflow-hidden border border-border/60 bg-muted/30"
+                    onClick={() => setLightboxOpen(true)}
+                  >
+                    <img
+                      src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`}
+                      alt="Payment proof"
+                      className="w-full max-h-48 object-contain bg-muted/20"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2.5 shadow-lg">
+                        <ImageIcon className="h-5 w-5 text-foreground" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] bg-black/60 text-white px-2 py-1 rounded-full">
+                        Click to enlarge
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Lightbox overlay for full-size screenshot view */}
+          {lightboxOpen && order.screenshot && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <div className="relative max-w-4xl max-h-[90vh] w-full">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setLightboxOpen(false)
+                  }}
+                  className="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+                <img
+                  src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`}
+                  alt="Payment proof full size"
+                  className="w-full h-full object-contain rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Invoice Card */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
