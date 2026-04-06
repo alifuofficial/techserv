@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Order {
@@ -217,6 +218,7 @@ export default function DashboardPage() {
     referral_system_enabled: 'true'
   })
   const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const { formatAmount } = useSettings()
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -298,7 +300,7 @@ export default function DashboardPage() {
         />
         <StatCard 
           title="Lifetime Investment" 
-          value={`$${totalSpent.toLocaleString()}`} 
+          value={formatAmount(totalSpent)} 
           icon={Wallet} 
           colorClass="bg-emerald-500/10 text-emerald-600"
           status="Across all services"
@@ -367,7 +369,7 @@ export default function DashboardPage() {
                                 <h4 className="font-bold text-sm truncate">{order.service.title}</h4>
                                 <StatusBadge status={order.status} />
                               </div>
-                              <span className="text-sm font-black tabular-nums">${order.amount.toFixed(2)}</span>
+                              <span className="text-sm font-black tabular-nums">{formatAmount(order.amount)}</span>
                             </div>
                             
                             {/* Progress Indicator */}

@@ -14,6 +14,7 @@ import {
   Briefcase,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSettings } from '@/hooks/use-settings'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -137,13 +138,7 @@ function durationLabel(d: string) {
   }
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
+// formatCurrency is now provided via useSettings().formatAmount
 
 /* ────────────────────────────────────────────
    Status Badge Component
@@ -349,7 +344,7 @@ function MobileOrderCard({
             </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm text-primary">
-                {formatCurrency(order.amount)}
+                {formatAmount(order.amount)}
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
@@ -364,6 +359,7 @@ function MobileOrderCard({
    Main Page Component
    ──────────────────────────────────────────── */
 export default function AdminOrdersPage() {
+  const { formatAmount } = useSettings()
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -632,7 +628,7 @@ export default function AdminOrdersPage() {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm font-semibold tabular-nums text-primary">
-                            {formatCurrency(order.amount)}
+                            {formatAmount(order.amount)}
                           </span>
                         </TableCell>
                         <TableCell>

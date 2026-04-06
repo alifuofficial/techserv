@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Order {
@@ -107,6 +108,7 @@ type FilterTab = typeof filterTabs[number]['key']
 
 export default function OrdersPage() {
   const { data: session, status } = useSession()
+  const { formatAmount } = useSettings()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -282,7 +284,7 @@ export default function OrdersPage() {
                       {/* Amount & Arrow */}
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="text-right hidden sm:block">
-                          <p className="text-base font-bold tabular-nums">${order.amount.toFixed(2)}</p>
+                          <p className="text-base font-bold tabular-nums">{formatAmount(order.amount)}</p>
                         </div>
                         <div className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground/50 group-hover:text-primary group-hover:bg-primary/10 transition-all duration-200">
                           <ArrowUpRight className="h-4 w-4" />

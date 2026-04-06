@@ -36,6 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Order {
@@ -195,6 +196,7 @@ export default function OrderDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { data: session, status } = useSession()
+  const { formatAmount } = useSettings()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -271,7 +273,7 @@ export default function OrderDetailPage() {
                     <span className="text-border">·</span>
                     <span>{durationLabel(order.duration)}</span>
                     <span className="text-border">·</span>
-                    <span className="font-semibold text-foreground">${order.amount.toFixed(2)}</span>
+                    <span className="font-semibold text-foreground">{formatAmount(order.amount)}</span>
                   </div>
                 </div>
               </div>
@@ -384,7 +386,7 @@ export default function OrderDetailPage() {
                 <Separator />
                 <InfoRow icon={Clock} label="Duration" value={durationLabel(order.duration)} />
                 <Separator />
-                <InfoRow icon={DollarSign} label="Amount" value={`$${order.amount.toFixed(2)}`} />
+                <InfoRow icon={DollarSign} label="Amount" value={formatAmount(order.amount)} />
                 <Separator />
                 <InfoRow icon={Calendar} label="Created" value={format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')} />
                 <Separator />

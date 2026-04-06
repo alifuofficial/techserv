@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSettings } from '@/hooks/use-settings'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -129,13 +130,7 @@ const statusConfig: Record<
 /* ────────────────────────────────────────────
    Helpers
    ──────────────────────────────────────────── */
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
+// formatCurrency is now provided via useSettings().formatAmount
 
 /* ────────────────────────────────────────────
    Status Badge Component
@@ -330,7 +325,7 @@ function MobileInvoiceCard({
             </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm text-primary">
-                {formatCurrency(invoice.amount)}
+                {formatAmount(invoice.amount)}
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
@@ -367,6 +362,7 @@ function MobileInvoiceCard({
    Main Page Component
    ──────────────────────────────────────────── */
 export default function AdminInvoicesPage() {
+  const { formatAmount } = useSettings()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [allInvoices, setAllInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -631,7 +627,7 @@ export default function AdminInvoicesPage() {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm font-semibold tabular-nums text-primary">
-                            {formatCurrency(invoice.amount)}
+                            {formatAmount(invoice.amount)}
                           </span>
                         </TableCell>
                         <TableCell>

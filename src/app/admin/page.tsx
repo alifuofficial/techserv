@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useSettings } from '@/hooks/use-settings'
 import {
   Table,
   TableHeader,
@@ -381,6 +382,7 @@ function QuickActions() {
    Main Page Component
    ──────────────────────────────────────────── */
 export default function AdminDashboardPage() {
+  const { formatAmount } = useSettings()
   const [stats, setStats] = useState<Stats | null>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -473,7 +475,7 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Revenue"
-            value={`$${stats.totalRevenue.toFixed(2)}`}
+            value={stats ? formatAmount(stats.totalRevenue) : '—'}
             icon={DollarSign}
             iconBg="bg-green-100 dark:bg-green-900/30"
             iconColor="text-green-600 dark:text-green-400"
@@ -663,7 +665,7 @@ export default function AdminDashboardPage() {
                       tickLine={false}
                       axisLine={false}
                       tick={{ fontSize: 12 }}
-                      tickFormatter={(v) => `$${v}`}
+                      tickFormatter={(v) => formatAmount(v)}
                     />
                     <ChartTooltip
                       content={<ChartTooltipContent />}
@@ -759,7 +761,7 @@ export default function AdminDashboardPage() {
                               {order.service?.title || '—'}
                             </TableCell>
                             <TableCell className="font-medium text-sm">
-                              ${order.amount.toFixed(2)}
+                              {formatAmount(order.amount)}
                             </TableCell>
                             <TableCell>
                               <StatusBadge status={order.status} />
@@ -828,7 +830,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <div className="flex items-center gap-2 ml-3">
                             <span className="font-semibold text-sm">
-                              ${order.amount.toFixed(2)}
+                              {formatAmount(order.amount)}
                             </span>
                             <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>

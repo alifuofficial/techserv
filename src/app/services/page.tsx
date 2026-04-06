@@ -36,6 +36,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ────────────────────────────────────────────
    Types
@@ -168,6 +169,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const { formatAmount } = useSettings()
 
   useEffect(() => {
     async function fetchServices() {
@@ -363,7 +365,7 @@ export default function ServicesPage() {
                           <div>
                             <span className="text-xs text-muted-foreground">Starting from</span>
                             <p className="text-lg font-bold text-primary">
-                              ${cheapest.toFixed(2)}
+                              {formatAmount(cheapest)}
                               {isMonthly && (
                                 <span className="text-xs font-normal text-muted-foreground">/mo</span>
                               )}
