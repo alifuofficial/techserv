@@ -275,6 +275,7 @@ function MobileInvoiceCard({
   index,
   onMarkPaid,
   markingPaidId,
+  formatAmount,
 }: {
   invoice: Invoice
   index: number

@@ -286,6 +286,7 @@ function EmptyState({ statusFilter }: { statusFilter: StatusFilter }) {
 function MobileOrderCard({
   order,
   index,
+  formatAmount,
 }: {
   order: Order
   index: number
