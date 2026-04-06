@@ -280,6 +280,7 @@ function MobileInvoiceCard({
   index: number
   onMarkPaid: (invoice: Invoice) => void
   markingPaidId: string | null
+  formatAmount: (amount: number) => string
 }) {
   return (
     <motion.div
@@ -686,6 +687,7 @@ export default function AdminInvoicesPage() {
                     index={index}
                     onMarkPaid={handleMarkPaid}
                     markingPaidId={markingPaidId}
+                    formatAmount={formatAmount}
                   />
                 ))}
               </div>

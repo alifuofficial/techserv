@@ -289,6 +289,7 @@ function MobileOrderCard({
 }: {
   order: Order
   index: number
+  formatAmount: (amount: number) => string
 }) {
   return (
     <motion.div
@@ -678,6 +679,7 @@ export default function AdminOrdersPage() {
                     key={order.id}
                     order={order}
                     index={index}
+                    formatAmount={formatAmount}
                   />
                 ))}
               </div>
