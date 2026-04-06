@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useSettings } from '@/hooks/use-settings'
 
 interface Service {
   id: string
@@ -139,6 +140,7 @@ function ServiceCardSkeleton() {
 export default function Home() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
+  const { formatAmount } = useSettings()
 
   useEffect(() => {
     let cancelled = false
@@ -299,7 +301,7 @@ export default function Home() {
                             <div>
                               <p className="text-xs text-slate-500 mb-0.5">Starting at</p>
                               <p className="text-lg font-bold text-slate-900">
-                                ${lowest.toFixed(2)}
+                                {formatAmount(lowest)}
                                 {service.pricingType === 'subscription' && <span className="text-sm font-normal text-slate-500">/mo</span>}
                               </p>
                             </div>
