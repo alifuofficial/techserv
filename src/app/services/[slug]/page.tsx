@@ -54,6 +54,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { useToast } from '@/hooks/use-toast'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ────────────────────────────────────────────
    Types
@@ -212,6 +213,7 @@ export default function ServiceDetailPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const { toast } = useToast()
+  const { formatAmount } = useSettings()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [service, setService] = useState<Service | null>(null)
@@ -574,7 +576,7 @@ export default function ServiceDetailPage() {
                                 <p className="text-sm font-medium">{tier.label}</p>
                                 {monthly !== null && (
                                   <p className="text-xs text-muted-foreground">
-                                    ${monthly.toFixed(2)}/mo
+                                    {formatAmount(monthly)}/mo
                                   </p>
                                 )}
                                 {!isSubscription && tier.description && (
@@ -584,7 +586,7 @@ export default function ServiceDetailPage() {
                                 )}
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-bold">${tier.price.toFixed(2)}</p>
+                                <p className="text-sm font-bold">{formatAmount(tier.price)}</p>
                                 {savings && (
                                   <p className="text-xs text-primary font-medium">{savings}</p>
                                 )}
@@ -672,7 +674,7 @@ export default function ServiceDetailPage() {
                     <CardHeader className={`text-center ${tier.popular ? 'pt-8' : ''}`}>
                       <CardTitle className="text-lg">{tier.label}</CardTitle>
                       {isSubscription && monthly !== null && (
-                        <CardDescription>${monthly.toFixed(2)}/month</CardDescription>
+                        <CardDescription>{formatAmount(monthly)}/month</CardDescription>
                       )}
                       {!isSubscription && tier.description && (
                         <CardDescription>{tier.description}</CardDescription>
@@ -682,10 +684,10 @@ export default function ServiceDetailPage() {
                     <CardContent className="text-center space-y-4">
                       {/* Price */}
                       <div>
-                        <span className="text-4xl font-extrabold">${tier.price.toFixed(2)}</span>
+                        <span className="text-4xl font-extrabold">{formatAmount(tier.price)}</span>
                         {isSubscription && monthly !== null && (
                           <span className="text-sm text-muted-foreground ml-1">
-                            (${monthly.toFixed(2)}/mo)
+                            ({formatAmount(monthly)}/mo)
                           </span>
                         )}
                       </div>
@@ -773,7 +775,7 @@ export default function ServiceDetailPage() {
                       <div>
                         <CardTitle className="text-lg">Place Your Order</CardTitle>
                         <CardDescription>
-                          {selectedTier.label} — ${selectedTier.price.toFixed(2)}
+                          {selectedTier.label} — {formatAmount(selectedTier.price)}
                         </CardDescription>
                       </div>
                     </div>
@@ -920,7 +922,7 @@ export default function ServiceDetailPage() {
                           <div className="flex items-center justify-between">
                             <span className="font-medium">Total</span>
                             <span className="text-xl font-bold text-primary">
-                              ${selectedTier.price.toFixed(2)}
+                              {formatAmount(selectedTier.price)}
                             </span>
                           </div>
                         </div>
