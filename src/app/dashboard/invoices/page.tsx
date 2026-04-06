@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Invoice {
@@ -134,6 +135,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all')
+  const { formatAmount } = useSettings()
 
   useEffect(() => {
     if (authStatus !== 'authenticated') return
@@ -286,7 +288,7 @@ export default function InvoicesPage() {
                     <div className="flex items-end justify-between mt-2">
                       <div className="space-y-1">
                         <p className="text-lg font-bold text-primary tabular-nums">
-                          ${invoice.amount.toFixed(2)}
+                          {formatAmount(invoice.amount)}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{format(new Date(invoice.createdAt), 'MMM d, yyyy')}</span>

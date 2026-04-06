@@ -43,6 +43,7 @@ import {
   Rocket,
   MousePointer2,
 } from 'lucide-react'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ────────────────────────────────────────────
    Types
@@ -275,6 +276,7 @@ function DetailSkeleton() {
    ──────────────────────────────────────────── */
 export default function AdminOrderDetailPage() {
   const params = useParams()
+  const { formatAmount } = useSettings()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -484,7 +486,7 @@ export default function AdminOrderDetailPage() {
               <CardContent className="grid grid-cols-2 gap-4">
                 <InfoField label="Service" value={order.service.title} />
                 <InfoField label="Duration" value={durationLabel(order.duration)} />
-                <InfoField label="Amount" value={`$${order.amount.toFixed(2)}`} highlight />
+                <InfoField label="Amount" value={formatAmount(order.amount)} highlight />
                 <InfoField label="Timeline" value={format(new Date(order.createdAt), 'MMM d, yyyy')} />
               </CardContent>
             </Card>

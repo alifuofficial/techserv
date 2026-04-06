@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Invoice {
@@ -121,6 +122,7 @@ export default function PublicInvoicePage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const { formatAmount } = useSettings()
 
   const invoiceNumber = params.invoiceNumber as string
 
@@ -209,7 +211,7 @@ export default function PublicInvoicePage() {
             <div className="text-center py-3">
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Amount Due</p>
               <p className="text-4xl font-extrabold text-primary tabular-nums">
-                ${invoice.amount.toFixed(2)}
+                {formatAmount(invoice.amount)}
               </p>
               {invoice.paidAt && (
                 <p className="text-xs text-emerald-600 mt-1">

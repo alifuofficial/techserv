@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { useSettings } from '@/hooks/use-settings'
 
 /* ─── Types ─── */
 interface Invoice {
@@ -172,6 +173,7 @@ export default function InvoiceDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const { formatAmount } = useSettings()
 
   const id = params.id as string
 
@@ -271,7 +273,7 @@ export default function InvoiceDetailPage() {
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-primary tabular-nums">
-                  ${invoice.amount.toFixed(2)}
+                  {formatAmount(invoice.amount)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">Total Amount</p>
               </div>
@@ -329,7 +331,7 @@ export default function InvoiceDetailPage() {
               <Separator />
               <InfoField icon={Clock} label="Duration" value={durationLabel(invoice.order.duration)} />
               <Separator />
-              <InfoField icon={DollarSign} label="Amount" value={`$${invoice.amount.toFixed(2)}`} mono />
+              <InfoField icon={DollarSign} label="Amount" value={formatAmount(invoice.amount)} mono />
               <Separator />
               <InfoField icon={AlertCircle} label="Order Status" value={invoice.order.status.charAt(0).toUpperCase() + invoice.order.status.slice(1)} />
               {invoice.order.telegramUsername && (

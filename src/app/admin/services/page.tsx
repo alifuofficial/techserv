@@ -159,7 +159,7 @@ function getParsedTiers(service: Service): PricingTier[] {
   }
 }
 
-function getDisplayPrice(service: Service): string {
+function getDisplayPrice(service: Service, formatAmount: (n: number) => string): string {
   const tiers = getParsedTiers(service)
   if (tiers.length === 0) return 'N/A'
   const cheapest = Math.min(...tiers.map(t => t.price))
@@ -171,9 +171,9 @@ function getDisplayPrice(service: Service): string {
       return t.price / months
     })
     const cheapestMonthly = Math.min(...monthlyPrices)
-    return `$${cheapestMonthly.toFixed(2)}/mo`
+    return `${formatAmount(cheapestMonthly)}/mo`
   }
-  return `$${cheapest.toFixed(2)}`
+  return formatAmount(cheapest)
 }
 
 /* ────────────────────────────────────────────
@@ -291,11 +291,13 @@ function MobileServiceCard({
   index,
   onToggle,
   onDelete,
+  formatAmount,
 }: {
   service: Service
   index: number
   onToggle: (s: Service) => void
   onDelete: (s: Service) => void
+  formatAmount: (n: number) => string
 }) {
   const serviceIcon = getIcon(service.icon)
 
@@ -348,7 +350,7 @@ function MobileServiceCard({
             {service.pricingType === 'subscription' ? 'Subscription' : 'One-Time'}
           </Badge>
           <span className="text-sm font-medium tabular-nums text-primary">
-            From {getDisplayPrice(service)}
+            From {getDisplayPrice(service, formatAmount)}
           </span>
         </div>
 
@@ -394,6 +396,8 @@ function MobileServiceCard({
   )
 }
 
+import { useSettings } from '@/hooks/use-settings'
+
 /* ────────────────────────────────────────────
    Main Page Component
    ──────────────────────────────────────────── */
@@ -404,6 +408,7 @@ export default function AdminServicesPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const { formatAmount } = useSettings()
 
   /* ── Fetch services ── */
   useEffect(() => {
@@ -620,7 +625,7 @@ export default function AdminServicesPage() {
                                 {service.pricingType === 'subscription' ? 'Sub' : 'One-Time'}
                               </Badge>
                               <span className="text-sm tabular-nums font-semibold text-primary">
-                                From {getDisplayPrice(service)}
+                                From {getDisplayPrice(service, formatAmount)}
                               </span>
                             </div>
                           </TableCell>
@@ -731,6 +736,7 @@ export default function AdminServicesPage() {
                     index={index}
                     onToggle={handleToggle}
                     onDelete={(s) => setDeleteTarget(s)}
+                    formatAmount={formatAmount}
                   />
                 ))}
               </div>
