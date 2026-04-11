@@ -5,21 +5,14 @@ WORKDIR /app
 # Enable experimental standalone output
 ENV NEXT_PRIVATE_STANDALONE=true
 
-# Copy package files
-COPY package.json bun.lock ./
-COPY prisma ./prisma/
-
-# Install dependencies
-RUN bun install --frozen-lockfile
-
-# Copy source code
+# Copy everything
 COPY . .
 
-# Generate Prisma client
-RUN bunx prisma generate
-
-# Build the application
-RUN bun run build
+# Install, generate client, and build in a single layer to save disk space
+RUN bun install --frozen-lockfile && \
+    bunx prisma generate && \
+    bun run build && \
+    rm -rf /root/.bun/install/cache
 
 # Stage 2: Runner
 FROM oven/bun:latest AS runner
