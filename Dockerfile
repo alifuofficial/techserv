@@ -40,8 +40,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/bun.lock ./bun.lock
 
-# Ensure the db directory exists for the persistent volume
-RUN mkdir -p /app/db && chown -R nextjs:nodejs /app/db && chmod -R 777 /app/db
+# Ensure the app directory and db directory are owned by nextjs
+# We do this as root before switching to the nextjs user
+RUN mkdir -p /app/db && chown -R nextjs:nodejs /app && chmod -R 777 /app/db
 
 USER nextjs
 
@@ -51,5 +52,5 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # ENTRYPOINT to handle migrations, seed data, then start the server
-# Pinned prisma to @6 and added 'db seed' to create the admin account
-CMD ["sh", "-c", "bunx prisma@6 db push --accept-data-loss && bunx prisma@6 db seed && bun server.js"]
+# --skip-generate prevents EACCES issues during 'db push'
+CMD ["sh", "-c", "bunx prisma@6 db push --accept-data-loss --skip-generate && bunx prisma@6 db seed && bun server.js"]
