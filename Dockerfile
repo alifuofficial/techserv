@@ -22,7 +22,7 @@ RUN bunx prisma generate
 RUN bun run build
 
 # Stage 2: Runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -48,4 +48,5 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # ENTRYPOINT to handle migrations then start the server
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
+# Pinned prisma to @6 to match project dependencies and avoid breaking changes in v7
+CMD ["sh", "-c", "npx prisma@6 db push --accept-data-loss && node server.js"]
