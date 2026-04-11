@@ -29,6 +29,7 @@ function TelegramLoginWrapper() {
   const [botName, setBotName] = useState<string | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -49,12 +50,20 @@ function TelegramLoginWrapper() {
   }, []);
 
   const handleAuth = async (user: any) => {
+    setError(null);
     try {
-      await signIn("telegram", {
+      const result = await signIn("telegram", {
         ...user,
-        callbackUrl: "/dashboard",
+        redirect: false,
       });
+      if (result?.ok && result?.url) {
+        window.location.href = "/dashboard";
+      } else if (result?.error) {
+        setError("Telegram login failed. Please try again.");
+        console.error("Telegram auth error:", result.error);
+      }
     } catch (error) {
+      setError("Telegram login failed. Please try again.");
       console.error("Telegram auth failed:", error);
     }
   };
@@ -63,6 +72,7 @@ function TelegramLoginWrapper() {
 
   return (
     <div className="flex flex-col items-center gap-3">
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <TelegramLogin botName={botName} onAuth={handleAuth} />
     </div>
   );

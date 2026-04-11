@@ -11,7 +11,6 @@ export async function GET() {
             "telegram_enabled", "telegram_bot_username", "maintenance_mode",
             "account_tier_enabled", "referral_system_enabled", "registration_enabled",
             "tier_benefits_standard", "tier_benefits_gold", "referral_benefits",
-            "telegram_bot_token", // Added for internal use if needed, though usually sensitive
           ],
         },
       },
