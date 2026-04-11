@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { format, subDays } from 'date-fns'
+import { format } from 'date-fns'
 import {
   BarChart,
   Bar,
@@ -12,6 +12,9 @@ import {
   CartesianGrid,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts'
 import {
   ShoppingCart,
@@ -19,14 +22,20 @@ import {
   DollarSign,
   Users,
   ArrowRight,
-  ArrowUpRight,
+  TrendingUp,
+  TrendingDown,
   PackageOpen,
   Eye,
   LayoutList,
   Package,
   Settings,
   Home,
-  TrendingUp,
+  Inbox,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+  Activity,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,30 +44,18 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSettings } from '@/hooks/use-settings'
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table'
-import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
   type ChartConfig,
 } from '@/components/ui/chart'
 
-/* ────────────────────────────────────────────
-   Types
-   ──────────────────────────────────────────── */
 interface Stats {
   totalOrders: number
   pendingOrders: number
@@ -81,180 +78,74 @@ interface Order {
   duration: string
   amount: number
   createdAt: string
-  user: {
-    id: string
-    name: string
-    email: string
-  }
-  service: {
-    id: string
-    title: string
-    slug: string
-  }
+  user: { id: string; name: string; email: string }
+  service: { id: string; title: string; slug: string }
   progress: number
 }
 
-/* ────────────────────────────────────────────
-   Animation Variants
-   ──────────────────────────────────────────── */
 const container = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 }
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-  },
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
 }
 
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-  },
-}
-
-/* ────────────────────────────────────────────
-   Status badge helper
-   ──────────────────────────────────────────── */
-const statusStyles: Record<string, string> = {
-  pending:
-    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-  approved:
-    'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  completed:
-    'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-  rejected:
-    'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+const statusStyles: Record<string, { bg: string; text: string; icon: React.ElementType }> = {
+  pending: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', icon: Clock },
+  approved: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', icon: Sparkles },
+  completed: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
+  rejected: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', icon: XCircle },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  const style = statusStyles[status] || statusStyles.pending
+  const Icon = style.icon
   return (
-    <Badge variant="outline" className={statusStyles[status] || ''}>
-      {label}
+    <Badge variant="outline" className={`${style.bg} ${style.text} border-0 gap-1 font-medium`}>
+      <Icon className="h-3 w-3" />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </Badge>
   )
 }
 
-/* ────────────────────────────────────────────
-   Chart Configs
-   ──────────────────────────────────────────── */
-const statusChartConfig = {
+const chartConfig = {
+  revenue: { label: 'Revenue', color: 'oklch(0.65 0.17 155)' },
   pending: { label: 'Pending', color: 'oklch(0.75 0.15 85)' },
   approved: { label: 'Approved', color: 'oklch(0.65 0.15 240)' },
   completed: { label: 'Completed', color: 'oklch(0.65 0.17 155)' },
   rejected: { label: 'Rejected', color: 'oklch(0.65 0.2 25)' },
 } satisfies ChartConfig
 
-const revenueChartConfig = {
-  revenue: {
-    label: 'Revenue',
-    color: 'oklch(0.65 0.17 155)',
-  },
-} satisfies ChartConfig
+const STATUS_COLORS = ['#eab308', '#3b82f6', '#22c55e', '#ef4444']
 
-/* ────────────────────────────────────────────
-   Generate mock 7-day revenue data
-   ──────────────────────────────────────────── */
-
-/* ────────────────────────────────────────────
-   Stat Card Component
-   ──────────────────────────────────────────── */
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  iconBg,
-  iconColor,
-  badge,
-  badgeColor,
-  delay,
-}: {
-  title: string
-  value: string | number
-  icon: React.ElementType
-  iconBg: string
-  iconColor: string
-  badge?: React.ReactNode
-  badgeColor?: string
-  delay: number
-}) {
+function StatsCardSkeleton() {
   return (
-    <motion.div variants={fadeUp} transition={{ delay }}>
-      <Card className="relative overflow-hidden border-border/60 hover:border-border transition-colors">
-        {/* Decorative gradient blob */}
-        <div
-          className={`absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-[0.04] ${iconColor}`}
-        />
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`}
-              >
-                <Icon className={`h-5 w-5 ${iconColor}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground leading-none">{title}</p>
-                <p className="text-2xl font-bold tracking-tight mt-1.5">{value}</p>
-              </div>
-            </div>
-            {badge && (
-              <div
-                className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}
-              >
-                {badge}
-              </div>
-            )}
+    <Card className="border-border/40">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-7 w-24" />
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
-/* ────────────────────────────────────────────
-   Skeleton Loaders
-   ──────────────────────────────────────────── */
-function StatsCardsSkeleton() {
+function ChartCardSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i} className="border-border/60">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-20" />
-                <Skeleton className="h-7 w-16" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-function ChartSkeleton() {
-  return (
-    <Card className="border-border/60">
+    <Card className="border-border/40">
       <CardHeader className="pb-2">
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="h-3.5 w-48" />
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-3 w-48 mt-1" />
       </CardHeader>
       <CardContent>
-        <Skeleton className="h-[250px] w-full rounded-lg" />
+        <Skeleton className="h-[220px] w-full rounded-lg" />
       </CardContent>
     </Card>
   )
@@ -262,33 +153,30 @@ function ChartSkeleton() {
 
 function TableSkeleton() {
   return (
-    <Card className="border-border/60">
+    <Card className="border-border/40">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-3.5 w-52" />
+            <Skeleton className="h-3 w-52" />
           </div>
-          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-8 w-24" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
-            >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
               <div className="flex items-center gap-3 flex-1">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-20" />
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-4 w-14" />
-                <Skeleton className="h-5 w-20 rounded-full" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-4 w-12" />
               </div>
             </div>
           ))}
@@ -298,89 +186,6 @@ function TableSkeleton() {
   )
 }
 
-/* ────────────────────────────────────────────
-   Quick Actions Component
-   ──────────────────────────────────────────── */
-const quickActions = [
-  {
-    title: 'Manage Orders',
-    description: 'Review and process incoming orders',
-    icon: LayoutList,
-    href: '/admin/orders',
-    accent: 'text-green-600 dark:text-green-400',
-    accentBg: 'bg-green-100 dark:bg-green-900/30',
-  },
-  {
-    title: 'Manage Services',
-    description: 'Add, edit or update services & pricing',
-    icon: Package,
-    href: '/admin/services',
-    accent: 'text-purple-600 dark:text-purple-400',
-    accentBg: 'bg-purple-100 dark:bg-purple-900/30',
-  },
-  {
-    title: 'View Customers',
-    description: 'See all registered users and activity',
-    icon: Users,
-    href: '/admin/customers',
-    accent: 'text-blue-600 dark:text-blue-400',
-    accentBg: 'bg-blue-100 dark:bg-blue-900/30',
-  },
-  {
-    title: 'System Settings',
-    description: 'Configure platform preferences',
-    icon: Settings,
-    href: '/admin/settings',
-    accent: 'text-orange-600 dark:text-orange-400',
-    accentBg: 'bg-orange-100 dark:bg-orange-900/30',
-  },
-  {
-    title: 'Back to Site',
-    description: 'Return to the main website',
-    icon: Home,
-    href: '/',
-    accent: 'text-muted-foreground',
-    accentBg: 'bg-muted',
-  },
-]
-
-function QuickActions() {
-  return (
-    <motion.div variants={fadeUp} transition={{ delay: 0.35 }}>
-      <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
-        Quick Actions
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {quickActions.map((action) => (
-          <Link key={action.href} href={action.href} className="group">
-            <Card className="h-full border-border/60 hover:border-primary/30 transition-all cursor-pointer group-hover:shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${action.accentBg}`}
-                  >
-                    <action.icon className={`h-4.5 w-4.5 ${action.accent}`} />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </div>
-                <div className="mt-3">
-                  <p className="font-medium text-sm leading-none">{action.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {action.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </motion.div>
-  )
-}
-
-/* ────────────────────────────────────────────
-   Main Page Component
-   ──────────────────────────────────────────── */
 export default function AdminDashboardPage() {
   const { formatAmount } = useSettings()
   const [stats, setStats] = useState<Stats | null>(null)
@@ -394,18 +199,8 @@ export default function AdminDashboardPage() {
           fetch('/api/admin/stats'),
           fetch('/api/admin/orders'),
         ])
-
-        if (statsRes.ok) {
-          const statsData = await statsRes.json()
-          setStats(statsData)
-        }
-
-        if (ordersRes.ok) {
-          const ordersData = await ordersRes.json()
-          setRecentOrders(ordersData.slice(0, 5))
-        }
-      } catch {
-        // silently handle
+        if (statsRes.ok) setStats(await statsRes.json())
+        if (ordersRes.ok) setRecentOrders((await ordersRes.json()).slice(0, 5))
       } finally {
         setLoading(false)
       }
@@ -413,297 +208,230 @@ export default function AdminDashboardPage() {
     fetchData()
   }, [])
 
-  // Chart data derived from stats
-  const statusChartData = useMemo(
-    () => [
-      {
-        name: 'Pending',
-        pending: stats?.pendingOrders ?? 0,
-        approved: 0,
-        completed: 0,
-        rejected: 0,
-      },
-      {
-        name: 'Approved',
-        pending: 0,
-        approved: stats?.approvedOrders ?? 0,
-        completed: 0,
-        rejected: 0,
-      },
-      {
-        name: 'Completed',
-        pending: 0,
-        approved: 0,
-        completed: stats?.completedOrders ?? 0,
-        rejected: 0,
-      },
-      {
-        name: 'Rejected',
-        pending: 0,
-        approved: 0,
-        completed: 0,
-        rejected: stats?.rejectedOrders ?? 0,
-      },
-    ],
-    [stats]
-  )
+  const pieData = useMemo(() => stats ? [
+    { name: 'Pending', value: stats.pendingOrders, color: STATUS_COLORS[0] },
+    { name: 'Approved', value: stats.approvedOrders, color: STATUS_COLORS[1] },
+    { name: 'Completed', value: stats.completedOrders, color: STATUS_COLORS[2] },
+    { name: 'Rejected', value: stats.rejectedOrders, color: STATUS_COLORS[3] },
+  ].filter(d => d.value > 0) : [], [stats])
 
-  const revenueData = useMemo(
-    () => stats?.dailyRevenue ?? [],
-    [stats?.dailyRevenue]
-  )
+  const revenueData = useMemo(() => stats?.dailyRevenue ?? [], [stats?.dailyRevenue])
 
   return (
-    <motion.div
-      className="p-4 md:p-6 space-y-6"
-      variants={container}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* ── Page Header ── */}
-      <motion.div variants={fadeUp} transition={{ delay: 0 }}>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Welcome back, Admin
-        </p>
+    <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {format(new Date(), 'EEEE, MMMM d, yyyy')}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild className="hidden md:flex">
+            <Link href="/">
+              <Home className="h-3.5 w-3.5 mr-1.5" />
+              View Site
+            </Link>
+          </Button>
+        </div>
       </motion.div>
 
-      {/* ── Stats Cards ── */}
-      {loading || !stats ? (
-        <StatsCardsSkeleton />
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Revenue"
-            value={stats ? formatAmount(stats.totalRevenue) : '—'}
-            icon={DollarSign}
-            iconBg="bg-green-100 dark:bg-green-900/30"
-            iconColor="text-green-600 dark:text-green-400"
-            badge={
-              <>
-                {stats.trends.revenue >= 0 ? <TrendingUp className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                {stats.trends.revenue >= 0 ? '+' : ''}{stats.trends.revenue}%
-              </>
-            }
-            badgeColor={stats.trends.revenue >= 0 
-              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-            }
-            delay={0.05}
-          />
-          <StatCard
-            title="Total Orders"
-            value={stats.totalOrders}
-            icon={ShoppingCart}
-            iconBg="bg-primary/10"
-            iconColor="text-primary"
-            badge={
-              <>
-                {stats.trends.orders >= 0 ? '+' : ''}{stats.trends.orders}%
-              </>
-            }
-            badgeColor={stats.trends.orders >= 0 
-              ? "bg-primary/10 text-primary"
-              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-            }
-            delay={0.1}
-          />
-          <StatCard
-            title="Pending Orders"
-            value={stats.pendingOrders}
-            icon={Clock}
-            iconBg="bg-yellow-100 dark:bg-yellow-900/30"
-            iconColor="text-yellow-600 dark:text-yellow-400"
-            badge={
-              <>
-                <ArrowUpRight className="h-3 w-3" />
-                Needs review
-              </>
-            }
-            badgeColor="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-            delay={0.15}
-          />
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers}
-            icon={Users}
-            iconBg="bg-blue-100 dark:bg-blue-900/30"
-            iconColor="text-blue-600 dark:text-blue-400"
-            badge={
-              <>
-                {stats.trends.users >= 0 ? '+' : ''}{stats.trends.users}%
-              </>
-            }
-            badgeColor={stats.trends.users >= 0 
-              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-            }
-            delay={0.2}
-          />
-        </div>
-      )}
-
-      {/* ── Charts Section ── */}
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ChartSkeleton />
-          <ChartSkeleton />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Orders by Status - Bar Chart */}
-          <motion.div variants={scaleIn} transition={{ delay: 0.2 }}>
-            <Card className="border-border/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Orders by Status</CardTitle>
-                <CardDescription>
-                  Distribution of orders across statuses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={statusChartConfig}
-                  className="h-[250px] w-full"
-                >
-                  <BarChart
-                    data={statusChartData}
-                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <ChartTooltip
-                      content={<ChartTooltipContent />}
-                      cursor={{ fill: 'oklch(0.95 0 0 / 0.3)' }}
-                    />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar
-                      dataKey="pending"
-                      fill="var(--color-pending)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                    <Bar
-                      dataKey="approved"
-                      fill="var(--color-approved)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                    <Bar
-                      dataKey="completed"
-                      fill="var(--color-completed)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                    <Bar
-                      dataKey="rejected"
-                      fill="var(--color-rejected)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                  </BarChart>
-                </ChartContainer>
+          <motion.div variants={fadeUp}>
+            <Card className="border-border/40 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-emerald-400" />
+              <CardContent className="pt-6 pb-5 px-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Total Revenue</p>
+                      <p className="text-xl font-bold tracking-tight mt-0.5">
+                        {formatAmount(stats?.totalRevenue ?? 0)}
+                      </p>
+                    </div>
+                  </div>
+                  {stats && (
+                    <div className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+                      stats.trends.revenue >= 0
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
+                      {stats.trends.revenue >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {Math.abs(stats.trends.revenue)}%
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Revenue Overview - Area Chart */}
-          <motion.div variants={scaleIn} transition={{ delay: 0.25 }}>
-            <Card className="border-border/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Revenue Overview</CardTitle>
-                <CardDescription>
-                  Last 7 days performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={revenueChartConfig}
-                  className="h-[250px] w-full"
-                >
-                  <AreaChart
-                    data={revenueData}
-                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="revenueGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="var(--color-revenue)"
-                          stopOpacity={0.3}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="var(--color-revenue)"
-                          stopOpacity={0.02}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(v) => formatAmount(v)}
-                    />
-                    <ChartTooltip
-                      content={<ChartTooltipContent />}
-                      cursor={{ fill: 'oklch(0.95 0 0 / 0.3)' }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="var(--color-revenue)"
-                      strokeWidth={2}
-                      fill="url(#revenueGradient)"
-                    />
-                  </AreaChart>
-                </ChartContainer>
+          <motion.div variants={fadeUp}>
+            <Card className="border-border/40 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary/60" />
+              <CardContent className="pt-6 pb-5 px-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <ShoppingCart className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Total Orders</p>
+                      <p className="text-xl font-bold tracking-tight mt-0.5">{stats?.totalOrders ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={fadeUp}>
+            <Card className="border-border/40 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-400" />
+              <CardContent className="pt-6 pb-5 px-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <Inbox className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Waiting Review</p>
+                      <p className="text-xl font-bold tracking-tight mt-0.5">{stats?.pendingOrders ?? 0}</p>
+                    </div>
+                  </div>
+                  {(stats?.pendingOrders ?? 0) > 0 && (
+                    <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={fadeUp}>
+            <Card className="border-border/40 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-400" />
+              <CardContent className="pt-6 pb-5 px-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Total Users</p>
+                      <p className="text-xl font-bold tracking-tight mt-0.5">{stats?.totalUsers ?? 0}</p>
+                    </div>
+                  </div>
+                  {stats && (
+                    <div className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+                      stats.trends.users >= 0
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
+                      {stats.trends.users >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {Math.abs(stats.trends.users)}%
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
         </div>
       )}
 
-      {/* ── Recent Orders Table ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {loading ? (
+          <>
+            <ChartCardSkeleton />
+            <ChartCardSkeleton />
+            <ChartCardSkeleton />
+          </>
+        ) : (
+          <>
+            <motion.div variants={fadeUp} className="lg:col-span-2">
+              <Card className="border-border/40 h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Revenue Overview</CardTitle>
+                  <CardDescription>Last 7 days performance</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[220px] w-full">
+                    <AreaChart data={revenueData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="oklch(0.65 0.17 155)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="oklch(0.65 0.17 155)" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(0.92 0 0)" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'oklch(0.45 0 0)' }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'oklch(0.45 0 0)' }} tickFormatter={(v) => `$${v}`} />
+                      <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: 'oklch(0.95 0 0 / 0.4)' }} />
+                      <Area type="monotone" dataKey="revenue" stroke="oklch(0.65 0.17 155)" strokeWidth={2} fill="url(#revenueGradient)" />
+                    </AreaChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="border-border/40 h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Order Status</CardTitle>
+                  <CardDescription>Distribution by status</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center">
+                  <ChartContainer config={chartConfig} className="h-[180px] w-full">
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 w-full">
+                    {pieData.map((item) => (
+                      <div key={item.name} className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-xs text-muted-foreground">{item.name}</span>
+                        <span className="text-xs font-medium ml-auto">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          </>
+        )}
+      </div>
+
       {loading ? (
         <TableSkeleton />
       ) : (
-        <motion.div variants={scaleIn} transition={{ delay: 0.3 }}>
-          <Card className="border-border/60">
-            <CardHeader>
+        <motion.div variants={fadeUp}>
+          <Card className="border-border/40">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <PackageOpen className="h-4 w-4 text-primary" />
-                    Recent Orders
-                  </CardTitle>
-                  <CardDescription>
-                    Latest orders across all users
-                  </CardDescription>
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Activity className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Recent Activity</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">Latest orders from customers</CardDescription>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
                   <Link href="/admin/orders">
                     View All
                     <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -711,142 +439,95 @@ export default function AdminDashboardPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {recentOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
-                    <PackageOpen className="h-6 w-6 text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                    <PackageOpen className="h-7 w-7 text-muted-foreground" />
                   </div>
-                  <h3 className="font-medium text-sm mb-1">No orders yet</h3>
-                  <p className="text-xs text-muted-foreground max-w-xs">
-                    Orders will appear here once customers place them.
+                  <h3 className="font-semibold mb-1">No orders yet</h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                    Orders will appear here once customers start placing them.
                   </p>
                 </div>
               ) : (
-                <>
-                  {/* Desktop Table */}
-                  <div className="hidden md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="pl-2">Order ID</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Progress</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead className="text-right pr-2">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {recentOrders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="pl-2 font-mono text-xs text-muted-foreground">
-                              #{order.id.slice(0, 8)}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {order.user?.name || 'Unknown'}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {order.user?.email}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium text-sm">
-                              {order.service?.title || '—'}
-                            </TableCell>
-                            <TableCell className="font-medium text-sm">
-                              {formatAmount(order.amount)}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={order.status} />
-                            </TableCell>
-                            <TableCell>
-                              <div className="w-24 space-y-1">
-                                <div className="flex items-center justify-between text-[10px]">
-                                  <span className="font-medium">{order.progress}%</span>
-                                </div>
-                                <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-primary transition-all duration-500" 
-                                    style={{ width: `${order.progress}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {format(new Date(order.createdAt), 'MMM d, yyyy')}
-                            </TableCell>
-                            <TableCell className="text-right pr-2">
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link href={`/admin/orders/${order.id}`}>
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Mobile Cards */}
-                  <div className="md:hidden space-y-2">
-                    {recentOrders.map((order) => (
-                      <Link
-                        key={order.id}
-                        href={`/admin/orders/${order.id}`}
-                        className="block group"
-                      >
-                        <div className="flex items-center justify-between p-3.5 rounded-lg border border-border/60 group-hover:border-primary/30 group-hover:bg-muted/30 transition-all">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-sm truncate">
-                                {order.service?.title || '—'}
-                              </p>
-                              <StatusBadge status={order.status} />
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono">
-                                #{order.id.slice(0, 8)}
-                              </span>
-                              <span className="text-border">·</span>
-                              <span className="truncate">
-                                {order.user?.name || 'Unknown'}
-                              </span>
-                              <span className="text-border">·</span>
-                              <span>
-                                {format(
-                                  new Date(order.createdAt),
-                                  'MMM d'
-                                )}
-                              </span>
-                            </div>
+                <div className="space-y-2">
+                  {recentOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href={`/admin/orders/${order.id}`}
+                      className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center shrink-0">
+                          <Package className="h-4.5 w-4.5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">
+                              {order.service?.title || 'Service'}
+                            </p>
+                            <StatusBadge status={order.status} />
                           </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <span className="font-semibold text-sm">
-                              {formatAmount(order.amount)}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span className="font-mono">{order.id.slice(0, 8)}</span>
+                            <span className="text-border">·</span>
+                            <span className="truncate">{order.user?.name}</span>
+                            <span className="text-border hidden sm:inline">·</span>
+                            <span className="hidden sm:inline">
+                              {format(new Date(order.createdAt), 'MMM d, h:mm a')}
                             </span>
-                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                         </div>
-                      </Link>
-                    ))}
-                  </div>
-                </>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="font-semibold text-sm">{formatAmount(order.amount)}</p>
+                          <div className="w-16 h-1 bg-muted rounded-full overflow-hidden mt-1">
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${order.progress}%` }} />
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
         </motion.div>
       )}
 
-      {/* ── Quick Actions ── */}
-      <QuickActions />
+      <motion.div variants={fadeUp}>
+        <Card className="border-border/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardDescription className="text-xs">Navigate to key admin areas</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { title: 'Orders', desc: 'Manage orders', icon: LayoutList, href: '/admin/orders', color: 'emerald' },
+                { title: 'Services', desc: 'Edit services', icon: Package, href: '/admin/services', color: 'purple' },
+                { title: 'Customers', desc: 'View users', icon: Users, href: '/admin/customers', color: 'blue' },
+                { title: 'Settings', desc: 'Configure', icon: Settings, href: '/admin/settings', color: 'orange' },
+              ].map((action) => (
+                <Link key={action.href} href={action.href} className="group">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-${action.color}-500/10`}>
+                      <action.icon className={`h-4 w-4 text-${action.color}-600 dark:text-${action.color}-400`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{action.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{action.desc}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </motion.div>
   )
 }
