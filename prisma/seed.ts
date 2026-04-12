@@ -385,6 +385,7 @@ async function seed() {
     { key: "smtp_from_name", value: "MilkyTech.Online Support", label: "Sender Name", type: "text", group: "email" },
     { key: "email_otp_enabled", value: "false", label: "Enable Email OTP Verification", type: "toggle", group: "email" },
     { key: "logo_url", value: "/logo.png", label: "Logo URL", type: "text", group: "general" },
+  ];
 
   for (const setting of defaultSettings) {
     await db.setting.upsert({
