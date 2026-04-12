@@ -47,4 +47,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # ENTRYPOINT to handle migrations, seed data, then start the server
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss --skip-generate && npx prisma db seed && node server.js"]
+CMD ["sh", "-c", "npx prisma@6 db push --accept-data-loss && npx prisma@6 db seed && node server.js"]
