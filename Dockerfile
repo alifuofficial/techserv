@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM oven/bun:latest AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Enable experimental standalone output
@@ -9,10 +9,9 @@ ENV NEXT_PRIVATE_STANDALONE=true
 COPY . .
 
 # Install, generate client, and build in a single layer
-RUN bun install --frozen-lockfile && \
-    bunx prisma generate && \
-    bun run build && \
-    rm -rf /root/.bun/install/cache
+RUN npm install && \
+    npx prisma generate && \
+    npm run build
 
 # Stage 2: Runner
 FROM node:22-alpine AS runner
