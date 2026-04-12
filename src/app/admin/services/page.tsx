@@ -30,21 +30,11 @@ import {
   Wifi,
   Rocket,
   Loader2,
-  ArrowRight,
   ShoppingCart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,12 +44,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { useSettings } from '@/hooks/use-settings'
 
-/* ────────────────────────────────────────────
-   Types
-   ──────────────────────────────────────────── */
 interface PricingTier {
   label: string
   duration: string
@@ -76,8 +63,8 @@ interface Service {
   longDescription: string
   features: string
   icon: string
-  pricingType: string // "subscription" | "one_time"
-  pricingTiers: string // JSON string of PricingTier[]
+  pricingType: string
+  pricingTiers: string
   isActive: boolean
   sortOrder: number
   createdAt: string
@@ -85,9 +72,6 @@ interface Service {
   orderCount: number
 }
 
-/* ────────────────────────────────────────────
-   Icon Mapping
-   ──────────────────────────────────────────── */
 const iconMap: Record<string, React.ElementType> = {
   Zap,
   Crown,
@@ -111,9 +95,6 @@ function getIcon(name: string): React.ElementType {
   return iconMap[name] || Package
 }
 
-/* ────────────────────────────────────────────
-   Animation Variants
-   ──────────────────────────────────────────── */
 const container = {
   hidden: { opacity: 0 },
   visible: {
@@ -127,28 +108,8 @@ const fadeUp = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
   },
-}
-
-const rowVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.03, duration: 0.3, ease: [0.22, 1, 0.36, 1] },
-  }),
-}
-
-/* ────────────────────────────────────────────
-   Helpers
-   ──────────────────────────────────────────── */
-function formatPrice(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 }
 
 function getParsedTiers(service: Service): PricingTier[] {
@@ -176,85 +137,64 @@ function getDisplayPrice(service: Service, formatAmount: (n: number) => string):
   return formatAmount(cheapest)
 }
 
-/* ────────────────────────────────────────────
-   Skeleton Loaders
-   ──────────────────────────────────────────── */
 function HeaderSkeleton() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div className="space-y-1.5">
-        <Skeleton className="h-7 w-28" />
-        <Skeleton className="h-4 w-44" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 w-9 rounded-xl" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </div>
-      <Skeleton className="h-9 w-36" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="h-9 w-32" />
+      </div>
     </div>
   )
 }
 
-function TableSkeleton() {
+function CardGridSkeleton() {
   return (
-    <div className="rounded-lg border border-border/60 overflow-hidden">
-      {/* Header row skeleton */}
-      <div className="hidden md:grid grid-cols-[48px_1.5fr_1.2fr_80px_90px_100px] items-center gap-4 px-4 py-3 bg-muted/30 border-b border-border/60">
-        <Skeleton className="h-3.5 w-10" />
-        <Skeleton className="h-3.5 w-24" />
-        <Skeleton className="h-3.5 w-24" />
-        <Skeleton className="h-3.5 w-14" />
-        <Skeleton className="h-3.5 w-16" />
-        <Skeleton className="h-3.5 w-20" />
-      </div>
-      {/* Row skeletons */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="hidden md:grid grid-cols-[48px_1.5fr_1.2fr_80px_90px_100px] items-center gap-4 px-4 py-3.5 border-b border-border/40 last:border-0"
-        >
-          <Skeleton className="h-8 w-8 rounded-lg" />
-          <div className="space-y-1">
-            <Skeleton className="h-3.5 w-32" />
-            <Skeleton className="h-3 w-40" />
-          </div>
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-12 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-8 w-20 rounded-md ml-auto" />
-        </div>
-      ))}
-      {/* Mobile card skeletons */}
-      <div className="md:hidden divide-y divide-border/40">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div className="space-y-1">
-                  <Skeleton className="h-3.5 w-28" />
-                  <Skeleton className="h-3 w-36" />
-                </div>
+        <div key={i} className="rounded-xl border border-border/40 overflow-hidden">
+          <div className="p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-36" />
               </div>
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
             </div>
             <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-border/40">
+              <Skeleton className="h-3.5 w-20" />
+              <div className="flex items-center gap-1">
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className="h-8 w-8 rounded-md" />
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   )
 }
 
-/* ────────────────────────────────────────────
-   Empty State
-   ──────────────────────────────────────────── */
 function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-lg border border-dashed border-border/80 py-16 px-6 flex flex-col items-center text-center"
+      className="rounded-xl border border-dashed border-border/80 py-16 px-6 flex flex-col items-center text-center"
     >
       <div className="h-12 w-12 rounded-xl bg-muted/80 flex items-center justify-center mb-4">
         {hasSearch ? (
@@ -283,111 +223,106 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   )
 }
 
-/* ────────────────────────────────────────────
-   Mobile Service Card
-   ──────────────────────────────────────────── */
-function MobileServiceCard({
+function ServiceCard({
   service,
-  index,
+  togglingId,
   onToggle,
-  onDelete,
+  onDeleteClick,
   formatAmount,
 }: {
   service: Service
-  index: number
+  togglingId: string | null
   onToggle: (s: Service) => void
-  onDelete: (s: Service) => void
+  onDeleteClick: (s: Service) => void
   formatAmount: (n: number) => string
 }) {
   const serviceIcon = getIcon(service.icon)
+  const isToggling = togglingId === service.id
 
   return (
     <motion.div
-      custom={index}
-      variants={rowVariants}
-      initial="hidden"
-      animate="visible"
-      className="rounded-lg border border-border/60 hover:border-primary/25 hover:bg-muted/20 transition-all"
+      variants={fadeUp}
+      className="rounded-xl border border-border/40 overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="p-4 space-y-3">
-        {/* Top row: icon + title + status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              {React.createElement(serviceIcon, { className: 'h-4 w-4' })}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium leading-tight truncate">
-                {service.title}
-              </p>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                /{service.slug}
-              </p>
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            {React.createElement(serviceIcon, { className: 'h-5 w-5' })}
           </div>
-          <Badge
-            variant="outline"
-            className={
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium leading-tight truncate">
+              {service.title}
+            </p>
+            <p className="text-xs font-mono text-muted-foreground truncate mt-0.5">
+              /{service.slug}
+            </p>
+          </div>
+          <span
+            className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
               service.isActive
-                ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800 shrink-0'
-                : 'bg-muted text-muted-foreground border-border shrink-0'
-            }
+                ? 'bg-emerald-500/10 text-emerald-600'
+                : 'bg-muted text-muted-foreground'
+            }`}
           >
             {service.isActive ? 'Active' : 'Inactive'}
-          </Badge>
+          </span>
         </div>
 
-        {/* Pricing */}
         <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
               service.pricingType === 'subscription'
-                ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 shrink-0'
-                : 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800 shrink-0'
-            }
+                ? 'bg-blue-500/10 text-blue-600'
+                : 'bg-purple-500/10 text-purple-600'
+            }`}
           >
             {service.pricingType === 'subscription' ? 'Subscription' : 'One-Time'}
-          </Badge>
-          <span className="text-sm font-medium tabular-nums text-primary">
+          </span>
+          <span className="text-sm font-semibold tabular-nums text-primary">
             From {getDisplayPrice(service, formatAmount)}
           </span>
         </div>
 
-        {/* Bottom: orders + actions */}
-        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+        <div className="flex items-center justify-between pt-3 border-t border-border/40">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShoppingCart className="h-3 w-3" />
             <span>{service.orderCount} order{service.orderCount !== 1 ? 's' : ''}</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <Button
               variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => onToggle(service)}
-              disabled={service.orderCount > 0}
+              disabled={isToggling}
+              title={service.isActive ? 'Deactivate' : 'Activate'}
             >
-              {service.isActive ? (
-                <PowerOff className="h-3 w-3 mr-1" />
+              {isToggling ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : service.isActive ? (
+                <PowerOff className="h-3.5 w-3.5" />
               ) : (
-                <Power className="h-3 w-3 mr-1" />
+                <Power className="h-3.5 w-3.5" />
               )}
-              {service.isActive ? 'Deactivate' : 'Activate'}
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
               <Link href={`/admin/services/${service.id}`}>
-                <Pencil className="h-3 w-3" />
+                <Pencil className="h-3.5 w-3.5" />
               </Link>
             </Button>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-              onClick={() => onDelete(service)}
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => onDeleteClick(service)}
               disabled={service.orderCount > 0}
+              title={
+                service.orderCount > 0
+                  ? 'Cannot delete service with orders'
+                  : 'Delete service'
+              }
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -396,11 +331,6 @@ function MobileServiceCard({
   )
 }
 
-import { useSettings } from '@/hooks/use-settings'
-
-/* ────────────────────────────────────────────
-   Main Page Component
-   ──────────────────────────────────────────── */
 export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
@@ -410,7 +340,6 @@ export default function AdminServicesPage() {
   const [deleting, setDeleting] = useState(false)
   const { formatAmount } = useSettings()
 
-  /* ── Fetch services ── */
   useEffect(() => {
     let cancelled = false
 
@@ -422,7 +351,6 @@ export default function AdminServicesPage() {
           setServices(data)
         }
       } catch {
-        // silently handle
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -434,7 +362,6 @@ export default function AdminServicesPage() {
     }
   }, [])
 
-  /* ── Client-side search filter ── */
   const filteredServices = useMemo(() => {
     if (!searchQuery.trim()) return services
     const q = searchQuery.toLowerCase().trim()
@@ -446,7 +373,6 @@ export default function AdminServicesPage() {
     )
   }, [services, searchQuery])
 
-  /* ── Toggle active status ── */
   const handleToggle = useCallback(async (service: Service) => {
     if (togglingId) return
     setTogglingId(service.id)
@@ -479,7 +405,6 @@ export default function AdminServicesPage() {
     }
   }, [togglingId])
 
-  /* ── Delete service ── */
   const handleDelete = useCallback(async () => {
     if (!deleteTarget || deleting) return
     setDeleting(true)
@@ -515,18 +440,22 @@ export default function AdminServicesPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* ── Page Header ── */}
       <motion.div
         variants={fadeUp}
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Services</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {loading
-              ? 'Loading services…'
-              : `${filteredServices.length} service${filteredServices.length !== 1 ? 's' : ''}${searchQuery.trim() ? ' found' : ' total'}`}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <Package className="h-4.5 w-4.5 text-purple-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Services</h1>
+            <p className="text-sm text-muted-foreground">
+              {loading
+                ? 'Loading services…'
+                : `${filteredServices.length} service${filteredServices.length !== 1 ? 's' : ''}${searchQuery.trim() ? ' found' : ''}`}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative w-full sm:w-72">
@@ -535,7 +464,7 @@ export default function AdminServicesPage() {
               placeholder="Search services…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-muted/40 border-border/60 focus-visible:bg-background"
+              className="pl-9 h-9 bg-muted/40 border-border/40 focus-visible:bg-background"
             />
           </div>
           <Button asChild size="sm" className="shrink-0">
@@ -547,10 +476,9 @@ export default function AdminServicesPage() {
         </div>
       </motion.div>
 
-      {/* ── Table / Content ── */}
       <motion.div variants={fadeUp}>
         {loading ? (
-          <TableSkeleton />
+          <CardGridSkeleton />
         ) : filteredServices.length === 0 ? (
           <EmptyState hasSearch={searchQuery.trim().length > 0} />
         ) : (
@@ -560,182 +488,15 @@ export default function AdminServicesPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-lg border border-border/60 overflow-hidden"
             >
-              {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/25 hover:bg-muted/25 border-border/60">
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Service
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                        Pricing
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
-                        Orders
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right pr-4">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredServices.map((service) => {
-                      const serviceIcon = getIcon(service.icon)
-                      const isToggling = togglingId === service.id
-
-                      return (
-                        <TableRow
-                          key={service.id}
-                          className="border-border/40 hover:bg-muted/30 transition-colors"
-                        >
-                          {/* Icon + Title + Slug */}
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                {React.createElement(serviceIcon, { className: 'h-4.5 w-4.5' })}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium leading-tight truncate">
-                                  {service.title}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  /{service.slug}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          {/* Pricing */}
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  service.pricingType === 'subscription'
-                                    ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
-                                    : 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
-                                }
-                              >
-                                {service.pricingType === 'subscription' ? 'Sub' : 'One-Time'}
-                              </Badge>
-                              <span className="text-sm tabular-nums font-semibold text-primary">
-                                From {getDisplayPrice(service, formatAmount)}
-                              </span>
-                            </div>
-                          </TableCell>
-
-                          {/* Orders */}
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="secondary"
-                              className="tabular-nums font-medium"
-                            >
-                              {service.orderCount}
-                            </Badge>
-                          </TableCell>
-
-                          {/* Status */}
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="outline"
-                              className={
-                                service.isActive
-                                  ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800'
-                                  : 'bg-muted text-muted-foreground border-border'
-                              }
-                            >
-                              {service.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-
-                          {/* Actions */}
-                          <TableCell className="text-right pr-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2.5 text-xs"
-                                onClick={() => handleToggle(service)}
-                                disabled={isToggling}
-                                title={service.isActive ? 'Deactivate' : 'Activate'}
-                              >
-                                {isToggling ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : service.isActive ? (
-                                  <PowerOff className="h-3.5 w-3.5" />
-                                ) : (
-                                  <Power className="h-3.5 w-3.5" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2.5 text-xs"
-                                asChild
-                              >
-                                <Link href={`/admin/services/${service.id}`}>
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Link>
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2.5 text-xs text-destructive hover:text-destructive"
-                                    disabled={service.orderCount > 0}
-                                    title={
-                                      service.orderCount > 0
-                                        ? 'Cannot delete service with orders'
-                                        : 'Delete service'
-                                    }
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Service</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete &quot;{service.title}&quot;?
-                                      This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleDelete}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Cards */}
-              <div className="md:hidden divide-y divide-border/40">
-                {filteredServices.map((service, index) => (
-                  <MobileServiceCard
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredServices.map((service) => (
+                  <ServiceCard
                     key={service.id}
                     service={service}
-                    index={index}
+                    togglingId={togglingId}
                     onToggle={handleToggle}
-                    onDelete={(s) => setDeleteTarget(s)}
+                    onDeleteClick={(s) => setDeleteTarget(s)}
                     formatAmount={formatAmount}
                   />
                 ))}
@@ -745,7 +506,6 @@ export default function AdminServicesPage() {
         )}
       </motion.div>
 
-      {/* ── Delete Confirmation Dialog (Mobile) ── */}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {
