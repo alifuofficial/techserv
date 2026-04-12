@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react'
 import {
   Zap, CheckCircle2, ShoppingCart, Upload, X, Loader2, ArrowLeft, Home,
   ChevronRight, AlertCircle, CreditCard, Smartphone, Landmark, Wallet,
-  MessageCircle, ArrowRight, Star, Shield, Clock, Copy, Check,
+  MessageCircle, ArrowRight, Star, Shield, Clock, Copy, Check, Info, BookOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -65,10 +65,11 @@ const paymentIcons: Record<string, React.ElementType> = {
 }
 
 const steps = [
-  { id: 1, title: 'Select Plan', icon: Star },
-  { id: 2, title: 'Payment', icon: CreditCard },
-  { id: 3, title: 'Details', icon: MessageCircle },
-  { id: 4, title: 'Confirm', icon: CheckCircle2 },
+  { id: 1, title: 'Overview', icon: Info },
+  { id: 2, title: 'Select Plan', icon: Star },
+  { id: 3, title: 'Payment', icon: CreditCard },
+  { id: 4, title: 'Details', icon: MessageCircle },
+  { id: 5, title: 'Confirm', icon: CheckCircle2 },
 ]
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
@@ -253,9 +254,50 @@ export default function ServiceDetailPage() {
 
         {/* Step Content */}
         <AnimatePresence mode="wait">
-          {/* STEP 1: Select Plan */}
+          {/* STEP 1: Overview */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+            <motion.div 
+              key="step1" 
+              initial={{ opacity: 0, x: 20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="bg-card border border-border/40 rounded-2xl p-6 sm:p-8 space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Service Overview
+                  </h2>
+                  <div className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {service.longDescription}
+                  </div>
+                </div>
+
+                {service.features && (
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 mb-4">What's Included</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {service.features.split(',').map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-sm font-medium">{feature.trim()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button onClick={() => setStep(2)} className="w-full h-12 rounded-xl group">
+                Continue to Pricing <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </motion.div>
+          )}
+
+          {/* STEP 2: Select Plan */}
+          {step === 2 && (
+            <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Select Your Plan</h2>
                 <p className="text-sm text-muted-foreground">Choose the {isSubscription ? 'subscription duration' : 'package'} that works best for you</p>
@@ -283,15 +325,20 @@ export default function ServiceDetailPage() {
                 ))}
               </div>
 
-              <Button onClick={() => setStep(2)} disabled={!selectedTier} className="w-full h-12 rounded-xl">
-                Continue <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 rounded-xl">
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                </Button>
+                <Button onClick={() => setStep(3)} disabled={!selectedTier} className="flex-1 h-12 rounded-xl">
+                  Continue <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
             </motion.div>
           )}
 
-          {/* STEP 2: Payment Method */}
-          {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 3: Payment Method */}
+          {step === 3 && (
+            <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Select Payment Method</h2>
                 <p className="text-sm text-muted-foreground">Choose how you'd like to pay</p>
@@ -340,19 +387,19 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
-                <Button onClick={() => setStep(3)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
+                <Button onClick={() => setStep(4)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 3: Details */}
-          {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 4: Details */}
+          {step === 4 && (
+            <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Order Details</h2>
                 <p className="text-sm text-muted-foreground">Provide your Telegram and payment proof</p>
@@ -411,19 +458,19 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
-                <Button onClick={() => setStep(4)} className="flex-1 h-12 rounded-xl">
+                <Button onClick={() => setStep(5)} className="flex-1 h-12 rounded-xl">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 4: Review & Confirm */}
-          {step === 4 && (
-            <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 5: Review & Confirm */}
+          {step === 5 && (
+            <motion.div key="step5" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Review Order</h2>
                 <p className="text-sm text-muted-foreground">Confirm your order details</p>
@@ -469,7 +516,7 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(3)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(4)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
                 <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700">
