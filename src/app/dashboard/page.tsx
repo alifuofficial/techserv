@@ -467,7 +467,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-sm">All Systems Go</p>
-                    <p className="text-[10px] text-muted-foreground">TechServ operational status</p>
+                    <p className="text-[10px] text-muted-foreground">MilkyTech.Online operational status</p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">

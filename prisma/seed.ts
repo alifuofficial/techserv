@@ -9,15 +9,15 @@ async function seed() {
   // Create admin user
   const adminPassword = await bcrypt.hash("admin123", 12);
   const admin = await db.user.upsert({
-    where: { email: "admin@techserv.com" },
+    where: { email: "admin@milkytech.online" },
     update: {},
     create: {
       name: "Admin",
-      email: "admin@techserv.com",
+      email: "admin@milkytech.online",
       password: adminPassword,
       role: "admin",
       phone: "+251911000000",
-      telegram: "@techserv_admin",
+      telegram: "@milkytech_online_admin",
     },
   });
   console.log("✅ Admin user created:", admin.email);
@@ -253,7 +253,7 @@ async function seed() {
       type: "mobile_money",
       isActive: true,
       sortOrder: 1,
-      details: JSON.stringify({ accountName: "TechServ", accountNumber: "0911000000" }),
+      details: JSON.stringify({ accountName: "MilkyTech.Online", accountNumber: "0911000000" }),
       instructions: "Open Telebirr app → Send Money → Enter the number above → Send the exact amount → Take a screenshot",
     },
   });
@@ -268,7 +268,7 @@ async function seed() {
       type: "bank",
       isActive: true,
       sortOrder: 2,
-      details: JSON.stringify({ bankName: "Commercial Bank of Ethiopia", accountName: "TechServ", accountNumber: "1000123456789", branch: "Bole Branch" }),
+      details: JSON.stringify({ bankName: "Commercial Bank of Ethiopia", accountName: "MilkyTech.Online", accountNumber: "1000123456789", branch: "Bole Branch" }),
       instructions: "Open CBE Birr app or visit any CBE branch → Transfer to the account above → Send the exact amount → Take a screenshot",
     },
   });
@@ -283,7 +283,7 @@ async function seed() {
       type: "bank",
       isActive: true,
       sortOrder: 3,
-      details: JSON.stringify({ bankName: "Awash International Bank", accountName: "TechServ", accountNumber: "0987654321", branch: "Mexico Branch" }),
+      details: JSON.stringify({ bankName: "Awash International Bank", accountName: "MilkyTech.Online", accountNumber: "0987654321", branch: "Mexico Branch" }),
       instructions: "Transfer to the account above via Awash Bank mobile app or branch → Send the exact amount → Take a screenshot of the receipt",
     },
   });
@@ -357,13 +357,13 @@ async function seed() {
 
   // Seed system settings
   const defaultSettings = [
-    { key: "site_name", value: "TechServ", label: "Site Name", type: "text", group: "general" },
+    { key: "site_name", value: "MilkyTech.Online", label: "Site Name", type: "text", group: "general" },
     { key: "site_description", value: "Premium Tech Services", label: "Site Description", type: "textarea", group: "general" },
-    { key: "site_email", value: "support@techserv.com", label: "Support Email", type: "text", group: "general" },
+    { key: "site_email", value: "support@milkytech.online", label: "Support Email", type: "text", group: "general" },
     { key: "site_phone", value: "+251-XXX-XXX-XXXX", label: "Support Phone", type: "text", group: "general" },
     { key: "currency", value: "USD", label: "Currency", type: "select", group: "general" },
     { key: "currency_symbol", value: "$", label: "Currency Symbol", type: "text", group: "general" },
-    { key: "telegram_channel", value: "@techserv", label: "Telegram Channel", type: "text", group: "general" },
+    { key: "telegram_channel", value: "@milkytech_online", label: "Telegram Channel", type: "text", group: "general" },
     { key: "telegram_bot_token", value: "", label: "Bot Token", type: "text", group: "telegram" },
     { key: "telegram_bot_username", value: "@milkytechonlinebot", label: "Bot Username", type: "text", group: "telegram" },
     { key: "telegram_enabled", value: "true", label: "Enable Telegram Login", type: "toggle", group: "telegram" },
@@ -375,16 +375,16 @@ async function seed() {
     { key: "referral_benefits", value: "Referral Program:\n- Share with friends\n- Earn 10% credit\n- No limit on referrals", label: "Referral Program Benefits", type: "textarea", group: "features" },
     { key: "auto_approve_orders", value: "false", label: "Auto Approve Orders", type: "toggle", group: "orders" },
     { key: "order_confirmation_message", value: "Thank you for your order! We will process it shortly.", label: "Order Confirmation Message", type: "textarea", group: "orders" },
-    { key: "welcome_message", value: "Welcome to TechServ! Browse our services and get started.", label: "Welcome Message", type: "textarea", group: "general" },
+    { key: "welcome_message", value: "Welcome to MilkyTech.Online! Browse our services and get started.", label: "Welcome Message", type: "textarea", group: "general" },
     { key: "smtp_host", value: "smtp.gmail.com", label: "SMTP Host", type: "text", group: "email" },
     { key: "smtp_port", value: "587", label: "SMTP Port", type: "text", group: "email" },
     { key: "smtp_user", value: "", label: "SMTP Username", type: "text", group: "email" },
     { key: "smtp_pass", value: "", label: "SMTP Password", type: "password", group: "email" },
     { key: "smtp_secure", value: "true", label: "SMTP Secure (SSL/TLS)", type: "toggle", group: "email" },
-    { key: "smtp_from_email", value: "support@techserv.com", label: "Sender Email", type: "text", group: "email" },
-    { key: "smtp_from_name", value: "TechServ Support", label: "Sender Name", type: "text", group: "email" },
+    { key: "smtp_from_email", value: "support@milkytech.online", label: "Sender Email", type: "text", group: "email" },
+    { key: "smtp_from_name", value: "MilkyTech.Online Support", label: "Sender Name", type: "text", group: "email" },
     { key: "email_otp_enabled", value: "false", label: "Enable Email OTP Verification", type: "toggle", group: "email" },
-  ];
+    { key: "logo_url", value: "/logo.png", label: "Logo URL", type: "text", group: "general" },
 
   for (const setting of defaultSettings) {
     await db.setting.upsert({
@@ -397,7 +397,7 @@ async function seed() {
 
   console.log("\n🎉 Seeding complete!");
   console.log("\n📋 Test Accounts:");
-  console.log("   Admin: admin@techserv.com / admin123");
+  console.log("   Admin: admin@milkytech.online / admin123");
   console.log("   User:  user@test.com / user123");
 }
 

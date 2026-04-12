@@ -427,7 +427,7 @@ export default function EditPaymentMethodPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Add account details as key-value pairs (e.g., &quot;Account Name&quot; → &quot;TechServ&quot;).
+                  Add account details as key-value pairs (e.g., &quot;Account Name&quot; → &quot;MilkyTech.Online&quot;).
                 </p>
 
                 <div className="space-y-3">

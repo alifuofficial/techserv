@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
 
-  const siteName = getSetting("site_name") || "TechServ";
+  const siteName = getSetting("site_name") || "MilkyTech.Online";
   const seoTitle = getSetting("seo_title") || siteName;
   const seoDesc = getSetting("seo_description") || "Premium digital services";
   const seoKeywords = getSetting("seo_keywords") || "";
@@ -49,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
   const logoUrl = getSetting("logo_url") || "";
-  const siteName = getSetting("site_name") || "TechServ";
+  const siteName = getSetting("site_name") || "MilkyTech.Online";
 
   return (
     <html lang="en" suppressHydrationWarning>

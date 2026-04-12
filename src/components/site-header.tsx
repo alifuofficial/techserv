@@ -19,9 +19,10 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/services", label: "Services" },
+  { href: "/about", label: "About" },
 ];
 
-export function SiteHeader({ logoUrl, siteName = "TechServ" }: { logoUrl?: string; siteName?: string }) {
+export function SiteHeader({ logoUrl = "/logo.png", siteName = "MilkyTech.Online" }: { logoUrl?: string; siteName?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);

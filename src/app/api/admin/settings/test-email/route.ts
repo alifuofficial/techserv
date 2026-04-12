@@ -24,15 +24,15 @@ export async function POST(request: NextRequest) {
 
     const result = await sendEmail({
       to: email,
-      subject: "SMTP Test - TechServ",
-      text: "This is a test email from your TechServ SMTP configuration.",
+      subject: "SMTP Test - MilkyTech.Online",
+      text: "This is a test email from your MilkyTech.Online SMTP configuration.",
       html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #10b981;">SMTP Connection Successful!</h2>
           <p>Your SMTP settings are correctly configured and working.</p>
           <p>This test email was sent to: <strong>${email}</strong></p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #999;">Sent from TechServ Admin Panel</p>
+          <p style="font-size: 12px; color: #999;">Sent from MilkyTech.Online Admin Panel</p>
         </div>
       `,
     });

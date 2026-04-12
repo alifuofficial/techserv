@@ -10,11 +10,9 @@ export function SiteFooter() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-                T
-              </div>
+              <img src="/logo.png" alt="MilkyTech.Online Logo" className="h-9 w-auto object-contain" />
               <span className="text-xl font-bold tracking-tight">
-                Tech<span className="text-primary">Serv</span>
+                Milky<span className="text-primary text-slate-900">Tech</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -58,8 +56,8 @@ export function SiteFooter() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Contact</h3>
             <div className="flex flex-col gap-2.5">
-              <a href="mailto:support@techserv.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                <Mail className="h-3.5 w-3.5" /> support@techserv.com
+              <a href="mailto:support@milkytech.online" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Mail className="h-3.5 w-3.5" /> support@milkytech.online
               </a>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Phone className="h-3.5 w-3.5" /> +251-XXX-XXX-XXXX
@@ -75,10 +73,10 @@ export function SiteFooter() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} TechServ. All rights reserved.
+            &copy; {new Date().getFullYear()} MilkyTech.Online. All rights reserved.
           </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            Powered by <Zap className="h-3 w-3 text-primary" /> TechServ
+            Powered by <Zap className="h-3 w-3 text-primary" /> MilkyTech.Online
           </div>
         </div>
       </div>

@@ -61,7 +61,7 @@ export async function sendEmail({
     });
 
     const fromEmail = settings.find((s) => s.key === "smtp_from_email")?.value || "noreply@example.com";
-    const fromName = settings.find((s) => s.key === "smtp_from_name")?.value || "TechServ";
+    const fromName = settings.find((s) => s.key === "smtp_from_name")?.value || "MilkyTech.Online";
 
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
@@ -87,13 +87,13 @@ export async function sendOtpEmail(email: string, otp: string) {
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;">
         <h2 style="color: #3b82f6; text-align: center;">Verification Code</h2>
         <p style="font-size: 16px; color: #333;">Hello,</p>
-        <p style="font-size: 16px; color: #333;">Your verification code for TechServ is:</p>
+        <p style="font-size: 16px; color: #333;">Your verification code for MilkyTech.Online is:</p>
         <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
           <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">${otp}</span>
         </div>
         <p style="font-size: 14px; color: #666; text-align: center;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #999; text-align: center;">&copy; ${new Date().getFullYear()} TechServ. All rights reserved.</p>
+        <p style="font-size: 12px; color: #999; text-align: center;">&copy; ${new Date().getFullYear()} MilkyTech.Online. All rights reserved.</p>
       </div>
     `,
   });

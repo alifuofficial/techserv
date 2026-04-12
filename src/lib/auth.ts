@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) {
           // Check if a user with the same email exists (Telegram doesn't provide email)
-          // For TechServ, we'll create a new user or link if they provide a username
+          // For MilkyTech.Online, we'll create a new user or link if they provide a username
           user = await db.user.create({
             data: {
               name: credentials.username 

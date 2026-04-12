@@ -158,7 +158,7 @@ export async function PATCH(
       }
 
       if (message) {
-        message += `Order ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing TechServ!`;
+        message += `Order ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing MilkyTech.Online!`;
         await sendTelegramNotification(updatedOrder.userId, message);
       }
     }

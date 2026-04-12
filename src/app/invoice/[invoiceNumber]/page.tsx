@@ -181,7 +181,7 @@ export default function PublicInvoicePage() {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold tracking-tight">TechServ</h1>
+                    <h1 className="text-lg font-bold tracking-tight">MilkyTech.Online</h1>
                     <p className="text-xs text-muted-foreground">Payment Invoice</p>
                   </div>
                 </div>

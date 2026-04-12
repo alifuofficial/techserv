@@ -93,7 +93,7 @@ const settingDescriptions: Record<string, string> = {
   seo_keywords: 'Comma-separated keywords for search engines',
   seo_author: 'The author meta tag of the application',
   telegram_bot_token: 'The unique HTTP API token from @BotFather',
-  telegram_bot_username: 'Your bot handle (e.g. @TechServBot)',
+  telegram_bot_username: 'Your bot handle (e.g. @MilkyTech.OnlineBot)',
   telegram_enabled: 'Allow users to register and sign in using Telegram',
   telegram_notifications: 'Send automated order status updates via the bot',
   account_tier_enabled: 'Display account tiers (Standard, Gold, etc.) and benefits',

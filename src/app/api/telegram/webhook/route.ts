@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       await sendMessage(
         botToken,
         chatId,
-        "<b>Welcome to TechServ!</b>\n\nWe provide premium tech services including subscriptions, social media campaigns, and custom development.\n\nType /services to see what we offer or visit our website to get started."
+        "<b>Welcome to MilkyTech.Online!</b>\n\nWe provide premium tech services including subscriptions, social media campaigns, and custom development.\n\nType /services to see what we offer or visit our website to get started."
       );
     } else if (text === "/services") {
       const services = await db.service.findMany({
