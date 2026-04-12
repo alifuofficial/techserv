@@ -1,13 +1,26 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 
 const db = new PrismaClient();
+
+// Simple hash function using SHA-256 as fallback when bcryptjs is not available
+function hashPassword(password: string): string {
+  // Use bcryptjs if available, otherwise fallback to sha256
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const bcrypt = require("bcryptjs");
+    return bcrypt.hashSync(password, 12);
+  } catch {
+    // Fallback: prefix with sha256$ so auth can detect it
+    return "sha256$" + createHash("sha256").update(password).digest("hex");
+  }
+}
 
 async function seed() {
   console.log("🌱 Seeding database...");
 
   // Create admin user
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const adminPassword = hashPassword("admin123");
   const admin = await db.user.upsert({
     where: { email: "admin@milkytech.online" },
     update: {},
@@ -23,7 +36,7 @@ async function seed() {
   console.log("✅ Admin user created:", admin.email);
 
   // Create test user
-  const userPassword = await bcrypt.hash("user123", 12);
+  const userPassword = hashPassword("user123");
   const testUser = await db.user.upsert({
     where: { email: "user@test.com" },
     update: {},

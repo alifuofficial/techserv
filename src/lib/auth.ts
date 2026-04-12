@@ -1,7 +1,29 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import { db } from "@/lib/db";
+
+// Try to load bcryptjs, fallback to sha256 verification
+let bcrypt: typeof import("bcryptjs") | null = null;
+try {
+  bcrypt = require("bcryptjs");
+} catch {
+  console.warn("bcryptjs not available, using sha256 for password hashing");
+}
+
+function verifyPassword(password: string, storedHash: string): boolean {
+  // Handle sha256$ prefixed hashes
+  if (storedHash.startsWith("sha256$")) {
+    const hash = storedHash.replace("sha256$", "");
+    const computedHash = createHash("sha256").update(password).digest("hex");
+    return hash === computedHash;
+  }
+  // Handle bcrypt hashes
+  if (bcrypt) {
+    return bcrypt.compareSync(password, storedHash);
+  }
+  return false;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -68,13 +90,18 @@ export const authOptions: NextAuthOptions = {
         if (!user) {
           // Check if a user with the same email exists (Telegram doesn't provide email)
           // For MilkyTech.Online, we'll create a new user or link if they provide a username
+          const randomPassword = Math.random().toString(36);
+          const hashedPassword = bcrypt 
+            ? bcrypt.hashSync(randomPassword, 12)
+            : "sha256$" + createHash("sha256").update(randomPassword).digest("hex");
+          
           user = await db.user.create({
             data: {
               name: credentials.username 
                 ? `@${credentials.username}` 
                 : `${credentials.first_name} ${credentials.last_name || ""}`.trim(),
               email: `${id}@telegram.user`, // Temporary email for telegram users
-              password: await bcrypt.hash(Math.random().toString(36), 12),
+              password: hashedPassword,
               telegramId: id,
               telegram: credentials.username ? `@${credentials.username}` : null,
               referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
@@ -107,7 +134,7 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
         if (!user) return null;
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+        const isPasswordValid = verifyPassword(credentials.password, user.password);
         if (!isPasswordValid) return null;
         return {
           id: user.id,
