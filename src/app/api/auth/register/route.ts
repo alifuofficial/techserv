@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { sendOtpEmail } from "@/lib/email";
+
+// Try to load bcryptjs, fallback to sha256 hashing
+let bcrypt: typeof import("bcryptjs") | null = null;
+try {
+  bcrypt = require("bcryptjs");
+} catch {}
+
+function hashPassword(password: string): string {
+  if (bcrypt) return bcrypt.hashSync(password, 12);
+  return "sha256$" + createHash("sha256").update(password).digest("hex");
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, referralCode: providedReferralCode } = body;
+    const { name, email, password, telegram, referralCode: providedReferralCode } = body;
 
     // Check if registration is enabled
     const registrationSetting = await (db.setting as any).findUnique({
@@ -40,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = hashPassword(password);
 
     // Generate a simple unique referral code
     const newReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -69,6 +80,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
+        telegram: telegram || null,
         role: "user",
         tier: "Standard",
         referralCode: newReferralCode,

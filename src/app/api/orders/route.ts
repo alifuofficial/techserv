@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const userId = (session.user as Record<string, unknown>).id as string;
     const body = await request.json();
-    const { serviceId, duration, telegramUsername, screenshot } = body;
+    const { serviceId, duration, telegramUsername, screenshot, paymentMethodId } = body;
 
     if (!serviceId || !duration) {
       return NextResponse.json(
@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
         userId,
         amount: order.amount,
         status: 'pending',
+        paymentMethodId: paymentMethodId || null,
       },
     });
 
