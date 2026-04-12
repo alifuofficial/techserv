@@ -127,7 +127,7 @@ export default function AboutPage() {
                 </motion.div>
                 <motion.h2 variants={reveal} custom={2} className="text-3xl md:text-4xl font-extrabold text-slate-900">
                   Driven by a Passion for <span className="text-primary italic">Digital Transformation</span>
-                </h2>
+                </motion.h2>
                 <motion.p variants={reveal} custom={3} className="text-lg text-slate-600 leading-relaxed">
                   "Hello! I am the founder of MilkyTech.Online. My journey started with a simple belief: high-end tech services shouldn't be complicated or inaccessible. I wanted to build a platform where quality meets speed — where every client feels like their project is our most important one."
                 </motion.p>
