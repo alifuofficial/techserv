@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   Loader2,
   Save,
-  ChevronRight,
   DollarSign,
   Tag,
   Layers,
@@ -43,20 +42,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 /* ────────────────────────────────────────────
@@ -174,7 +159,7 @@ function TierEditor({
   onRemove: (index: number) => void
 }) {
   return (
-    <div className="relative rounded-lg border border-border/60 bg-muted/20 p-4 space-y-3">
+    <div className="relative rounded-xl border border-border/40 bg-muted/20 p-4 space-y-3">
       {/* Tier header with number + remove */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -184,7 +169,7 @@ function TierEditor({
           <button
             type="button"
             onClick={() => onRemove(index)}
-            className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             title="Remove tier"
           >
             <X className="h-3.5 w-3.5" />
@@ -410,43 +395,34 @@ export default function CreateServicePage() {
       initial="hidden"
       animate="visible"
     >
-      {/* ── Breadcrumb + Back ── */}
+      {/* ── Page Header ── */}
       <motion.div variants={fadeUp} className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link
-            href="/admin/services"
-            className="hover:text-foreground transition-colors"
-          >
-            Services
+        <div className="flex items-center gap-3">
+          <Link href="/admin/services" className="h-9 w-9 rounded-xl bg-muted/50 hover:bg-muted flex items-center justify-center transition-colors">
+            <ArrowLeft className="h-4 w-4" />
           </Link>
-          <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground font-medium">New Service</span>
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Save className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">New Service</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Create a new service for your platform</p>
+            </div>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground -mr-2">
-          <Link href="/admin/services">
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            <span className="hidden sm:inline">Back to Services</span>
-            <span className="sm:hidden">Back</span>
-          </Link>
-        </Button>
       </motion.div>
 
       {/* ── Form Card ── */}
       <motion.div variants={fadeUp}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Create New Service</CardTitle>
-            <CardDescription>
-              Fill in the details below to create a new service for your platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* ── Basic Information ── */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Tag className="h-4 w-4 text-muted-foreground" />
-                  Basic Information
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Tag className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="font-semibold text-sm">Basic Information</span>
                 </div>
 
                 {/* Title */}
@@ -513,13 +489,15 @@ export default function CreateServicePage() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-8" />
 
               {/* ── Icon Selection ── */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  Service Icon
+              <div className="space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <span className="font-semibold text-sm">Service Icon</span>
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                   {iconOptions.map(({ name, Icon }) => {
@@ -529,10 +507,10 @@ export default function CreateServicePage() {
                         key={name}
                         type="button"
                         onClick={() => setValue('icon', name)}
-                        className={`flex flex-col items-center gap-1.5 rounded-lg p-2.5 border transition-all ${
+                        className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border transition-all ${
                           isSelected
                             ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                            : 'border-border/60 bg-muted/30 hover:border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                            : 'border-border/40 bg-muted/30 hover:border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <Icon className="h-5 w-5" />
@@ -545,13 +523,15 @@ export default function CreateServicePage() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-8" />
 
               {/* ── Features ── */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Layers className="h-4 w-4 text-muted-foreground" />
-                  Features
+              <div className="space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <Layers className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <span className="font-semibold text-sm">Features</span>
                 </div>
                 <div className="space-y-2">
                   <Textarea
@@ -566,13 +546,15 @@ export default function CreateServicePage() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-8" />
 
               {/* ── Pricing ── */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  Pricing
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="font-semibold text-sm">Pricing</span>
                 </div>
 
                 {/* Pricing Type Toggle */}
@@ -580,10 +562,10 @@ export default function CreateServicePage() {
                   <button
                     type="button"
                     onClick={() => handlePricingTypeChange('subscription')}
-                    className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
                       pricingType === 'subscription'
                         ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                        : 'border-border/60 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
+                        : 'border-border/40 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
                     }`}
                   >
                     <Repeat className="h-4 w-4" />
@@ -592,10 +574,10 @@ export default function CreateServicePage() {
                   <button
                     type="button"
                     onClick={() => handlePricingTypeChange('one_time')}
-                    className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
                       pricingType === 'one_time'
                         ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                        : 'border-border/60 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
+                        : 'border-border/40 bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50'
                     }`}
                   >
                     <CreditCard className="h-4 w-4" />
@@ -656,13 +638,15 @@ export default function CreateServicePage() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-8" />
 
               {/* ── Settings ── */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  Settings
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-slate-500/10 flex items-center justify-center">
+                    <BarChart3 className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                  </div>
+                  <span className="font-semibold text-sm">Settings</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Sort Order */}
@@ -700,23 +684,22 @@ export default function CreateServicePage() {
                 </div>
               </div>
 
-              <Separator />
-
               {/* ── Actions ── */}
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-border/40">
                 <Button
                   type="button"
                   variant="outline"
                   asChild
                   disabled={submitting}
+                  className="rounded-xl"
                 >
                   <Link href="/admin/services">Cancel</Link>
                 </Button>
-                <Button type="submit" disabled={submitting}>
+                <Button type="submit" disabled={submitting} className="rounded-xl">
                   {submitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating…
+                      Creating...
                     </>
                   ) : (
                     <>
@@ -727,8 +710,6 @@ export default function CreateServicePage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
       </motion.div>
     </motion.div>
   )
