@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -482,27 +482,18 @@ export default function AdminServicesPage() {
         ) : filteredServices.length === 0 ? (
           <EmptyState hasSearch={searchQuery.trim().length > 0} />
         ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    togglingId={togglingId}
-                    onToggle={handleToggle}
-                    onDeleteClick={(s) => setDeleteTarget(s)}
-                    formatAmount={formatAmount}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredServices.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                togglingId={togglingId}
+                onToggle={handleToggle}
+                onDeleteClick={(s) => setDeleteTarget(s)}
+                formatAmount={formatAmount}
+              />
+            ))}
+          </div>
         )}
       </motion.div>
 
