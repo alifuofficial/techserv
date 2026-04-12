@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: seoDesc,
     keywords: seoKeywords,
     authors: [{ name: seoAuthor }],
-    icons: { icon: getSetting("logo_url") || "https://z-cdn.chatglm.cn/z-ai/static/logo.svg" },
+    icons: { icon: getSetting("logo_url") || "/logo.png" },
   };
 }
 
@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
-  const logoUrl = getSetting("logo_url") || "";
+  const logoUrl = getSetting("logo_url") || "/logo.png";
   const siteName = getSetting("site_name") || "MilkyTech.Online";
 
   return (
