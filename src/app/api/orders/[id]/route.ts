@@ -163,6 +163,21 @@ export async function PATCH(
       }
     }
 
+    // Send Email notification
+    try {
+      const { sendOrderNotificationEmail } = await import("@/lib/email");
+      if (status && status !== existingOrder.status) {
+        await sendOrderNotificationEmail(updatedOrder.user.email, {
+          id: updatedOrder.id,
+          title: updatedOrder.service.title,
+          amount: updatedOrder.amount,
+          status: status,
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send order status email:", emailError);
+    }
+
     return NextResponse.json(updatedOrder);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal server error";

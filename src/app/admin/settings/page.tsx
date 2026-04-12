@@ -249,6 +249,38 @@ function GroupSettingsCard({ groupKey, settings, formValues, onValueChange, onRe
             )}
           </div>
           <div className="flex items-center gap-2">
+            {groupKey === 'email' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={async () => {
+                  const email = prompt('Enter email address to send test message to:');
+                  if (!email) return;
+                  toast.promise(
+                    fetch('/api/admin/settings/test-email', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email }),
+                    }).then(async (res) => {
+                      if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || 'Failed to send test email');
+                      }
+                      return res.json();
+                    }),
+                    {
+                      loading: 'Sending test email...',
+                      success: 'Test email sent successfully!',
+                      error: (err) => err.message,
+                    }
+                  );
+                }}
+                disabled={saving}
+                className="mr-2"
+              >
+                <Send className="h-3.5 w-3.5 mr-1.5" /> Test Connection
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={onReset} disabled={saving || !isDirty} className="text-muted-foreground">
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Discard
             </Button>

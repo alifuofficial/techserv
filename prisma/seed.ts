@@ -383,6 +383,7 @@ async function seed() {
     { key: "smtp_secure", value: "true", label: "SMTP Secure (SSL/TLS)", type: "toggle", group: "email" },
     { key: "smtp_from_email", value: "support@techserv.com", label: "Sender Email", type: "text", group: "email" },
     { key: "smtp_from_name", value: "TechServ Support", label: "Sender Name", type: "text", group: "email" },
+    { key: "email_otp_enabled", value: "false", label: "Enable Email OTP Verification", type: "toggle", group: "email" },
   ];
 
   for (const setting of defaultSettings) {

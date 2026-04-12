@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { sendOtpEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if email OTP is enabled
+    const otpSetting = await (db.setting as any).findUnique({
+      where: { key: "email_otp_enabled" }
+    });
+    const isOtpEnabled = otpSetting && otpSetting.value === "true";
+
     // Create user
     const user = await (db.user as any).create({
       data: {
@@ -66,8 +73,31 @@ export async function POST(request: NextRequest) {
         tier: "Standard",
         referralCode: newReferralCode,
         referredById,
+        isActive: !isOtpEnabled, // Deactivate if OTP is required
       },
     });
+
+    if (isOtpEnabled) {
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await (db as any).verificationToken.create({
+        data: {
+          email,
+          token: otp,
+          expires,
+        },
+      });
+
+      await sendOtpEmail(email, otp);
+      
+      return NextResponse.json({ 
+        message: "OTP sent to your email. Please verify to complete registration.",
+        requiresVerification: true,
+        email 
+      }, { status: 201 });
+    }
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;

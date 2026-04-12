@@ -88,6 +88,9 @@ function SignUpForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [refCode, setRefCode] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
   
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -162,6 +165,15 @@ function SignUpForm() {
         return;
       }
 
+      if (data.requiresVerification) {
+        setShowOtp(true);
+        toast({
+          title: "Verification required",
+          description: "We've sent a 6-digit code to your email.",
+        });
+        return;
+      }
+
       toast({
         title: "Account created successfully!",
         description: "Please sign in to continue.",
@@ -180,6 +192,96 @@ function SignUpForm() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" />
+      </div>
+    );
+  }
+
+  if (showOtp) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center grid-pattern px-4 py-12">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative w-full max-w-[440px] rounded-[32px] border border-border/40 bg-card/60 p-8 shadow-2xl backdrop-blur-2xl sm:p-10"
+        >
+          <div className="mb-10 text-center space-y-2">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <Mail className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight">Verify Email</h1>
+            <p className="text-sm text-muted-foreground font-medium">We sent a 6-digit code to <span className="text-foreground font-bold">{email}</span></p>
+          </div>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setError("");
+            if (otp.length !== 6) {
+              setError("Please enter a 6-digit code.");
+              return;
+            }
+            try {
+              setOtpLoading(true);
+              const res = await fetch("/api/auth/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Verification failed");
+              
+              toast({
+                title: "Email verified!",
+                description: "Your account is now active. Please sign in.",
+              });
+              router.push("/auth/signin");
+            } catch (err: any) {
+              setError(err.message);
+            } finally {
+              setOtpLoading(false);
+            }
+          }} className="space-y-6">
+            {error && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs font-bold text-destructive flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2 text-center">
+              <Input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                className="h-16 text-center text-3xl font-black tracking-[10px] rounded-2xl bg-muted/30 border-border/50 focus:bg-background transition-all"
+                disabled={otpLoading}
+              />
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Verification Code</p>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={otpLoading}
+              className="h-12 w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+            >
+              {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify & Activate"}
+            </Button>
+
+            <div className="text-center pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  toast({ title: "OTP Resent", description: "Please check your inbox again." });
+                  // Add logic here to trigger resend API if needed
+                }}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Resend code
+              </button>
+            </div>
+          </form>
+        </motion.div>
       </div>
     );
   }

@@ -110,6 +110,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send order confirmation email
+    try {
+      const { sendOrderNotificationEmail } = await import("@/lib/email");
+      if (session.user?.email) {
+        await sendOrderNotificationEmail(session.user.email, {
+          id: order.id,
+          title: order.service.title,
+          amount: order.amount,
+          status: "pending",
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send order confirmation email:", emailError);
+    }
+
     // Generate unique invoice number and create invoice
     const count = await db.invoice.count();
     const d = new Date();
