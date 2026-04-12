@@ -364,7 +364,7 @@ async function seed() {
     { key: "currency", value: "USD", label: "Currency", type: "select", group: "general" },
     { key: "currency_symbol", value: "$", label: "Currency Symbol", type: "text", group: "general" },
     { key: "telegram_channel", value: "@techserv", label: "Telegram Channel", type: "text", group: "general" },
-    { key: "telegram_bot_token", value: "8773395225:AAEMXnznyGqIR2pnUPypVI5zonpozWBQ5c4", label: "Bot Token", type: "text", group: "telegram" },
+    { key: "telegram_bot_token", value: "", label: "Bot Token", type: "text", group: "telegram" },
     { key: "telegram_bot_username", value: "@milkytechonlinebot", label: "Bot Username", type: "text", group: "telegram" },
     { key: "telegram_enabled", value: "true", label: "Enable Telegram Login", type: "toggle", group: "telegram" },
     { key: "telegram_notifications", value: "true", label: "Enable Telegram Notifications", type: "toggle", group: "telegram" },

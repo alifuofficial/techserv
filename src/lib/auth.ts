@@ -20,8 +20,20 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials) return null;
 
-        const { id, hash, ...data } = credentials;
+        const { id, hash } = credentials;
         if (!id || !hash) return null;
+
+        // Filter valid Telegram fields for hash verification
+        const telegramFields = [
+          "id", "first_name", "last_name", "username", "photo_url", "auth_date"
+        ];
+        
+        const data: Record<string, string> = { hash };
+        for (const key of telegramFields) {
+          if (credentials[key as keyof typeof credentials]) {
+            data[key] = credentials[key as keyof typeof credentials] as string;
+          }
+        }
 
         // Fetch bot token from settings
         const botTokenSetting = await db.setting.findUnique({
@@ -42,7 +54,7 @@ export const authOptions: NextAuthOptions = {
 
         // Verify hash
         const { verifyTelegramAuth } = await import("./telegram");
-        const isValid = verifyTelegramAuth(credentials as any, botTokenSetting.value);
+        const isValid = verifyTelegramAuth(data, botTokenSetting.value);
 
         if (!isValid) {
           throw new Error("Invalid Telegram authentication");
