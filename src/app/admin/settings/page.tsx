@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Send,
   Zap,
+  Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -65,6 +66,7 @@ const groupMeta: Record<string, { label: string; description: string; icon: Reac
   orders: { label: 'Orders', description: 'Order processing settings', icon: ShoppingCart, accent: 'bg-primary/10 text-primary', color: 'bg-primary' },
   system: { label: 'System', description: 'System and maintenance', icon: ShieldCheck, accent: 'bg-green-500/10 text-green-600 dark:text-green-400', color: 'bg-green-500' },
   features: { label: 'Features', description: 'Toggle platform features', icon: Zap, accent: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', color: 'bg-amber-500' },
+  email: { label: 'Email', description: 'SMTP and notification settings', icon: Mail, accent: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', color: 'bg-purple-500' },
 }
 
 const settingDescriptions: Record<string, string> = {
@@ -103,6 +105,13 @@ const settingDescriptions: Record<string, string> = {
   order_confirmation_message: 'Message sent when an order is placed',
   currency_symbol: 'Symbol used for currency display',
   site_phone: 'Phone number shown for customer support',
+  smtp_host: 'The hostname of your SMTP server (e.g., smtp.gmail.com)',
+  smtp_port: 'The port number for your SMTP server (usually 587 or 465)',
+  smtp_user: 'The username (often email) used to authenticate with the SMTP server',
+  smtp_pass: 'The password used to authenticate with the SMTP server',
+  smtp_secure: 'Use SSL/TLS for a secure connection to the SMTP server',
+  smtp_from_email: 'The email address used as the "From" address for sent emails',
+  smtp_from_name: 'The display name used as the "From" name for sent emails',
 }
 
 function getDescription(key: string, label: string): string {
@@ -165,7 +174,7 @@ function ToggleSetting({ setting, value, onChange, disabled }: {
 function TextSetting({ setting, value, onChange, disabled }: {
   setting: SettingItem, value: string, onChange: (val: string) => void, disabled: boolean
 }) {
-  const isSecret = setting.key.includes('token') || setting.key.includes('secret')
+  const isSecret = setting.key.includes('token') || setting.key.includes('secret') || setting.key.includes('pass')
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -339,7 +348,7 @@ export default function AdminSettingsPage() {
   const groupKeys = useMemo(() => {
     if (!originalData) return []
     const keys = Object.keys(originalData.groups)
-    const preferredOrder = ['general', 'telegram', 'orders', 'system', 'features']
+    const preferredOrder = ['general', 'telegram', 'email', 'orders', 'system', 'features']
     const ordered: string[] = []
     for (const pk of preferredOrder) if (keys.includes(pk)) ordered.push(pk)
     for (const k of keys) if (!ordered.includes(k)) ordered.push(k)

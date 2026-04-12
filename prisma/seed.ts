@@ -376,6 +376,13 @@ async function seed() {
     { key: "auto_approve_orders", value: "false", label: "Auto Approve Orders", type: "toggle", group: "orders" },
     { key: "order_confirmation_message", value: "Thank you for your order! We will process it shortly.", label: "Order Confirmation Message", type: "textarea", group: "orders" },
     { key: "welcome_message", value: "Welcome to TechServ! Browse our services and get started.", label: "Welcome Message", type: "textarea", group: "general" },
+    { key: "smtp_host", value: "smtp.gmail.com", label: "SMTP Host", type: "text", group: "email" },
+    { key: "smtp_port", value: "587", label: "SMTP Port", type: "text", group: "email" },
+    { key: "smtp_user", value: "", label: "SMTP Username", type: "text", group: "email" },
+    { key: "smtp_pass", value: "", label: "SMTP Password", type: "password", group: "email" },
+    { key: "smtp_secure", value: "true", label: "SMTP Secure (SSL/TLS)", type: "toggle", group: "email" },
+    { key: "smtp_from_email", value: "support@techserv.com", label: "Sender Email", type: "text", group: "email" },
+    { key: "smtp_from_name", value: "TechServ Support", label: "Sender Name", type: "text", group: "email" },
   ];
 
   for (const setting of defaultSettings) {
