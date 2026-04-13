@@ -146,18 +146,18 @@ export async function sendPasswordResetEmail(email: string, otp: string) {
 export async function sendBroadcastEmail(email: string, message: string) {
   return sendEmail({
     to: email,
-    subject: \`Important Update from MilkyTech\`,
-    html: \`
+    subject: `Important Update from MilkyTech`,
+    html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;">
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #3b82f6; margin: 0;">MilkyTech.Online</h2>
         </div>
         <div style="background-color: #f9fafb; padding: 25px; border-radius: 8px; font-size: 16px; color: #333; line-height: 1.6;">
-          \${message.replace(/\\n/g, '<br/>')}
+          ${message.replace(/\n/g, '<br/>')}
         </div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #999; text-align: center;">&copy; \${new Date().getFullYear()} MilkyTech.Online. All rights reserved.</p>
+        <p style="font-size: 12px; color: #999; text-align: center;">&copy; ${new Date().getFullYear()} MilkyTech.Online. All rights reserved.</p>
       </div>
-    \`,
+    `,
   });
 }

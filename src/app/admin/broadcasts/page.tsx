@@ -63,7 +63,7 @@ export default function AdminBroadcastsPage() {
 
       if (res.ok) {
         toast.success('Broadcast Dispatched!', { 
-          description: \`Message queued to \${data.stats.totalTargeted} users.\`
+          description: `Message queued to ${data.stats.totalTargeted} users.`
         })
         setSuccessStats(data.stats)
         setMessage('')
