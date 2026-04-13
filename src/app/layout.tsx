@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const seoAuthor = getSetting("seo_author") || siteName;
 
   const rawLogo = getSetting("logo_url") || "/logo.png";
-  const iconUrl = rawLogo.startsWith("/uploads/") ? `/api${rawLogo}` : rawLogo;
+  const iconUrl = rawLogo;
 
   return {
     title: {
@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
   const rawLogo = getSetting("logo_url") || "/logo.png";
-  const logoUrl = rawLogo.startsWith("/uploads/") ? `/api${rawLogo}` : rawLogo;
+  const logoUrl = rawLogo;
   const siteName = getSetting("site_name") || "MilkyTech.Online";
 
   return (
