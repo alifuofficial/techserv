@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import {
-  Zap, CheckCircle2, ShoppingCart, Upload, X, Loader2, ArrowLeft, Home,
-  ChevronRight, AlertCircle, CreditCard, Smartphone, Landmark, Wallet,
-  MessageCircle, ArrowRight, Star, Shield, Clock, Copy, Check,
+  Zap, CheckCircle2, Upload, X, Loader2, ArrowLeft,
+  AlertCircle, CreditCard, Smartphone, Landmark, Wallet,
+  MessageCircle, ArrowRight, Star, Shield, Clock, Check,
+  Sparkles, Crown, Rocket, Diamond, Gem,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
@@ -65,6 +65,8 @@ const paymentIcons: Record<string, React.ElementType> = {
   other: CreditCard,
 }
 
+const planIcons: React.ElementType[] = [Sparkles, Crown, Rocket, Diamond, Gem]
+
 const steps = [
   { id: 1, title: 'Select Plan', icon: Star },
   { id: 2, title: 'Payment', icon: CreditCard },
@@ -78,13 +80,17 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
       {steps.map((step, index) => (
         <div key={step.id} className="flex items-center">
           <div className="flex flex-col items-center gap-1.5">
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-              currentStep > step.id ? 'bg-emerald-500 text-white' :
-              currentStep === step.id ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' :
-              'bg-muted text-muted-foreground'
-            }`}>
+            <motion.div 
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                currentStep > step.id ? 'bg-emerald-500 text-white' :
+                currentStep === step.id ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' :
+                'bg-muted text-muted-foreground'
+              }`}
+            >
               {currentStep > step.id ? <Check className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
-            </div>
+            </motion.div>
             <span className={`text-[9px] font-bold uppercase tracking-wider hidden sm:block ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>
               {step.title}
             </span>
@@ -102,7 +108,7 @@ export default function ServiceDetailPage() {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const { toast } = useToast()
   const { formatAmount } = useSettings()
 
@@ -232,19 +238,19 @@ export default function ServiceDetailPage() {
 
   return (
     <div className="min-h-screen py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8">
           <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
             <ArrowLeft className="h-4 w-4" /> Back to Services
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Zap className="h-6 w-6" />
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Zap className="h-7 w-7 text-primary" />
             </div>
             <div>
               <h1 className="text-2xl font-bold">{service.title}</h1>
-              <p className="text-sm text-muted-foreground">{service.shortDescription}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{service.shortDescription}</p>
             </div>
           </div>
         </div>
@@ -256,98 +262,133 @@ export default function ServiceDetailPage() {
         <AnimatePresence mode="wait">
           {/* STEP 1: Select Plan */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2">Select Your Plan</h2>
-                <p className="text-sm text-muted-foreground">Choose the {isSubscription ? 'subscription duration' : 'package'} that works best for you</p>
+            <motion.div key="step1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Choose Your Plan</h2>
+                <p className="text-muted-foreground">Select the {isSubscription ? 'subscription duration' : 'package'} that fits your needs</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+              {/* Plan Tabs */}
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {tiers.map((tier, i) => {
-                  const items = tier.features 
-                    ? tier.features.split(',').map(f => f.trim()).filter(Boolean)
-                    : service.features.split(',').map(f => f.trim()).filter(Boolean).slice(0, 6)
                   const isSelected = selectedTier?.label === tier.label
-
+                  const PlanIcon = planIcons[i % planIcons.length]
+                  
                   return (
                     <motion.button
-                      key={i}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      key={tier.label}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
                       onClick={() => setSelectedTier(tier)}
-                      className={`relative flex flex-col text-left p-8 rounded-[2rem] border-2 transition-all duration-300 ${
-                        isSelected
-                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-xl shadow-primary/5 -translate-y-1'
-                          : 'border-border/40 bg-card hover:border-primary/30 hover:shadow-lg'
+                      className={`relative group overflow-hidden rounded-2xl transition-all duration-300 ${
+                        isSelected 
+                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' 
+                          : 'hover:bg-muted/50'
                       }`}
                     >
-                      {/* Premium gradient overlay for selected */}
+                      {/* Background gradient for selected */}
                       {isSelected && (
-                        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
                       )}
-
+                      
+                      {/* Popular badge */}
                       {tier.popular && (
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 whitespace-nowrap z-10 flex items-center gap-1.5">
-                          <Star className="h-3 w-3 fill-white" />
-                          Most Popular
+                        <div className="absolute -top-0.5 left-1/2 -translate-x-1/2">
+                          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-b-lg">
+                            Popular
+                          </div>
                         </div>
                       )}
                       
-                      <div className="mb-6 relative">
-                        <p className={`text-[11px] font-black uppercase tracking-[0.15em] mb-2 ${isSelected ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                      <div className={`p-6 min-w-[160px] ${tier.popular ? 'pt-8' : ''}`}>
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
+                            isSelected 
+                              ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            <PlanIcon className="h-4 w-4" />
+                          </div>
+                        </div>
+                        
+                        <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
                           {tier.label}
                         </p>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-4xl font-extrabold tracking-tight italic">
+                        
+                        <div className="flex items-baseline justify-center gap-0.5">
+                          <span className={`text-2xl font-extrabold ${isSelected ? 'text-foreground' : 'text-muted-foreground'}`}>
                             {formatAmount(tier.price).split('.')[0]}
-                            <span className="text-xl opacity-70">.{formatAmount(tier.price).split('.')[1] || '00'}</span>
                           </span>
                           {isSubscription && (
-                            <span className="text-muted-foreground/70 text-sm font-bold lowercase">
-                              /{tier.duration.includes('month') ? 'mo' : tier.duration.includes('year') ? 'yr' : tier.duration}
+                            <span className="text-xs text-muted-foreground">
+                              /{tier.duration.includes('month') ? 'mo' : tier.duration.includes('year') ? 'yr' : ''}
                             </span>
                           )}
                         </div>
+                        
                         {tier.description && (
-                          <p className="text-[13px] text-muted-foreground mt-3 leading-relaxed opacity-80">
+                          <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2">
                             {tier.description}
                           </p>
                         )}
-                      </div>
-
-                      <Separator className={`mb-6 ${isSelected ? 'bg-primary/20' : 'bg-border/40'}`} />
-
-                      <div className="flex-1 space-y-4 mb-8">
-                        {items.map((feature, idx) => (
-                          <div key={idx} className="flex items-start gap-3 group/feat">
-                            <div className={`mt-0.5 rounded-full p-1 transition-transform group-hover/feat:scale-110 ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground/40'}`}>
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            </div>
-                            <span className={`text-[13px] leading-tight ${isSelected ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
-                              {feature}
-                            </span>
+                        
+                        {/* Check indicator */}
+                        <div className={`mt-3 flex items-center justify-center transition-all ${
+                          isSelected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                        }`}>
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3 w-3 text-primary-foreground" />
                           </div>
-                        ))}
-                      </div>
-
-                      <div className={`mt-auto w-full py-3.5 rounded-2xl text-center text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-                        isSelected 
-                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
-                          : 'bg-muted text-muted-foreground group-hover:bg-primary/10 border-2 border-transparent hover:border-primary/20'
-                      }`}>
-                        {isSelected ? 'Selected Plan' : 'Select This Plan'}
+                        </div>
                       </div>
                     </motion.button>
                   )
                 })}
               </div>
 
+              {/* Selected Plan Features */}
+              {selectedTier && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-8"
+                >
+                  <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl border border-border/50 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-lg">{selectedTier.label} Plan Features</h3>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">
+                        {formatAmount(selectedTier.price)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(selectedTier.features 
+                        ? selectedTier.features.split(',').map(f => f.trim()).filter(Boolean)
+                        : service.features.split(',').map(f => f.trim()).filter(Boolean)
+                      ).map((feature, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-background/50"
+                        >
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium">{feature}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               <Button 
-                onClick={() => setStep(2)} 
+                onClick={() => selectedTier && setStep(2)} 
                 disabled={!selectedTier} 
-                className={`w-full h-14 rounded-2xl font-bold text-lg transition-all duration-300 ${
-                  selectedTier ? 'shadow-xl shadow-primary/25' : ''
-                }`}
+                className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20"
               >
                 Continue to Payment <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
@@ -356,50 +397,70 @@ export default function ServiceDetailPage() {
 
           {/* STEP 2: Payment Method */}
           {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2">Select Payment Method</h2>
-                <p className="text-sm text-muted-foreground">Choose how you'd like to pay</p>
+            <motion.div key="step2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Payment Method</h2>
+                <p className="text-muted-foreground">Choose how you'd like to pay</p>
               </div>
 
-              <div className="space-y-3 mb-6">
-                {paymentMethods.map((method) => {
+              <div className="grid gap-3 mb-8">
+                {paymentMethods.map((method, i) => {
                   const Icon = paymentIcons[method.type] || CreditCard
                   const details = parseDetails(method.details)
                   const isSelected = selectedPayment?.id === method.id
 
                   return (
-                    <button
+                    <motion.button
                       key={method.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
                       onClick={() => setSelectedPayment(method)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                        isSelected ? 'border-primary bg-primary/5' : 'border-border/40 bg-card hover:border-primary/30'
+                      className={`relative text-left p-5 rounded-2xl border-2 transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-gradient-to-br from-primary/5 to-transparent shadow-lg shadow-primary/10' 
+                          : 'border-border/50 bg-card hover:border-primary/30 hover:bg-muted/30'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                          <Icon className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex items-start gap-4">
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                          isSelected ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'bg-muted'
+                        }`}>
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">{method.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{method.type.replace('_', ' ')}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold">{method.name}</p>
+                            {isSelected && (
+                              <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                <Check className="h-3 w-3 text-primary-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground capitalize mt-0.5">{method.type.replace('_', ' ')}</p>
                         </div>
-                        {isSelected && <CheckCircle2 className="h-5 w-5 text-primary" />}
                       </div>
 
-                      {isSelected && method.instructions && (
-                        <div className="mt-4 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
-                          <p className="font-semibold mb-1">Instructions:</p>
-                          <p>{method.instructions}</p>
-                          {Object.entries(details).map(([key, value]) => (
-                            <div key={key} className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
-                              <span className="text-muted-foreground">{key}</span>
-                              <span className="font-mono font-semibold">{value}</span>
-                            </div>
-                          ))}
-                        </div>
+                      {isSelected && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="mt-4 pt-4 border-t border-border/50"
+                        >
+                          {method.instructions && (
+                            <p className="text-xs text-muted-foreground mb-3">{method.instructions}</p>
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(details).map(([key, value]) => (
+                              <div key={key} className="p-2 rounded-lg bg-muted/50">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{key}</p>
+                                <p className="text-sm font-mono font-semibold truncate">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
                       )}
-                    </button>
+                    </motion.button>
                   )
                 })}
               </div>
@@ -408,7 +469,7 @@ export default function ServiceDetailPage() {
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
-                <Button onClick={() => setStep(3)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
+                <Button onClick={() => selectedPayment && setStep(3)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -417,24 +478,24 @@ export default function ServiceDetailPage() {
 
           {/* STEP 3: Details */}
           {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2">Order Details</h2>
-                <p className="text-sm text-muted-foreground">Provide your Telegram and payment proof</p>
+            <motion.div key="step3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Order Details</h2>
+                <p className="text-muted-foreground">Provide your contact and payment proof</p>
               </div>
 
-              <div className="space-y-5 mb-6">
-                {/* Telegram - only show if not already in profile */}
+              <div className="space-y-6 mb-8">
+                {/* Telegram */}
                 {!userTelegram ? (
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">Telegram Username</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">@</span>
                       <Input
                         placeholder="your_username"
                         value={telegramUsername.replace('@', '')}
                         onChange={(e) => setTelegramUsername('@' + e.target.value.replace('@', ''))}
-                        className="pl-8 h-12 rounded-xl"
+                        className="pl-9 h-12 rounded-xl"
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">We'll use this to deliver your service</p>
@@ -449,26 +510,33 @@ export default function ServiceDetailPage() {
                   </div>
                 )}
 
-                {/* Screenshot Upload */}
+                {/* Screenshot */}
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">Payment Screenshot</Label>
                   <div
-                    className="border-2 border-dashed border-border/60 rounded-xl p-6 text-center hover:border-primary/40 transition-colors cursor-pointer"
+                    className="border-2 border-dashed border-border/60 rounded-2xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer group"
                     onClick={() => document.getElementById('screenshot')?.click()}
                   >
                     <input id="screenshot" type="file" accept="image/*" onChange={handleScreenshotChange} className="hidden" />
                     {screenshotPreview ? (
-                      <div className="space-y-2">
-                        <img src={screenshotPreview} alt="Preview" className="max-h-40 rounded-lg mx-auto" />
-                        <button onClick={(e) => { e.stopPropagation(); removeScreenshot() }} className="text-destructive text-sm">
+                      <div className="space-y-3">
+                        <img src={screenshotPreview} alt="Preview" className="max-h-48 rounded-xl mx-auto shadow-lg" />
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); removeScreenshot() }} 
+                          className="text-destructive text-sm font-medium hover:underline"
+                        >
                           <X className="h-4 w-4 inline mr-1" /> Remove
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                        <p className="text-sm font-medium">Click to upload</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG (max 10MB)</p>
+                      <div className="space-y-3">
+                        <div className="h-14 w-14 rounded-2xl bg-muted mx-auto flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                          <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">Click to upload</p>
+                          <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 10MB</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -480,7 +548,7 @@ export default function ServiceDetailPage() {
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
                 <Button onClick={() => setStep(4)} className="flex-1 h-12 rounded-xl">
-                  Continue <ArrowRight className="h-4 w-4 ml-2" />
+                  Review Order <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </motion.div>
@@ -488,49 +556,72 @@ export default function ServiceDetailPage() {
 
           {/* STEP 4: Review & Confirm */}
           {step === 4 && (
-            <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2">Review Order</h2>
-                <p className="text-sm text-muted-foreground">Confirm your order details</p>
+            <motion.div key="step4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Review Order</h2>
+                <p className="text-muted-foreground">Confirm your order details before submitting</p>
               </div>
 
-              <div className="space-y-3 mb-6">
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Service</span>
-                    <span className="font-semibold">{service?.title}</span>
+              <div className="space-y-4 mb-8">
+                {/* Order Summary Card */}
+                <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl border border-border/50 p-6">
+                  <h3 className="font-bold mb-4 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Order Summary
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="text-muted-foreground">Service</span>
+                      <span className="font-semibold">{service?.title}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="text-muted-foreground">Plan</span>
+                      <span className="font-semibold">{selectedTier?.label}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="text-muted-foreground">Payment</span>
+                      <span className="font-semibold">{selectedPayment?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="text-muted-foreground">Telegram</span>
+                      <span className="font-mono font-semibold">{tgUsername || 'Not provided'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="text-muted-foreground">Screenshot</span>
+                      <span className={`font-semibold ${screenshotFile ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {screenshotFile ? 'Uploaded' : 'Not uploaded'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Plan</span>
-                    <span className="font-semibold">{selectedTier?.label}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Payment Method</span>
-                    <span className="font-semibold">{selectedPayment?.name}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Telegram</span>
-                    <span className="font-mono font-semibold">{tgUsername || 'Not provided'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Screenshot</span>
-                    <span className={screenshotFile ? 'text-emerald-600' : 'text-amber-600'}>
-                      {screenshotFile ? 'Uploaded' : 'Not uploaded'}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="font-bold">Total</span>
-                    <span className="text-xl font-bold text-primary">{formatAmount(selectedTier?.price || 0)}</span>
+
+                  <div className="flex justify-between items-center pt-4 mt-2">
+                    <span className="font-bold text-lg">Total Amount</span>
+                    <span className="text-2xl font-extrabold text-primary">{formatAmount(selectedTier?.price || 0)}</span>
                   </div>
                 </div>
 
+                {/* Payment Instructions */}
                 {selectedPayment?.instructions && (
                   <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20">
-                    <p className="text-sm font-semibold mb-1">Payment Instructions</p>
+                    <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Payment Instructions
+                    </p>
                     <p className="text-xs text-muted-foreground">{selectedPayment.instructions}</p>
                   </div>
                 )}
+
+                {/* Security Notice */}
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold">Secure Order</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Your payment will be verified and your order processed within 24 hours.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3">
