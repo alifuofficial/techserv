@@ -37,6 +37,7 @@ export async function GET() {
         select: {
           tier: true,
           referralCode: true,
+          telegramId: true,
           _count: {
             select: { referrals: true },
           },
@@ -96,6 +97,7 @@ export async function GET() {
       nextTierRequirement: tierRequirement,
       referralCode: userData.referralCode,
       referralCount: userData._count.referrals,
+      hasLinkedTelegram: !!userData.telegramId,
       trends,
     });
   } catch (error) {

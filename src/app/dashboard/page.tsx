@@ -75,6 +75,7 @@ interface UserStats {
     spendingGrowth: number
     newActivity: number
   }
+  hasLinkedTelegram?: boolean
 }
 
 const container = {
@@ -135,6 +136,52 @@ function DashboardSkeleton() {
   )
 }
 
+function ConnectTelegramBanner() {
+  const [connecting, setConnecting] = useState(false)
+  const handleConnect = async () => {
+    setConnecting(true)
+    try {
+      const res = await fetch('/api/user/telegram-link')
+      if (res.ok) {
+        const data = await res.json()
+        window.open(data.deepLink, '_blank')
+      } else {
+        toast.error('Failed to generate secure link.')
+      }
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  return (
+    <motion.div variants={fadeUp} className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500/10 to-blue-500/10 border border-sky-500/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="absolute -top-10 -right-10 text-sky-500/10 rotate-12 pointer-events-none">
+        <MessageCircle className="h-32 w-32" />
+      </div>
+      <div className="flex items-start gap-3 relative z-10">
+        <div className="h-10 w-10 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
+          <MessageCircle className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+        </div>
+        <div>
+          <h3 className="font-bold text-sky-900 dark:text-sky-100">Connect to Telegram</h3>
+          <p className="text-sm text-sky-700 dark:text-sky-300 max-w-md leading-relaxed mt-0.5">
+            Link your account to our Telegram bot to receive instant updates, manage orders, and get support directly in your chat.
+          </p>
+        </div>
+      </div>
+      <Button 
+        onClick={handleConnect} 
+        disabled={connecting}
+        className="shrink-0 relative z-10 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-500/20"
+      >
+        {connecting ? 'Connecting...' : 'Connect Now'}
+      </Button>
+    </motion.div>
+  )
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
@@ -182,6 +229,9 @@ export default function DashboardPage() {
 
   return (
     <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">
+      {userStats && userStats.hasLinkedTelegram === false && (
+        <ConnectTelegramBanner />
+      )}
       <motion.div variants={fadeUp}>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
