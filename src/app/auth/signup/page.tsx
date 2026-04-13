@@ -25,6 +25,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const slideVariants = {
   enter: (direction: number) => ({ x: direction > 0 ? 300 : -300, opacity: 0 }),
@@ -260,6 +266,77 @@ function Step2({ data, onChange, onNext, onBack }: { data: any; onChange: (d: an
   );
 }
 
+function StepOtp({ 
+  email, 
+  value, 
+  onChange, 
+  onVerify, 
+  onBack, 
+  isLoading 
+}: { 
+  email: string; 
+  value: string; 
+  onChange: (v: string) => void; 
+  onVerify: () => void; 
+  onBack: () => void; 
+  isLoading: boolean 
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="space-y-6"
+    >
+      <div className="text-center space-y-2">
+        <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+          <Mail className="h-6 w-6 text-primary" />
+        </div>
+        <h2 className="text-xl font-bold">Verify Your Email</h2>
+        <p className="text-sm text-muted-foreground">
+          We've sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center gap-6 py-4">
+        <InputOTP
+          maxLength={6}
+          value={value}
+          onChange={onChange}
+          render={({ slots }) => (
+            <InputOTPGroup className="gap-2">
+              {slots.map((slot, index) => (
+                <InputOTPSlot
+                  key={index}
+                  {...slot}
+                  className="w-10 h-12 rounded-xl border-2 border-border/40 bg-muted/30 text-lg font-bold transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10"
+                />
+              ))}
+            </InputOTPGroup>
+          )}
+        />
+        
+        <p className="text-xs text-muted-foreground text-center">
+          Didn't receive the code? <button className="text-primary font-semibold hover:underline">Resend</button>
+        </p>
+      </div>
+
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={onBack} disabled={isLoading} className="flex-1 h-12 rounded-xl">
+          Back
+        </Button>
+        <Button 
+          onClick={onVerify} 
+          disabled={value.length !== 6 || isLoading} 
+          className="flex-1 h-12 rounded-xl font-semibold shadow-lg shadow-primary/20"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify & Sign In"}
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
 function Step3({ data, onChange, onBack, onSubmit, isLoading }: { data: any; onChange: (d: any) => void; onBack: () => void; onSubmit: () => void; isLoading: boolean }) {
   return (
     <motion.div
@@ -327,6 +404,9 @@ function SignUpForm() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [settings, setSettings] = useState<Record<string, string>>({
     registration_enabled: "true",
     referral_system_enabled: "true",
@@ -382,9 +462,18 @@ function SignUpForm() {
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
         setError(data.error || "Registration failed. Please try again.");
+        return;
+      }
+
+      if (data.requiresVerification) {
+        setShowOtp(true);
+        toast({
+          title: "Verification Required",
+          description: "Please enter the code sent to your email.",
+        });
         return;
       }
 
@@ -398,6 +487,37 @@ function SignUpForm() {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    setVerifying(true);
+
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Verification failed.");
+        return;
+      }
+
+      toast({
+        title: "Verified!",
+        description: "Your account is now active. Please sign in.",
+      });
+
+      router.push("/auth/signin");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Verification error.");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -450,9 +570,23 @@ function SignUpForm() {
           )}
 
           <AnimatePresence mode="wait" custom={direction}>
-            {step === 1 && <Step1 key="step1" data={formData} onChange={updateData} onNext={nextStep} />}
-            {step === 2 && <Step2 key="step2" data={formData} onChange={updateData} onNext={nextStep} onBack={prevStep} />}
-            {step === 3 && <Step3 key="step3" data={formData} onChange={updateData} onBack={prevStep} onSubmit={handleSubmit} isLoading={isLoading} />}
+            {showOtp ? (
+              <StepOtp 
+                key="otp" 
+                email={formData.email} 
+                value={otp} 
+                onChange={setOtp} 
+                onVerify={handleVerifyOtp} 
+                onBack={() => setShowOtp(false)}
+                isLoading={verifying}
+              />
+            ) : (
+              <>
+                {step === 1 && <Step1 key="step1" data={formData} onChange={updateData} onNext={nextStep} />}
+                {step === 2 && <Step2 key="step2" data={formData} onChange={updateData} onNext={nextStep} onBack={prevStep} />}
+                {step === 3 && <Step3 key="step3" data={formData} onChange={updateData} onBack={prevStep} onSubmit={handleSubmit} isLoading={isLoading} />}
+              </>
+            )}
           </AnimatePresence>
 
           <div className="mt-6 text-center">

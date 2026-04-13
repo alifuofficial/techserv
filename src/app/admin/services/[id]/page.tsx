@@ -81,6 +81,7 @@ interface PricingTier {
   price: number
   popular?: boolean
   description?: string
+  features?: string
 }
 
 interface ServiceFormData {
@@ -164,6 +165,7 @@ function createEmptyTier(pricingType: string): PricingTier {
     price: 0,
     popular: false,
     description: '',
+    features: '',
   }
 }
 
@@ -280,17 +282,33 @@ function TierEditor({
         </div>
       </div>
 
-      {/* Description (more prominent for one-time) */}
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">
-          Description {pricingType === 'one_time' && <span className="text-primary">(recommended)</span>}
-        </Label>
-        <Input
-          placeholder={pricingType === 'one_time' ? "What's included in this plan?" : 'Optional description'}
-          value={tier.description || ''}
-          onChange={(e) => onUpdate(index, 'description', e.target.value)}
-          className="h-8 text-sm bg-muted/30 border-border/60 focus-visible:bg-background"
-        />
+      {/* Description & Features */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Description */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Description {pricingType === 'one_time' && <span className="text-primary">(recommended)</span>}
+          </Label>
+          <Input
+            placeholder={pricingType === 'one_time' ? "What's included in this plan?" : 'Optional description'}
+            value={tier.description || ''}
+            onChange={(e) => onUpdate(index, 'description', e.target.value)}
+            className="h-8 text-sm bg-muted/30 border-border/60 focus-visible:bg-background"
+          />
+        </div>
+
+        {/* Features */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Features (optional, comma-separated)
+          </Label>
+          <Input
+            placeholder="e.g., 24/7 Support, Free updates, 10GB Storage"
+            value={tier.features || ''}
+            onChange={(e) => onUpdate(index, 'features', e.target.value)}
+            className="h-8 text-sm bg-muted/30 border-border/60 focus-visible:bg-background"
+          />
+        </div>
       </div>
     </div>
   )
@@ -379,6 +397,7 @@ export default function EditServicePage() {
                   price: Number(t.price) || 0,
                   popular: !!t.popular,
                   description: String(t.description || ''),
+                  features: String(t.features || ''),
                 }))
               }
             } catch {
@@ -460,6 +479,7 @@ export default function EditServicePage() {
               price: Number(t.price),
               popular: !!t.popular,
               description: (t.description || '').trim(),
+              features: (t.features || '').trim(),
             })),
             sortOrder: Number(data.sortOrder),
           }),

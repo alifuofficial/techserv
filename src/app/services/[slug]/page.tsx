@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react'
 import {
   Zap, CheckCircle2, ShoppingCart, Upload, X, Loader2, ArrowLeft, Home,
   ChevronRight, AlertCircle, CreditCard, Smartphone, Landmark, Wallet,
-  MessageCircle, ArrowRight, Star, Shield, Clock, Copy, Check, Info, BookOpen
+  MessageCircle, ArrowRight, Star, Shield, Clock, Copy, Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,6 +26,7 @@ interface PricingTier {
   price: number
   popular?: boolean
   description?: string
+  features?: string
 }
 
 interface Service {
@@ -65,11 +66,10 @@ const paymentIcons: Record<string, React.ElementType> = {
 }
 
 const steps = [
-  { id: 1, title: 'Overview', icon: Info },
-  { id: 2, title: 'Select Plan', icon: Star },
-  { id: 3, title: 'Payment', icon: CreditCard },
-  { id: 4, title: 'Details', icon: MessageCircle },
-  { id: 5, title: 'Confirm', icon: CheckCircle2 },
+  { id: 1, title: 'Select Plan', icon: Star },
+  { id: 2, title: 'Payment', icon: CreditCard },
+  { id: 3, title: 'Details', icon: MessageCircle },
+  { id: 4, title: 'Confirm', icon: CheckCircle2 },
 ]
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
@@ -254,91 +254,94 @@ export default function ServiceDetailPage() {
 
         {/* Step Content */}
         <AnimatePresence mode="wait">
-          {/* STEP 1: Overview */}
+          {/* STEP 1: Select Plan */}
           {step === 1 && (
-            <motion.div 
-              key="step1" 
-              initial={{ opacity: 0, x: 20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="bg-card border border-border/40 rounded-2xl p-6 sm:p-8 space-y-6">
-                <div>
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Service Overview
-                  </h2>
-                  <div className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                    {service.longDescription}
-                  </div>
-                </div>
-
-                {service.features && (
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 mb-4">What's Included</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {service.features.split(',').map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                          <span className="text-sm font-medium">{feature.trim()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Button onClick={() => setStep(2)} className="w-full h-12 rounded-xl group">
-                Continue to Pricing <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </motion.div>
-          )}
-
-          {/* STEP 2: Select Plan */}
-          {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+            <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Select Your Plan</h2>
                 <p className="text-sm text-muted-foreground">Choose the {isSubscription ? 'subscription duration' : 'package'} that works best for you</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {tiers.map((tier, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedTier(tier)}
-                    className={`relative text-left p-5 rounded-xl border-2 transition-all ${
-                      selectedTier === tier
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-border/40 bg-card hover:border-primary/30'
-                    }`}
-                  >
-                    {tier.popular && (
-                      <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground text-[10px]">Popular</Badge>
-                    )}
-                    <p className="font-semibold text-sm">{tier.label}</p>
-                    {tier.description && <p className="text-xs text-muted-foreground mt-1">{tier.description}</p>}
-                    <p className="text-2xl font-bold mt-3">{formatAmount(tier.price)}</p>
-                    {isSubscription && <p className="text-xs text-muted-foreground">{formatAmount(tier.price / (parseInt(tier.duration) || 1))}/mo</p>}
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                {tiers.map((tier, i) => {
+                  const items = tier.features 
+                    ? tier.features.split(',').map(f => f.trim()).filter(Boolean)
+                    : service.features.split(',').map(f => f.trim()).filter(Boolean).slice(0, 6)
+                  const isSelected = selectedTier === tier
+
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedTier(tier)}
+                      className={`relative flex flex-col text-left p-6 rounded-2xl border-2 transition-all duration-300 ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-lg translate-y--1'
+                          : 'border-border/60 bg-card hover:border-primary/40 hover:shadow-md'
+                      }`}
+                    >
+                      {tier.popular && (
+                        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 shadow-sm whitespace-nowrap">
+                          Most Popular
+                        </Badge>
+                      )}
+                      
+                      <div className="mb-4">
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {tier.label}
+                        </p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-extrabold">{formatAmount(tier.price)}</span>
+                          {isSubscription && (
+                            <span className="text-muted-foreground text-xs font-medium">
+                              /{tier.duration.includes('month') ? 'mo' : tier.duration.includes('year') ? 'yr' : tier.duration}
+                            </span>
+                          )}
+                        </div>
+                        {tier.description && (
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2 min-h-[2rem]">
+                            {tier.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <Separator className="mb-4 opacity-50" />
+
+                      <div className="flex-1 space-y-3 mb-6">
+                        {items.map((feature, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <div className={`mt-0.5 rounded-full p-0.5 ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground/60'}`}>
+                              <Check className="h-3 w-3" />
+                            </div>
+                            <span className={isSelected ? 'font-medium' : 'text-muted-foreground'}>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className={`mt-auto w-full py-2 rounded-xl text-center text-xs font-bold transition-colors ${
+                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground group-hover:bg-primary/10'
+                      }`}>
+                        {isSelected ? 'Selected' : 'Select Plan'}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
 
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 rounded-xl">
-                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
-                </Button>
-                <Button onClick={() => setStep(3)} disabled={!selectedTier} className="flex-1 h-12 rounded-xl">
-                  Continue <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
+              <Button 
+                onClick={() => setStep(2)} 
+                disabled={!selectedTier} 
+                className={`w-full h-14 rounded-2xl font-bold text-lg transition-all duration-300 ${
+                  selectedTier ? 'shadow-xl shadow-primary/25' : ''
+                }`}
+              >
+                Continue to Payment <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
             </motion.div>
           )}
 
-          {/* STEP 3: Payment Method */}
-          {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 2: Payment Method */}
+          {step === 2 && (
+            <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Select Payment Method</h2>
                 <p className="text-sm text-muted-foreground">Choose how you'd like to pay</p>
@@ -387,19 +390,19 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
-                <Button onClick={() => setStep(4)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
+                <Button onClick={() => setStep(3)} disabled={!selectedPayment} className="flex-1 h-12 rounded-xl">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 4: Details */}
-          {step === 4 && (
-            <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 3: Details */}
+          {step === 3 && (
+            <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Order Details</h2>
                 <p className="text-sm text-muted-foreground">Provide your Telegram and payment proof</p>
@@ -458,19 +461,19 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(3)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
-                <Button onClick={() => setStep(5)} className="flex-1 h-12 rounded-xl">
+                <Button onClick={() => setStep(4)} className="flex-1 h-12 rounded-xl">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 5: Review & Confirm */}
-          {step === 5 && (
-            <motion.div key="step5" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+          {/* STEP 4: Review & Confirm */}
+          {step === 4 && (
+            <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Review Order</h2>
                 <p className="text-sm text-muted-foreground">Confirm your order details</p>
@@ -516,7 +519,7 @@ export default function ServiceDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(4)} className="flex-1 h-12 rounded-xl">
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1 h-12 rounded-xl">
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
                 <Button onClick={handleSubmit} disabled={submitting} className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700">
