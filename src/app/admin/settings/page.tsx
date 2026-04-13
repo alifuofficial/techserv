@@ -173,9 +173,6 @@ function ToggleSetting({ setting, value, onChange, disabled }: {
   )
 }
 
-    </div>
-  )
-}
 
 function TextSetting({ setting, value, onChange, disabled }: {
   setting: SettingItem, value: string, onChange: (val: string) => void, disabled: boolean

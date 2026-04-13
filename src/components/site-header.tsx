@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { useTelegram } from "@/components/telegram-provider";
 
 const navLinks = [
   { href: "/", label: "Home" },
