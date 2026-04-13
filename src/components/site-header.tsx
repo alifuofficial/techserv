@@ -41,7 +41,10 @@ export function SiteHeader({ logoUrl = "/logo.png", siteName = "MilkyTech.Online
         <Link href="/" className="flex items-center gap-2.5 group">
           {logoUrl ? (
             <img 
-              src={logoUrl} 
+              src={logoUrl.startsWith("/uploads/") || logoUrl.startsWith("uploads/") 
+                ? `/api/${logoUrl.startsWith("/") ? logoUrl.slice(1) : logoUrl}` 
+                : logoUrl
+              } 
               alt={`${siteName} Logo`} 
               className="h-9 w-auto max-w-[120px] object-contain" 
             />

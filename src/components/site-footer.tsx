@@ -6,7 +6,15 @@ import { useTelegram } from "@/components/telegram-provider";
 import { Zap, Mail, MapPin, Phone } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
-export function SiteFooter() {
+interface SiteFooterProps {
+  logoUrl?: string;
+  siteName?: string;
+}
+
+export function SiteFooter({ 
+  logoUrl = "/logo.png", 
+  siteName = "MilkyTech.Online" 
+}: SiteFooterProps) {
   const { isTma } = useTelegram();
   const { status } = useSession();
 
@@ -18,10 +26,20 @@ export function SiteFooter() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="MilkyTech.Online Logo" className="h-9 w-auto object-contain" />
+            <Link href="/" className="flex items-center gap-2.5 group">
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt={`${siteName} Logo`} 
+                  className="h-9 w-auto max-w-[120px] object-contain" 
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+                  {siteName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="text-xl font-bold tracking-tight">
-                Milky<span className="text-primary text-slate-900">Tech</span>
+                {siteName.split('.')[0]}<span className="text-primary">{siteName.includes('.') ? `.${siteName.split('.')[1]}` : ''}</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">

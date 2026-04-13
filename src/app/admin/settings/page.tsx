@@ -233,7 +233,14 @@ function LogoUpload({ value, onUpdate, disabled }: { value: string, onUpdate: (u
       <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 hover:bg-muted/30 transition-all">
         <div className="h-20 w-20 rounded-xl bg-background border flex items-center justify-center overflow-hidden shadow-sm">
           {value ? (
-            <img src={value} alt="Current Logo" className="h-full w-full object-contain p-2" />
+            <img 
+              src={value.startsWith("/uploads/") || value.startsWith("uploads/") 
+                ? `/api/${value.startsWith("/") ? value.slice(1) : value}` 
+                : value
+              } 
+              alt="Current Logo" 
+              className="h-full w-full object-contain p-2" 
+            />
           ) : (
             <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
           )}

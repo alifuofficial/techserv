@@ -53,7 +53,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
   const rawLogo = getSetting("logo_url") || "/logo.png";
-  const logoUrl = rawLogo;
+  const logoUrl = rawLogo.startsWith("/uploads/") || rawLogo.startsWith("uploads/") 
+    ? `/api/${rawLogo.startsWith("/") ? rawLogo.slice(1) : rawLogo}` 
+    : rawLogo;
+  
   const siteName = getSetting("site_name") || "MilkyTech.Online";
 
   return (
@@ -63,8 +66,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <TelegramProvider>
             <MaintenanceWrapper>
               <SiteHeader logoUrl={logoUrl} siteName={siteName} />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
+              <main className="flex-1">
+                {children}
+              </main>
+              <SiteFooter logoUrl={logoUrl} siteName={siteName} />
             </MaintenanceWrapper>
           </TelegramProvider>
         </Providers>
