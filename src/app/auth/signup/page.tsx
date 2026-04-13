@@ -531,7 +531,9 @@ function SignUpForm() {
         description: "Please sign in to continue.",
       });
 
-      router.push("/auth/signin");
+      const callbackUrl = searchParams.get("callbackUrl");
+      const signInUrl = callbackUrl ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin";
+      router.push(signInUrl);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -669,7 +671,9 @@ function SignUpForm() {
 
                 <div className="pt-2">
                   <Button variant="ghost" asChild className="text-muted-foreground text-xs hover:text-foreground">
-                    <Link href="/auth/signin">Skip and Sign In</Link>
+                    <Link href={searchParams.get("callbackUrl") || "/auth/signin"}>
+                      {searchParams.get("callbackUrl") ? "Continue to Order" : "Skip and Sign In"}
+                    </Link>
                   </Button>
                 </div>
               </motion.div>

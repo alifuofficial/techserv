@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -50,6 +50,18 @@ interface PaymentMethod {
   instructions: string
 }
 
+interface PendingOrder {
+  serviceSlug: string
+  selectedTier: PricingTier
+  selectedPaymentId: string
+  telegramUsername: string
+  screenshotDataUrl: string | null
+  screenshotName: string | null
+  autoSubmit?: boolean
+}
+
+const PENDING_ORDER_KEY = 'techserv_pending_order'
+
 function getParsedTiers(tiersJson: string): PricingTier[] {
   try { return JSON.parse(tiersJson || '[]') } catch { return [] }
 }
@@ -66,6 +78,15 @@ const paymentIcons: Record<string, React.ElementType> = {
 }
 
 const planIcons: React.ElementType[] = [Sparkles, Crown, Rocket, Diamond, Gem]
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 const steps = [
   { id: 1, title: 'Select Plan', icon: Star },
@@ -108,7 +129,8 @@ export default function ServiceDetailPage() {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
-  const { data: session } = useSession()
+  const searchParams = useSearchParams()
+  const { data: session, status } = useSession()
   const { toast } = useToast()
   const { formatAmount } = useSettings()
 
@@ -122,7 +144,143 @@ export default function ServiceDetailPage() {
   const [telegramUsername, setTelegramUsername] = useState('')
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [restoringOrder, setRestoringOrder] = useState(false)
+
+  // Submitting logic (memoized to be used in restoration effect)
+  const handleSubmit = useCallback(async (isAuto = false) => {
+    if (!service || !selectedTier || !selectedPayment) return
+
+    // If not authenticated, save progress and redirect to signup
+    if (status === 'unauthenticated') {
+      try {
+        setSubmitting(true)
+        const pending: PendingOrder = {
+          serviceSlug: slug,
+          selectedTier,
+          selectedPaymentId: selectedPayment.id,
+          telegramUsername,
+          autoSubmit: true,
+          screenshotName: screenshotFile?.name || null,
+          screenshotDataUrl: screenshotFile ? await fileToBase64(screenshotFile) : null,
+        }
+        localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(pending))
+        
+        toast({ 
+          title: 'Saving Progress', 
+          description: 'Redirecting you to create an account. Your order will resume automatically.' 
+        })
+        
+        router.push(`/auth/signup?callbackUrl=/services/${slug}`)
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to save progress.', variant: 'destructive' })
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      let screenshotUrl: string | null = null
+      if (screenshotFile) {
+        const uploadForm = new FormData()
+        uploadForm.append('file', screenshotFile)
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm })
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          screenshotUrl = uploadData.url
+        }
+      }
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: service.id,
+          duration: selectedTier.duration,
+          telegramUsername: telegramUsername || userTelegram,
+          screenshot: screenshotUrl,
+          paymentMethodId: selectedPayment.id,
+        }),
+      })
+      if (res.ok) {
+        localStorage.removeItem(PENDING_ORDER_KEY)
+        toast({ 
+          title: isAuto ? 'Order Automatically Placed!' : 'Order placed!', 
+          description: 'Your order has been submitted successfully.' 
+        })
+        router.push('/dashboard/orders')
+      } else {
+        const data = await res.json()
+        toast({ title: 'Failed', description: data.error || 'Please try again.', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Please check your connection.', variant: 'destructive' })
+    } finally {
+      setSubmitting(false)
+    }
+  }, [service, selectedTier, selectedPayment, status, slug, telegramUsername, screenshotFile, userTelegram, router, toast])
+
+  // Restore pending order after login
+  useEffect(() => {
+    if (status === 'authenticated' && service && paymentMethods.length > 0) {
+      const pendingOrder = localStorage.getItem(PENDING_ORDER_KEY)
+      if (pendingOrder) {
+        try {
+          const pending: PendingOrder = JSON.parse(pendingOrder)
+          if (pending.serviceSlug === slug) {
+            setRestoringOrder(true)
+            
+            // Restore tier
+            const tiers = getParsedTiers(service.pricingTiers)
+            const tier = tiers.find(t => t.label === pending.selectedTier.label)
+            if (tier) setSelectedTier(tier)
+            
+            // Restore payment method
+            const method = paymentMethods.find(m => m.id === pending.selectedPaymentId)
+            if (method) setSelectedPayment(method)
+            
+            // Restore telegram
+            if (pending.telegramUsername) {
+              setTelegramUsername(pending.telegramUsername)
+            }
+            
+            // Restore screenshot
+            if (pending.screenshotDataUrl && pending.screenshotName) {
+              setScreenshotPreview(pending.screenshotDataUrl)
+              fetch(pending.screenshotDataUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                  const file = new File([blob], pending.screenshotName!, { type: 'image/png' })
+                  setScreenshotFile(file)
+                })
+            }
+            
+            // Handle auto-submit
+            if (pending.autoSubmit) {
+              toast({ 
+                title: 'Resuming Order', 
+                description: 'We are completing your order now...' 
+              })
+              // Small timeout to allow state to settle
+              setTimeout(() => {
+                handleSubmit(true)
+              }, 1000)
+            } else {
+              toast({ 
+                title: 'Order Restored', 
+                description: 'Your order details have been restored. Please review and confirm.' 
+              })
+              setStep(4)
+              setRestoringOrder(false)
+            }
+          }
+        } catch (e) {
+          console.error('Failed to restore pending order:', e)
+          localStorage.removeItem(PENDING_ORDER_KEY)
+        }
+      }
+    }
+  }, [status, service, slug, paymentMethods, toast, handleSubmit])
 
   useEffect(() => {
     async function fetchData() {
@@ -173,44 +331,6 @@ export default function ServiceDetailPage() {
     setScreenshotPreview(null)
   }
 
-  const handleSubmit = async () => {
-    if (!service || !selectedTier || !selectedPayment) return
-    try {
-      setSubmitting(true)
-      let screenshotUrl: string | null = null
-      if (screenshotFile) {
-        const uploadForm = new FormData()
-        uploadForm.append('file', screenshotFile)
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm })
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json()
-          screenshotUrl = uploadData.url
-        }
-      }
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId: service.id,
-          duration: selectedTier.duration,
-          telegramUsername: telegramUsername || userTelegram,
-          screenshot: screenshotUrl,
-          paymentMethodId: selectedPayment.id,
-        }),
-      })
-      if (res.ok) {
-        toast({ title: 'Order placed!', description: 'Your order has been submitted.' })
-        router.push('/dashboard/orders')
-      } else {
-        const data = await res.json()
-        toast({ title: 'Failed', description: data.error || 'Please try again.', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Please check your connection.', variant: 'destructive' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   if (loading) {
     return (

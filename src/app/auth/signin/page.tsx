@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Loader2, Zap } from "lucide-react";
@@ -43,7 +43,8 @@ function TelegramLoginWrapper() {
         redirect: false,
       });
       if (result?.ok) {
-        window.location.href = "/dashboard";
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = params.get("callbackUrl") || "/dashboard";
       } else if (result?.error) {
         setError("Telegram login failed. Please try again.");
         console.error("Telegram auth error:", result.error);
@@ -77,6 +78,7 @@ const fadeUp = {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -85,9 +87,10 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push("/dashboard");
+      const callbackUrl = searchParams.get("callbackUrl");
+      router.push(callbackUrl || "/dashboard");
     }
-  }, [status, router]);
+  }, [status, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,14 +124,19 @@ export default function SignInPage() {
         try {
           const sessionRes = await fetch("/api/auth/session");
           const session = await sessionRes.json();
-          const role = (session?.user as any)?.role;
+          const callbackUrl = searchParams.get("callbackUrl");
+          if (callbackUrl) {
+            router.push(callbackUrl);
+            return;
+          }
           if (role === "admin") {
             router.push("/admin");
           } else {
             router.push("/dashboard");
           }
         } catch {
-          router.push("/dashboard");
+          const callbackUrl = searchParams.get("callbackUrl");
+          router.push(callbackUrl || "/dashboard");
         }
       }
     } catch (err: unknown) {
@@ -255,7 +263,7 @@ export default function SignInPage() {
             <p className="text-center text-sm text-muted-foreground pt-2">
               Don&apos;t have an account?{" "}
               <Link
-                href="/auth/signup"
+                href={searchParams.get("callbackUrl") ? `/auth/signup?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}` : "/auth/signup"}
                 className="font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 Sign Up
