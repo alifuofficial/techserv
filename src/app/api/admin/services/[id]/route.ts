@@ -201,14 +201,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
-    // Prevent deletion if orders exist
-    if (service._count.orders > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete service with existing orders. Please remove or reassign all orders first." },
-        { status: 400 }
-      );
-    }
-
     await db.service.delete({ where: { id } });
 
     return NextResponse.json({ message: "Service deleted successfully" });

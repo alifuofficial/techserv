@@ -69,7 +69,9 @@ interface Service {
   sortOrder: number
   createdAt: string
   updatedAt: string
-  orderCount: number
+  _count?: {
+    orders: number
+  }
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -286,7 +288,7 @@ function ServiceCard({
         <div className="flex items-center justify-between pt-3 border-t border-border/40">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShoppingCart className="h-3 w-3" />
-            <span>{service.orderCount} order{service.orderCount !== 1 ? 's' : ''}</span>
+            <span>{service._count?.orders || 0} order{(service._count?.orders || 0) !== 1 ? 's' : ''}</span>
           </div>
           <div className="flex items-center gap-0.5">
             <Button
@@ -315,12 +317,7 @@ function ServiceCard({
               size="icon"
               className="h-8 w-8 text-destructive hover:text-destructive"
               onClick={() => onDeleteClick(service)}
-              disabled={service.orderCount > 0}
-              title={
-                service.orderCount > 0
-                  ? 'Cannot delete service with orders'
-                  : 'Delete service'
-              }
+              title="Delete service"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -506,9 +503,23 @@ export default function AdminServicesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Service</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTarget?.title}&quot;?
-              This action cannot be undone.
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Are you sure you want to delete &quot;{deleteTarget?.title}&quot;? 
+                This action is <strong>permanent</strong> and cannot be undone.
+              </p>
+              {(deleteTarget?._count?.orders || 0) > 0 && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium space-y-1">
+                  <p className="flex items-center gap-1.5">
+                    <AlertCircle className="h-3 w-3" />
+                    <strong>Cascading Delete Warning</strong>
+                  </p>
+                  <p>
+                    This service has <strong>{deleteTarget?._count?.orders}</strong> existing order(s). 
+                    Deleting this service will also permanently delete all related orders and invoices.
+                  </p>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

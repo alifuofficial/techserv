@@ -76,7 +76,7 @@ model Order {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service          Service  @relation(fields: [serviceId], references: [id])
+  service          Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   invoices         Invoice[]
 }
 
@@ -104,7 +104,7 @@ model Invoice {
   paidAt          DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  order           Order          @relation(fields: [orderId], references: [id])
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 }

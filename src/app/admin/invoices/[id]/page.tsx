@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
@@ -19,6 +19,7 @@ import {
   Clock,
   Printer,
   QrCode,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -256,6 +257,7 @@ function DetailSkeleton() {
    ──────────────────────────────────────────── */
 export default function AdminInvoiceDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -333,6 +335,30 @@ export default function AdminInvoiceDetailPage() {
       toast.error('Error', {
         description: 'Failed to update invoice status. Please try again.',
       })
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
+  // Delete invoice
+  async function handleDeleteInvoice() {
+    if (!window.confirm("Are you sure you want to permanently delete this invoice? This cannot be undone.")) return;
+    
+    setStatusLoading(true)
+    try {
+      const res = await fetch(`/api/admin/invoices/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        toast.success("Invoice deleted forever.");
+        router.push("/admin/invoices");
+      } else {
+        const data = await res.json();
+        toast.error("Failed to delete", { description: data.error || "Something went wrong." });
+      }
+    } catch {
+      toast.error("Network error");
     } finally {
       setStatusLoading(false)
     }
@@ -459,6 +485,16 @@ export default function AdminInvoiceDetailPage() {
         >
           <Printer className="h-3.5 w-3.5" />
           Print Invoice
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="gap-2 rounded-lg text-xs"
+          onClick={handleDeleteInvoice}
+          disabled={statusLoading}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete Invoice
         </Button>
       </motion.div>
 
