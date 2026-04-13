@@ -11,10 +11,12 @@ import {
   ArrowRight,
   Package,
   Trash2,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSettings } from '@/hooks/use-settings'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -182,6 +184,13 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false)
+
+  // Clear selections when filter changes
+  useEffect(() => {
+    setSelectedIds([])
+  }, [statusFilter, searchQuery])
 
   useEffect(() => {
     let cancelled = false
@@ -225,12 +234,41 @@ export default function AdminOrdersPage() {
       if (res.ok) {
         setOrders((prev) => prev.filter(o => o.id !== id));
         setAllOrders((prev) => prev.filter(o => o.id !== id));
+        setSelectedIds((prev) => prev.filter(selectedId => selectedId !== id));
         toast.success("Order deleted successfully");
       } else {
         toast.error("Failed to delete order");
       }
     } catch {
       toast.error("Network error");
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.length} order(s)?`)) return;
+
+    setIsDeletingBulk(true);
+    try {
+      const res = await fetch('/api/admin/orders/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+
+      if (res.ok) {
+        setOrders((prev) => prev.filter(o => !selectedIds.includes(o.id)));
+        setAllOrders((prev) => prev.filter(o => !selectedIds.includes(o.id)));
+        toast.success(`Successfully deleted ${selectedIds.length} order(s)`);
+        setSelectedIds([]);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete orders");
+      }
+    } catch {
+      toast.error("Network error occurred during bulk deletion.");
+    } finally {
+      setIsDeletingBulk(false);
     }
   }
 
@@ -245,6 +283,20 @@ export default function AdminOrdersPage() {
       return matchesId || matchesService || matchesName || matchesEmail
     })
   }, [orders, searchQuery])
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredOrders.length && filteredOrders.length > 0) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredOrders.map(o => o.id))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    )
+  }
 
   const pendingCount = allOrders.filter((o) => o.status === 'pending').length
   const rejectedCount = allOrders.filter((o) => o.status === 'rejected').length
@@ -337,6 +389,13 @@ export default function AdminOrdersPage() {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[40px] px-4 text-center">
+                        <Checkbox 
+                          checked={filteredOrders.length > 0 && selectedIds.length === filteredOrders.length}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
                       <TableHead className="w-[300px]">Order Details</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead className="text-center">Status</TableHead>
@@ -347,8 +406,27 @@ export default function AdminOrdersPage() {
                   <TableBody>
                     {filteredOrders.map((order, index) => {
                       const pill = statusPill[order.status]
+                      const isSelected = selectedIds.includes(order.id)
+                      
                       return (
-                        <TableRow key={order.id} className="group hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => window.location.href = `/admin/orders/${order.id}`}>
+                        <TableRow 
+                          key={order.id} 
+                          className={`group hover:bg-muted/20 transition-colors cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                          onClick={(e) => {
+                            // Prevent row click if clicking checkbox or buttons
+                            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.checkbox-wrap')) return;
+                            window.location.href = `/admin/orders/${order.id}`;
+                          }}
+                        >
+                          <TableCell className="px-4 text-center">
+                            <div className="checkbox-wrap inline-flex items-center" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelect(order.id)}
+                                aria-label={`Select order ${order.id}`}
+                              />
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -403,6 +481,53 @@ export default function AdminOrdersPage() {
           </AnimatePresence>
         )}
       </motion.div>
+
+      {/* Bulk Actions Bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-foreground py-3 px-6 rounded-full shadow-2xl"
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-full bg-background/20 flex items-center justify-center text-background text-xs font-bold">
+                {selectedIds.length}
+              </div>
+              <span className="text-background text-sm font-medium">Selected</span>
+            </div>
+            
+            <div className="w-px h-6 bg-background/20" />
+            
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-background/80 hover:text-background text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="flex items-center gap-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground px-4 py-2 rounded-full text-sm font-semibold transition-all shadow-lg active:scale-95 disabled:opacity-70 disabled:active:scale-100"
+            >
+              {isDeletingBulk ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete Selected
+                </>
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

@@ -203,7 +203,6 @@ export default function ServiceDetailPage() {
         }),
       })
       if (res.ok) {
-        localStorage.removeItem(PENDING_ORDER_KEY)
         toast({ 
           title: isAuto ? 'Order Automatically Placed!' : 'Order placed!', 
           description: 'Your order has been submitted successfully.' 
@@ -229,6 +228,7 @@ export default function ServiceDetailPage() {
           const pending: PendingOrder = JSON.parse(pendingOrder)
           if (pending.serviceSlug === slug) {
             setRestoringOrder(true)
+            localStorage.removeItem(PENDING_ORDER_KEY) // Prevent infinite restore loop
             
             // Restore tier
             const tiers = getParsedTiers(service.pricingTiers)
