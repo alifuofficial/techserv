@@ -38,7 +38,46 @@ export async function POST(req: NextRequest) {
 
     const botToken = botTokenSetting.value;
 
-    if (text === "/start") {
+    if (text.startsWith("/start")) {
+      const parts = text.split(" ");
+      const linkToken = parts.length > 1 ? parts[1] : null;
+
+      if (linkToken) {
+        // Find user by token
+        const user = await db.user.findFirst({
+          where: {
+            telegramLinkToken: linkToken,
+            telegramLinkExpires: { gt: new Date() },
+          },
+        });
+
+        if (user) {
+          // Link the account
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              telegramId: String(chatId),
+              telegramLinkToken: null,
+              telegramLinkExpires: null,
+            },
+          });
+
+          await sendMessage(
+            botToken,
+            chatId,
+            `<b>Account Linked Successfully!</b>\n\nWelcome ${user.name}. You will now receive order updates and OTPs via this bot.`
+          );
+          return NextResponse.json({ ok: true });
+        } else {
+          await sendMessage(
+            botToken,
+            chatId,
+            "<b>Invalid or Expired Link</b>\n\nPlease generate a new link from your account settings."
+          );
+          return NextResponse.json({ ok: true });
+        }
+      }
+
       await sendMessage(
         botToken,
         chatId,

@@ -406,6 +406,8 @@ function SignUpForm() {
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [linkData, setLinkData] = useState<{ deepLink: string; botUsername: string } | null>(null);
   const [settings, setSettings] = useState<Record<string, string>>({
     registration_enabled: "true",
     referral_system_enabled: "true",
@@ -509,10 +511,22 @@ function SignUpForm() {
 
       toast({
         title: "Verified!",
-        description: "Your account is now active. Please sign in.",
+        description: "Your account is now active.",
       });
 
-      router.push("/auth/signin");
+      // Instead of redirecting, show success and linking options
+      try {
+        const linkRes = await fetch("/api/user/telegram-link");
+        if (linkRes.ok) {
+          const lData = await linkRes.json();
+          setLinkData(lData);
+        }
+      } catch (err) {
+        console.error("Failed to generate link", err);
+      }
+
+      setShowSuccess(true);
+      setShowOtp(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification error.");
     } finally {
@@ -569,7 +583,49 @@ function SignUpForm() {
           )}
 
           <AnimatePresence mode="wait" custom={direction}>
-            {showOtp ? (
+            {showSuccess ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center space-y-6"
+              >
+                <div className="mx-auto w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center mb-2">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold italic tracking-tight">VAMOS!</h2>
+                  <p className="text-sm text-muted-foreground">Your account is active. One final (and highly recommended) step:</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-sky-500/5 border border-sky-500/20 text-left space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-6 w-6 rounded-full bg-sky-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Send className="h-3 w-3 text-sky-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-sky-500">Connect Telegram Bot</h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Receive instant order updates, secure OTPs, and fast password recovery.</p>
+                    </div>
+                  </div>
+
+                  <Button 
+                    asChild
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white rounded-xl h-11 shadow-lg shadow-sky-500/20"
+                  >
+                    <a href={linkData?.deepLink} target="_blank" rel="noopener noreferrer">
+                      <Send className="h-4 w-4 mr-2" />
+                      Connect @{linkData?.botUsername || "MilkyTechBot"}
+                    </a>
+                  </Button>
+                </div>
+
+                <div className="pt-2">
+                  <Button variant="ghost" asChild className="text-muted-foreground text-xs hover:text-foreground">
+                    <Link href="/auth/signin">Skip and Sign In</Link>
+                  </Button>
+                </div>
+              </motion.div>
+            ) : showOtp ? (
               <StepOtp 
                 key="otp" 
                 email={formData.email} 

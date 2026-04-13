@@ -88,8 +88,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          // Check if a user with the same email exists (Telegram doesn't provide email)
-          // For MilkyTech.Online, we'll create a new user or link if they provide a username
+          // ... (existing user creation logic)
           const randomPassword = Math.random().toString(36);
           const hashedPassword = bcrypt 
             ? bcrypt.hashSync(randomPassword, 12)
@@ -107,6 +106,112 @@ export const authOptions: NextAuthOptions = {
               referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
               tier: "Standard",
             },
+          });
+        }
+
+        // --- Soft Delete Handle ---
+        if (user.deletedAt) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          if (user.deletedAt < thirtyDaysAgo) {
+            throw new Error("This account has been permanently deleted.");
+          }
+
+          // Restore account
+          await db.user.update({
+            where: { id: user.id },
+            data: { deletedAt: null },
+          });
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tier: user.tier,
+          referralCode: user.referralCode,
+        };
+      },
+    }),
+    CredentialsProvider({
+      id: "telegram-tma",
+      name: "Telegram Mini App",
+      credentials: {
+        initData: { label: "Init Data", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.initData) return null;
+
+        const { initData } = credentials;
+
+        // Fetch bot token from settings
+        const botTokenSetting = await db.setting.findUnique({
+          where: { key: "telegram_bot_token" },
+        });
+
+        if (!botTokenSetting?.value) {
+          throw new Error("Telegram bot not configured");
+        }
+
+        // Verify HMAC signature
+        const { verifyTmaAuth } = await import("./telegram");
+        const isValid = verifyTmaAuth(initData, botTokenSetting.value);
+
+        if (!isValid) {
+          throw new Error("Invalid Mini App authentication");
+        }
+
+        // Extract user info from initData
+        const params = new URLSearchParams(initData);
+        const userRaw = params.get("user");
+        if (!userRaw) throw new Error("User data missing in initData");
+
+        const tgUser = JSON.parse(userRaw);
+        const { id, first_name, last_name, username } = tgUser;
+
+        // Find or create user
+        let user = await db.user.findUnique({
+          where: { telegramId: String(id) },
+        });
+
+        if (!user) {
+          const randomPassword = Math.random().toString(36);
+          const hashedPassword = bcrypt 
+            ? bcrypt.hashSync(randomPassword, 12)
+            : "sha256$" + createHash("sha256").update(randomPassword).digest("hex");
+          
+          user = await db.user.create({
+            data: {
+              name: username 
+                ? `@${username}` 
+                : `${first_name} ${last_name || ""}`.trim(),
+              email: `${id}@telegram.user`,
+              password: hashedPassword,
+              telegramId: String(id),
+              telegram: username ? `@${username}` : null,
+              referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
+              tier: "Standard",
+              isActive: true, // Auto-activate TMA users
+              emailVerified: new Date(),
+            },
+          });
+        }
+
+        // --- Soft Delete Handle ---
+        if (user.deletedAt) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          if (user.deletedAt < thirtyDaysAgo) {
+            throw new Error("This account has been permanently deleted.");
+          }
+
+          // Restore account
+          await db.user.update({
+            where: { id: user.id },
+            data: { deletedAt: null },
           });
         }
 
@@ -136,6 +241,22 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const isPasswordValid = verifyPassword(credentials.password, user.password);
         if (!isPasswordValid) return null;
+
+        // --- Soft Delete Handle ---
+        if (user.deletedAt) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          if (user.deletedAt < thirtyDaysAgo) {
+            throw new Error("This account has been permanently deleted.");
+          }
+
+          // Restore account
+          await db.user.update({
+            where: { id: user.id },
+            data: { deletedAt: null },
+          });
+        }
         return {
           id: user.id,
           email: user.email,

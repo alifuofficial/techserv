@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTelegram } from "@/components/telegram-provider";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, ChevronDown, LogOut, LayoutDashboard, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { useTelegram } from "@/components/telegram-provider";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -27,7 +29,11 @@ export function SiteHeader({ logoUrl = "/logo.png", siteName = "MilkyTech.Online
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
 
+  const { isTma } = useTelegram();
+
   const isAdmin = (session?.user as any)?.role === "admin";
+
+  if (isTma) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">

@@ -17,7 +17,19 @@ import {
   EyeOff,
   Shield,
   CheckCircle2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -83,6 +95,10 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [passwordSaving, setPasswordSaving] = useState(false)
+
+  // Deletion state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Fetch profile
   useEffect(() => {
@@ -167,6 +183,31 @@ export default function SettingsPage() {
       toast.error('Error', { description: 'Failed to change password. Please try again.' })
     } finally {
       setPasswordSaving(false)
+    }
+  }
+
+  // Delete account
+  async function handleDeleteAccount() {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/user/account/delete', {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        toast.success('Account marked for deletion', { description: 'You will be logged out. You have 30 days to recover your account.' })
+        setTimeout(() => {
+          window.location.href = '/auth/signin'
+        }, 2000)
+      } else {
+        const data = await res.json()
+        toast.error('Failed to delete account', { description: data.error || 'Something went wrong.' })
+      }
+    } catch {
+      toast.error('Error', { description: 'Failed to initiate deletion. Please try again.' })
+    } finally {
+      setDeleting(false)
+      setShowDeleteDialog(false)
     }
   }
 
@@ -471,6 +512,80 @@ export default function SettingsPage() {
         </Card>
       </motion.div>
 
+      {/* ─── Danger Zone ─── */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+        <Card className="border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-950/10 transition-all duration-300">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="h-9 w-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold">Danger Zone</CardTitle>
+                <CardDescription className="text-xs text-red-600/70 dark:text-red-400/70">
+                  Critical actions for your account
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-red-200 bg-white/50 dark:border-red-900/50 dark:bg-black/20">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-foreground">Delete Account</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
+                  Once initiated, your account will be hidden and scheduled for permanent removal. 
+                  You can restore it by logging in within the next 30 days.
+                </p>
+              </div>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setShowDeleteDialog(true)}
+                className="shrink-0 bg-red-600 hover:bg-red-700 shadow-sm shadow-red-200"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete My Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* ─── Deletion Confirmation Dialog ─── */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="rounded-3xl border-border/40 max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Account Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed pt-2">
+              Are you sure you want to delete your account? You will be logged out immediately. 
+              Your data will be held for <span className="font-bold text-foreground">30 days</span>, during which you can reverse this by simply logging back in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 gap-2">
+            <AlertDialogCancel className="rounded-2xl border-border/60">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteAccount();
+              }}
+              disabled={deleting}
+              className="rounded-2xl bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Yes, Delete My Account'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

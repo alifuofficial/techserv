@@ -14,6 +14,8 @@ import {
   Send,
   Zap,
   Mail,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -171,6 +173,10 @@ function ToggleSetting({ setting, value, onChange, disabled }: {
   )
 }
 
+    </div>
+  )
+}
+
 function TextSetting({ setting, value, onChange, disabled }: {
   setting: SettingItem, value: string, onChange: (val: string) => void, disabled: boolean
 }) {
@@ -193,6 +199,84 @@ function TextSetting({ setting, value, onChange, disabled }: {
       )}
     </div>
   )
+}
+
+function LogoUpload({ value, onUpdate, disabled }: { value: string, onUpdate: (url: string) => void, disabled: boolean }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    try {
+      const res = await fetch('/api/admin/settings/logo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Failed to upload logo');
+      
+      const data = await res.json();
+      onUpdate(data.url);
+      toast.success('Logo uploaded successfully');
+    } catch (err) {
+      toast.error('Upload failed', { description: err instanceof Error ? err.message : 'Unknown error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">Site Logo</Label>
+      <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 hover:bg-muted/30 transition-all">
+        <div className="h-20 w-20 rounded-xl bg-background border flex items-center justify-center overflow-hidden shadow-sm">
+          {value ? (
+            <img src={value} alt="Current Logo" className="h-full w-full object-contain p-2" />
+          ) : (
+            <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+          )}
+        </div>
+        <div className="flex-1 space-y-3 text-center sm:text-left">
+          <div className="space-y-1">
+            <h4 className="text-sm font-semibold">Update Company Logo</h4>
+            <p className="text-xs text-muted-foreground">Upload your brand logo (PNG, JPG, or SVG recommended)</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled || uploading}
+              className="relative overflow-hidden group h-9"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5 mr-2 transition-transform group-hover:-translate-y-0.5" />
+              )}
+              {uploading ? 'Uploading...' : 'Choose File'}
+              <input
+                type="file"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                accept="image/*"
+                onChange={handleUpload}
+                disabled={disabled || uploading}
+              />
+            </Button>
+            {value && (
+              <p className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                {value.split('/').pop()}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function GroupSettingsCard({ groupKey, settings, formValues, onValueChange, onReset, onSave, saving, isDirty }: {
@@ -223,9 +307,19 @@ function GroupSettingsCard({ groupKey, settings, formValues, onValueChange, onRe
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {groupKey === 'general' && (
+          <>
+            <LogoUpload 
+              value={formValues['logo_url']} 
+              onUpdate={(url) => onValueChange('logo_url', url)} 
+              disabled={saving} 
+            />
+            <Separator />
+          </>
+        )}
         {fieldSettings.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            {fieldSettings.map((setting) => (
+            {fieldSettings.filter(s => s.key !== 'logo_url').map((setting) => (
               <TextSetting key={setting.key} setting={setting} value={formValues[setting.key] ?? setting.value} onChange={(val) => onValueChange(setting.key, val)} disabled={saving} />
             ))}
           </div>

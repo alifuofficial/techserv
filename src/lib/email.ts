@@ -122,3 +122,23 @@ export async function sendOrderNotificationEmail(email: string, orderDetails: an
     `,
   });
 }
+export async function sendPasswordResetEmail(email: string, otp: string) {
+  return sendEmail({
+    to: email,
+    subject: `Password Reset Code: ${otp}`,
+    text: `Your password reset code is ${otp}. It will expire in 10 minutes.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;">
+        <h2 style="color: #ef4444; text-align: center;">Password Reset Request</h2>
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #333;">We received a request to reset your password. Use the following code to proceed:</p>
+        <div style="background-color: #fef2f2; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; border: 1px solid #fee2e2;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #b91c1c;">${otp}</span>
+        </div>
+        <p style="font-size: 14px; color: #666; text-align: center;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+        <p style="font-size: 12px; color: #999; text-align: center;">&copy; ${new Date().getFullYear()} MilkyTech.Online. All rights reserved.</p>
+      </div>
+    `,
+  });
+}

@@ -1,8 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useTelegram } from "@/components/telegram-provider";
 import { Zap, Mail, MapPin, Phone } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export function SiteFooter() {
+  const { isTma } = useTelegram();
+
+  if (isTma) return null;
+
   return (
     <footer className="border-t border-border/50 bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-12">
