@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -129,7 +129,6 @@ export default function ServiceDetailPage() {
   const params = useParams()
   const slug = params.slug as string
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
   const { toast } = useToast()
   const { formatAmount } = useSettings()
@@ -144,6 +143,7 @@ export default function ServiceDetailPage() {
   const [telegramUsername, setTelegramUsername] = useState('')
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const [restoringOrder, setRestoringOrder] = useState(false)
 
   // Submitting logic (memoized to be used in restoration effect)
