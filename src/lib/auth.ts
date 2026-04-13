@@ -125,6 +125,11 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
+        // --- Banned Account Check ---
+        if (user.isActive === false) {
+          throw new Error("Your account has been suspended. Please contact support.");
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -215,6 +220,11 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
+        // --- Banned Account Check ---
+        if (user.isActive === false) {
+          throw new Error("Your account has been suspended. Please contact support.");
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -257,6 +267,12 @@ export const authOptions: NextAuthOptions = {
             data: { deletedAt: null },
           });
         }
+
+        // --- Banned Account Check ---
+        if (user.isActive === false) {
+          throw new Error("Your account has been suspended. Please contact support.");
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -284,6 +300,17 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).tier = token.tier;
         (session.user as any).referralCode = token.referralCode;
+
+        // Check if user is still active (not banned)
+        if (token.id) {
+          const user = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { isActive: true },
+          });
+          if (user && user.isActive === false) {
+            (session.user as any).banned = true;
+          }
+        }
       }
       return session;
     },

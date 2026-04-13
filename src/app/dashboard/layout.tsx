@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
   SidebarProvider,
   Sidebar,
@@ -35,7 +36,33 @@ import {
   User,
   Activity,
   Briefcase,
+  Ban,
 } from 'lucide-react'
+
+function BannedScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full text-center"
+      >
+        <div className="h-20 w-20 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+          <Ban className="h-10 w-10 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Account Suspended</h1>
+        <p className="text-muted-foreground mb-6">
+          Your account has been suspended. If you believe this is an error, please contact our support team.
+        </p>
+        <Button variant="outline" onClick={() => signOut({ callbackUrl: '/' })}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
+      </motion.div>
+    </div>
+  )
+}
 
 export default function DashboardLayout({
   children,
@@ -61,6 +88,11 @@ export default function DashboardLayout({
   }
 
   if (!session) return null
+
+  // Check if user is banned
+  if ((session.user as any).banned) {
+    return <BannedScreen />
+  }
 
   const navItems = [
     { title: 'Overview', href: '/dashboard', icon: LayoutDashboard, exact: true },

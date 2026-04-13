@@ -15,7 +15,10 @@ import {
   ShoppingCart,
   ArrowRight,
   Calendar,
+  Ban,
+  UserCheck,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +39,7 @@ interface Customer {
   role: string
   phone: string | null
   telegram: string | null
+  isActive: boolean
   createdAt: string
   updatedAt: string
   orderCount: number
@@ -146,6 +150,7 @@ export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [banningId, setBanningId] = useState<string | null>(null)
   const { formatAmount } = useSettings()
 
   useEffect(() => {
@@ -153,7 +158,7 @@ export default function AdminCustomersPage() {
 
     async function fetchCustomers() {
       try {
-        const res = await fetch('/api/admin/customers')
+        const res = await fetch('/api/admin/customers', { cache: 'no-store' })
         if (res.ok && !cancelled) {
           const data = await res.json()
           setCustomers(data)
@@ -169,6 +174,42 @@ export default function AdminCustomersPage() {
       cancelled = true
     }
   }, [])
+
+  async function handleToggleBan(customer: Customer) {
+    if (customer.role === 'admin') {
+      toast.error('Cannot ban admin users')
+      return
+    }
+    
+    const action = customer.isActive ? 'ban' : 'unban'
+    if (!window.confirm(`Are you sure you want to ${action} ${customer.name}?`)) return
+
+    setBanningId(customer.id)
+    try {
+      const res = await fetch('/api/admin/customers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: customer.id,
+          isActive: !customer.isActive,
+        }),
+      })
+
+      if (res.ok) {
+        setCustomers((prev) =>
+          prev.map((c) => (c.id === customer.id ? { ...c, isActive: !c.isActive } : c))
+        )
+        toast.success(`Customer ${customer.isActive ? 'banned' : 'unbanned'} successfully`)
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to update customer')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setBanningId(null)
+    }
+  }
 
   const filteredCustomers = useMemo(() => {
     if (!searchQuery.trim()) return customers
@@ -278,27 +319,29 @@ export default function AdminCustomersPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[300px]">Customer</TableHead>
+                    <TableHead className="w-[280px]">Customer</TableHead>
                     <TableHead>Contact / Source</TableHead>
                     <TableHead className="text-center">Orders</TableHead>
                     <TableHead className="text-right">Total Spent</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCustomers.map((customer) => {
                     const isAdmin = customer.role === 'admin'
                     const isTelegram = customer.email.includes('@telegram.user')
+                    const isBanned = customer.isActive === false
                     return (
-                      <TableRow key={customer.id} className="group hover:bg-muted/20 transition-colors">
+                      <TableRow key={customer.id} className={`group transition-colors ${isBanned ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-muted/20'}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${isAdmin ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : 'bg-muted text-muted-foreground'}`}>
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${isAdmin ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : isBanned ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground'}`}>
                               {getInitials(customer.name)}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                                <p className={`text-sm font-bold truncate transition-colors ${isBanned ? 'text-red-600' : 'text-foreground group-hover:text-primary'}`}>
                                   {customer.name}
                                 </p>
                                 {isAdmin && <Badge variant="secondary" className="px-1.5 py-0 min-w-0 text-[9px] bg-primary/10 text-primary uppercase">Admin</Badge>}
@@ -339,10 +382,45 @@ export default function AdminCustomersPage() {
                             Registered {format(new Date(customer.createdAt), 'MMM yyyy')}
                           </div>
                         </TableCell>
+                        <TableCell className="text-center">
+                          {isBanned ? (
+                            <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
+                              <Ban className="h-3 w-3 mr-1" />
+                              Banned
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                              <UserCheck className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell>
-                          <Link href={`/admin/customers/${customer.id}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
+                          <div className="flex items-center gap-1">
+                            <Link href={`/admin/customers/${customer.id}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                            {!isAdmin && (
+                              <button
+                                onClick={() => handleToggleBan(customer)}
+                                disabled={banningId === customer.id}
+                                className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors ${
+                                  isBanned
+                                    ? 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600'
+                                    : 'hover:bg-red-500/10 text-muted-foreground hover:text-red-600'
+                                } disabled:opacity-50`}
+                                title={isBanned ? 'Unban user' : 'Ban user'}
+                              >
+                                {banningId === customer.id ? (
+                                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                ) : isBanned ? (
+                                  <UserCheck className="h-4 w-4" />
+                                ) : (
+                                  <Ban className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
