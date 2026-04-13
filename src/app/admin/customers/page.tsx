@@ -17,10 +17,15 @@ import {
   Calendar,
   Ban,
   UserCheck,
+  Trash2,
+  AtSign,
+  Mail,
+  Send,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { useSettings } from '@/hooks/use-settings'
 import {
@@ -39,6 +44,7 @@ interface Customer {
   role: string
   phone: string | null
   telegram: string | null
+  telegramId: string | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -151,6 +157,8 @@ export default function AdminCustomersPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [banningId, setBanningId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isDeleting, setIsDeleting] = useState(false)
   const { formatAmount } = useSettings()
 
   useEffect(() => {
@@ -211,6 +219,49 @@ export default function AdminCustomersPage() {
     }
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.length} customer(s)? This will also delete all their associated orders and invoices. This action CANNOT be undone.`)) return
+
+    setIsDeleting(true)
+    try {
+      const res = await fetch('/api/admin/customers/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+
+      if (res.ok) {
+        setCustomers((prev) => prev.filter((c) => !selectedIds.includes(c.id)))
+        setSelectedIds([])
+        toast.success(`Successfully deleted ${selectedIds.length} customer(s)`)
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete customers')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredCustomers.map(c => c.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id])
+    } else {
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id))
+    }
+  }
+
   const filteredCustomers = useMemo(() => {
     if (!searchQuery.trim()) return customers
     const q = searchQuery.toLowerCase().trim()
@@ -236,6 +287,41 @@ export default function AdminCustomersPage() {
       initial="hidden"
       animate="visible"
     >
+      {/* FLOATING BULK ACTIONS BAR */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 fade-in duration-200">
+          <div className="bg-card border shadow-lg rounded-full px-4 py-3 flex items-center justify-between min-w-[340px] max-w-sm w-full transition-all">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                {selectedIds.length}
+              </span>
+              <span className="text-sm font-medium">customers selected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIds([])}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <motion.div
         variants={fadeUp}
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -319,21 +405,46 @@ export default function AdminCustomersPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-12 pl-4 text-center">
+                      <Checkbox 
+                        checked={selectedIds.length > 0 && selectedIds.length === filteredCustomers.length}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all customers"
+                      />
+                    </TableHead>
                     <TableHead className="w-[280px]">Customer</TableHead>
                     <TableHead>Contact / Source</TableHead>
                     <TableHead className="text-center">Orders</TableHead>
                     <TableHead className="text-right">Total Spent</TableHead>
                     <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCustomers.map((customer) => {
                     const isAdmin = customer.role === 'admin'
-                    const isTelegram = customer.email.includes('@telegram.user')
+                    const hasEmailAuth = !customer.email.includes('@telegram.user')
+                    const hasTelegramAuth = !!customer.telegramId
                     const isBanned = customer.isActive === false
+                    const isSelected = selectedIds.includes(customer.id)
+                    
                     return (
-                      <TableRow key={customer.id} className={`group transition-colors ${isBanned ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-muted/20'}`}>
+                      <TableRow 
+                        key={customer.id} 
+                        className={`group transition-colors ${
+                          isSelected ? 'bg-primary/5 hover:bg-primary/10' : 
+                          isBanned ? 'bg-red-500/5 hover:bg-red-500/10' : 
+                          'hover:bg-muted/20'
+                        }`}
+                      >
+                        <TableCell className="pl-4 text-center">
+                           <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelect(customer.id, !!checked)}
+                              disabled={isAdmin}
+                              aria-label={`Select ${customer.name}`}
+                           />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${isAdmin ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : isBanned ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground'}`}>
@@ -359,12 +470,30 @@ export default function AdminCustomersPage() {
                             )}
                             {customer.telegram && (
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <MessageCircle className="h-3 w-3" /> <span className="truncate">@{customer.telegram}</span>
+                                <AtSign className="h-3 w-3" /> <span className="truncate">{customer.telegram}</span>
                               </div>
                             )}
-                            <Badge variant="outline" className={`mt-1 text-[9px] px-1.5 py-0 uppercase border-dashed ${isTelegram ? 'border-sky-500/50 text-sky-600 bg-sky-500/5' : 'border-emerald-500/50 text-emerald-600 bg-emerald-500/5'}`}>
-                              Via {isTelegram ? 'Telegram' : 'Email'}
-                            </Badge>
+                            
+                            <div className="flex items-center gap-1.5 mt-2">
+                              {hasTelegramAuth && hasEmailAuth ? (
+                                <>
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase border-dashed border-sky-500/50 text-sky-600 bg-sky-500/5">
+                                    <Send className="h-2.5 w-2.5 mr-1" /> Telegram
+                                  </Badge>
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase border-dashed border-emerald-500/50 text-emerald-600 bg-emerald-500/5">
+                                    <Mail className="h-2.5 w-2.5 mr-1" /> Email
+                                  </Badge>
+                                </>
+                              ) : hasTelegramAuth ? (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase border-dashed border-sky-500/50 text-sky-600 bg-sky-500/5">
+                                  <Send className="h-2.5 w-2.5 mr-1" /> Telegram User
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase border-dashed border-emerald-500/50 text-emerald-600 bg-emerald-500/5">
+                                  <Mail className="h-2.5 w-2.5 mr-1" /> Email User
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -401,24 +530,37 @@ export default function AdminCustomersPage() {
                               <ArrowRight className="h-4 w-4" />
                             </Link>
                             {!isAdmin && (
-                              <button
-                                onClick={() => handleToggleBan(customer)}
-                                disabled={banningId === customer.id}
-                                className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors ${
-                                  isBanned
-                                    ? 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600'
-                                    : 'hover:bg-red-500/10 text-muted-foreground hover:text-red-600'
-                                } disabled:opacity-50`}
-                                title={isBanned ? 'Unban user' : 'Ban user'}
-                              >
-                                {banningId === customer.id ? (
-                                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                ) : isBanned ? (
-                                  <UserCheck className="h-4 w-4" />
-                                ) : (
-                                  <Ban className="h-4 w-4" />
-                                )}
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleToggleBan(customer)}
+                                  disabled={banningId === customer.id}
+                                  className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors ${
+                                    isBanned
+                                      ? 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600'
+                                      : 'hover:bg-amber-500/10 text-muted-foreground hover:text-amber-600'
+                                  } disabled:opacity-50`}
+                                  title={isBanned ? 'Unban user' : 'Ban user'}
+                                >
+                                  {banningId === customer.id ? (
+                                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  ) : isBanned ? (
+                                    <UserCheck className="h-4 w-4" />
+                                  ) : (
+                                    <Ban className="h-4 w-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedIds([customer.id])
+                                    // Give state a tiny tick to update before the confirm dialog triggers
+                                    setTimeout(() => document.querySelector<HTMLButtonElement>('button:has(.lucide-trash-2)')?.click(), 10)
+                                  }}
+                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-red-500/10 text-muted-foreground hover:text-red-600 focus:outline-none"
+                                  title="Delete user"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </TableCell>

@@ -58,3 +58,38 @@ export async function GET(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = (session.user as Record<string, unknown>).role as string;
+    if (userRole !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    // Optional: Sever any referral ties where this user is the referrer to avoid sqlite constraint issues 
+    // even though onDelete: SetNull is technically the Prisma default for Optionals.
+    await db.user.updateMany({
+      where: { referredById: id },
+      data: { referredById: null }
+    });
+
+    await db.user.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "Customer deleted safely" });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
