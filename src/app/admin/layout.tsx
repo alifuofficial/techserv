@@ -37,7 +37,6 @@ import {
   FileText,
   CreditCard,
   Briefcase,
-  Activity,
   Megaphone,
 } from 'lucide-react'
 

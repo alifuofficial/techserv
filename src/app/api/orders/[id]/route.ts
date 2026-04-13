@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
 
 export async function GET(
   request: NextRequest,
@@ -225,6 +226,11 @@ export async function DELETE(
     await db.order.delete({
       where: { id },
     });
+
+    revalidatePath("/api/admin/orders");
+    revalidatePath("/api/orders");
+    revalidatePath("/api/admin/stats");
+    revalidatePath("/admin/orders");
 
     return NextResponse.json({ success: true, message: "Order deleted successfully" });
   } catch (error: unknown) {

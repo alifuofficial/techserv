@@ -95,7 +95,7 @@ export default function AdminProjectsPage() {
     async function fetchProjects() {
       setLoading(true)
       try {
-        const res = await fetch('/api/admin/orders')
+        const res = await fetch('/api/admin/orders', { cache: 'no-store' })
         if (res.ok && !cancelled) {
           const data = await res.json()
           const active = data.filter((o: Order) => ['approved', 'completed'].includes(o.status))

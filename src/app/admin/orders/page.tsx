@@ -193,7 +193,7 @@ export default function AdminOrdersPage() {
           statusFilter === 'all'
             ? '/api/admin/orders'
             : `/api/admin/orders?status=${statusFilter}`
-        const res = await fetch(url)
+        const res = await fetch(url, { cache: 'no-store' })
         if (res.ok && !cancelled) {
           const data = await res.json()
           const nonProjects = data.filter(

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import { format, subDays } from 'date-fns'
+import { format } from 'date-fns'
 import {
   BarChart,
   Bar,
@@ -21,13 +21,11 @@ import {
 import {
   ShoppingCart,
   Clock,
-  DollarSign,
   Users,
   ArrowRight,
   TrendingUp,
   TrendingDown,
   PackageOpen,
-  Eye,
   LayoutList,
   Package,
   Settings,
@@ -40,9 +38,7 @@ import {
   Wallet,
   Zap,
   ArrowUpRight,
-  Calendar,
   ChevronRight,
-  Crown,
   Bell,
   Timer,
   Target,
