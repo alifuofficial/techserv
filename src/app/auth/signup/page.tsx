@@ -281,6 +281,41 @@ function StepOtp({
   onBack: () => void; 
   isLoading: boolean 
 }) {
+  const [countdown, setCountdown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    let timer: any;
+    if (countdown > 0) {
+      timer = setInterval(() => setCountdown(c => c - 1), 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const handleResend = async () => {
+    if (!canResend) return;
+    try {
+      const res = await fetch("/api/auth/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        toast({ title: "Code Resent", description: "A new code has been sent to your email." });
+        setCountdown(60);
+        setCanResend(false);
+      } else {
+        const data = await res.json();
+        toast({ title: "Error", description: data.error || "Failed to resend code.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Network error. Please try again.", variant: "destructive" });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -292,9 +327,9 @@ function StepOtp({
         <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
           <Mail className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-xl font-bold">Verify Your Email</h2>
+        <h2 className="text-xl font-bold italic tracking-tight uppercase">Verify Humanity</h2>
         <p className="text-sm text-muted-foreground">
-          We've sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>
+          Enter the 6-digit synchronization code sent to <span className="font-semibold text-foreground">{email}</span>
         </p>
       </div>
 
@@ -316,20 +351,27 @@ function StepOtp({
         </InputOTP>
         
         <p className="text-xs text-muted-foreground text-center">
-          Didn't receive the code? <button className="text-primary font-semibold hover:underline">Resend</button>
+          Didn't receive the code?{" "}
+          <button 
+            onClick={handleResend}
+            disabled={!canResend}
+            className={`font-semibold transition-colors ${canResend ? "text-primary hover:underline cursor-pointer" : "text-muted-foreground/50 cursor-not-allowed"}`}
+          >
+            {canResend ? "Resend Code" : `Resend in ${countdown}s`}
+          </button>
         </p>
       </div>
 
       <div className="flex gap-3">
         <Button variant="outline" onClick={onBack} disabled={isLoading} className="flex-1 h-12 rounded-xl">
-          Back
+          Go Back
         </Button>
         <Button 
           onClick={onVerify} 
           disabled={value.length !== 6 || isLoading} 
-          className="flex-1 h-12 rounded-xl font-semibold shadow-lg shadow-primary/20"
+          className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest shadow-lg shadow-primary/20"
         >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify & Sign In"}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify Code"}
         </Button>
       </div>
     </motion.div>

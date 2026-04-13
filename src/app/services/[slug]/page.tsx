@@ -270,59 +270,74 @@ export default function ServiceDetailPage() {
                   const isSelected = selectedTier?.label === tier.label
 
                   return (
-                    <button
+                    <motion.button
                       key={i}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedTier(tier)}
-                      className={`relative flex flex-col text-left p-6 rounded-2xl border-2 transition-all duration-300 ${
+                      className={`relative flex flex-col text-left p-8 rounded-[2rem] border-2 transition-all duration-300 ${
                         isSelected
-                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-lg -translate-y-1'
-                          : 'border-border/60 bg-card hover:border-primary/40 hover:shadow-md'
+                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-xl shadow-primary/5 -translate-y-1'
+                          : 'border-border/40 bg-card hover:border-primary/30 hover:shadow-lg'
                       }`}
                     >
+                      {/* Premium gradient overlay for selected */}
+                      {isSelected && (
+                        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50 pointer-events-none" />
+                      )}
+
                       {tier.popular && (
-                        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 shadow-sm whitespace-nowrap">
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 whitespace-nowrap z-10 flex items-center gap-1.5">
+                          <Star className="h-3 w-3 fill-white" />
                           Most Popular
-                        </Badge>
+                        </div>
                       )}
                       
-                      <div className="mb-4">
-                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+                      <div className="mb-6 relative">
+                        <p className={`text-[11px] font-black uppercase tracking-[0.15em] mb-2 ${isSelected ? 'text-primary' : 'text-muted-foreground/60'}`}>
                           {tier.label}
                         </p>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold">{formatAmount(tier.price)}</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-4xl font-extrabold tracking-tight italic">
+                            {formatAmount(tier.price).split('.')[0]}
+                            <span className="text-xl opacity-70">.{formatAmount(tier.price).split('.')[1] || '00'}</span>
+                          </span>
                           {isSubscription && (
-                            <span className="text-muted-foreground text-xs font-medium">
+                            <span className="text-muted-foreground/70 text-sm font-bold lowercase">
                               /{tier.duration.includes('month') ? 'mo' : tier.duration.includes('year') ? 'yr' : tier.duration}
                             </span>
                           )}
                         </div>
                         {tier.description && (
-                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2 min-h-[2rem]">
+                          <p className="text-[13px] text-muted-foreground mt-3 leading-relaxed opacity-80">
                             {tier.description}
                           </p>
                         )}
                       </div>
 
-                      <Separator className="mb-4 opacity-50" />
+                      <Separator className={`mb-6 ${isSelected ? 'bg-primary/20' : 'bg-border/40'}`} />
 
-                      <div className="flex-1 space-y-3 mb-6">
+                      <div className="flex-1 space-y-4 mb-8">
                         {items.map((feature, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs">
-                            <div className={`mt-0.5 rounded-full p-0.5 ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground/60'}`}>
-                              <Check className="h-3 w-3" />
+                          <div key={idx} className="flex items-start gap-3 group/feat">
+                            <div className={`mt-0.5 rounded-full p-1 transition-transform group-hover/feat:scale-110 ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground/40'}`}>
+                              <CheckCircle2 className="h-3.5 w-3.5" />
                             </div>
-                            <span className={isSelected ? 'font-medium' : 'text-muted-foreground'}>{feature}</span>
+                            <span className={`text-[13px] leading-tight ${isSelected ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
+                              {feature}
+                            </span>
                           </div>
                         ))}
                       </div>
 
-                      <div className={`mt-auto w-full py-2 rounded-xl text-center text-xs font-bold transition-colors ${
-                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground group-hover:bg-primary/10'
+                      <div className={`mt-auto w-full py-3.5 rounded-2xl text-center text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+                        isSelected 
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                          : 'bg-muted text-muted-foreground group-hover:bg-primary/10 border-2 border-transparent hover:border-primary/20'
                       }`}>
-                        {isSelected ? 'Selected' : 'Select Plan'}
+                        {isSelected ? 'Selected Plan' : 'Select This Plan'}
                       </div>
-                    </button>
+                    </motion.button>
                   )
                 })}
               </div>

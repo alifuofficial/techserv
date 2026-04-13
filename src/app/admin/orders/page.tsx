@@ -10,10 +10,21 @@ import {
   PackageSearch,
   ArrowRight,
   Package,
+  Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useSettings } from '@/hooks/use-settings'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Order {
   id: string
@@ -85,82 +96,7 @@ function durationLabel(d: string) {
   }
 }
 
-function OrderCard({
-  order,
-  index,
-  formatAmount,
-}: {
-  order: Order
-  index: number
-  formatAmount: (amount: number) => string
-}) {
-  const pill = statusPill[order.status]
-
-  return (
-    <motion.div
-      custom={index}
-      variants={{
-        hidden: { opacity: 0, y: 8 },
-        visible: (i: number) => ({
-          opacity: 1,
-          y: 0,
-          transition: { delay: i * 0.03, duration: 0.3, ease: [0.22, 1, 0.36, 1] },
-        }),
-      }}
-      initial="hidden"
-      animate="visible"
-    >
-      <Link
-        href={`/admin/orders/${order.id}`}
-        className="group block rounded-xl border border-border/40 p-4 hover:bg-muted/50 transition-colors"
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium leading-snug truncate">
-                {order.service?.title || '—'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {durationLabel(order.duration)}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {pill && (
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${pill.className}`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
-                {pill.label}
-              </span>
-            )}
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-          <span className="font-medium text-foreground/70">
-            {order.user?.name || 'Unknown'}
-          </span>
-          <span className="text-border">·</span>
-          <span className="truncate">{order.user?.email}</span>
-        </div>
-
-        <div className="flex items-center justify-between pt-3 border-t border-border/30">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {format(new Date(order.createdAt), 'MMM d, yyyy')}
-          </span>
-          <span className="text-sm font-semibold tabular-nums text-primary">
-            {formatAmount(order.amount)}
-          </span>
-        </div>
-      </Link>
-    </motion.div>
-  )
-}
+// OrderCard eliminated in favor of Table Row inline
 
 function HeaderSkeleton() {
   return (
@@ -187,35 +123,23 @@ function TabsSkeleton() {
   )
 }
 
-function CardListSkeleton() {
+function TableSkeleton() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-border/40 p-4 space-y-3"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2.5">
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-16" />
-              </div>
+    <div className="rounded-xl border border-border/40 overflow-hidden bg-card shadow-sm">
+      <div className="p-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-border/40 py-4 last:border-0">
+            <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
             </div>
             <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-4 w-24 hidden sm:block" />
+            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-4" />
-            <Skeleton className="h-3 w-28" />
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-border/30">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
@@ -290,6 +214,25 @@ export default function AdminOrdersPage() {
       cancelled = true
     }
   }, [statusFilter])
+
+  async function handleDeleteOrder(e: React.MouseEvent, id: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!window.confirm("Are you sure you want to permanently delete this order?")) return;
+    
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setOrders((prev) => prev.filter(o => o.id !== id));
+        setAllOrders((prev) => prev.filter(o => o.id !== id));
+        toast.success("Order deleted successfully");
+      } else {
+        toast.error("Failed to delete order");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  }
 
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return orders
@@ -377,7 +320,7 @@ export default function AdminOrdersPage() {
 
       <motion.div variants={fadeUp}>
         {loading ? (
-          <CardListSkeleton />
+          <TableSkeleton />
         ) : filteredOrders.length === 0 ? (
           <EmptyState statusFilter={statusFilter} />
         ) : (
@@ -388,16 +331,74 @@ export default function AdminOrdersPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-3"
+              className="rounded-xl border border-border/40 shadow-sm overflow-hidden bg-card"
             >
-              {filteredOrders.map((order, index) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  index={index}
-                  formatAmount={formatAmount}
-                />
-              ))}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[300px]">Order Details</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Amount / Date</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map((order, index) => {
+                      const pill = statusPill[order.status]
+                      return (
+                        <TableRow key={order.id} className="group hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => window.location.href = `/admin/orders/${order.id}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                                  {order.service?.title || 'Unknown Service'}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5 truncate uppercase tracking-widest">
+                                  ID: {order.id.slice(0, 8)} • {durationLabel(order.duration)}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{order.user?.name || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground truncate">{order.user?.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {pill && (
+                              <Badge variant="outline" className={`px-2 py-0.5 text-xs font-semibold ${pill.className} border-transparent`}>
+                                {pill.label}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <p className="text-sm font-bold tabular-nums text-primary">{formatAmount(order.amount)}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider font-medium">
+                              {format(new Date(order.createdAt), 'MMM d, yyyy')}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2 isolate">
+                              <Link href={`/admin/orders/${order.id}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                <ArrowRight className="h-4 w-4" />
+                              </Link>
+                              <button onClick={(e) => handleDeleteOrder(e, order.id)} className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </motion.div>
           </AnimatePresence>
         )}

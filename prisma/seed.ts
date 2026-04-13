@@ -67,9 +67,25 @@ async function seed() {
       icon: "Crown",
       pricingType: "subscription",
       pricingTiers: JSON.stringify([
-        { label: "3 Months", duration: "3months", price: 15.99 },
-        { label: "6 Months", duration: "6months", price: 28.99, popular: true },
-        { label: "12 Months", duration: "1year", price: 49.99 },
+        { 
+          label: "3 Months", 
+          duration: "3months", 
+          price: 15.99,
+          features: "Faster downloads,4GB uploads,Premium status,Basic stickers"
+        },
+        { 
+          label: "6 Months", 
+          duration: "6months", 
+          price: 28.99, 
+          popular: true,
+          features: "Faster downloads,4GB uploads,Premium status,Exclusive stickers,No ads,Custom icons"
+        },
+        { 
+          label: "12 Months", 
+          duration: "1year", 
+          price: 49.99,
+          features: "Faster downloads,4GB uploads,Premium status,Exclusive stickers,No ads,Custom icons,Premium reactions,Profile badges"
+        },
       ]),
       isActive: true,
       sortOrder: 1,

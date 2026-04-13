@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
@@ -42,6 +42,7 @@ import {
   SearchCode,
   Rocket,
   MousePointer2,
+  Trash2,
 } from 'lucide-react'
 import { useSettings } from '@/hooks/use-settings'
 
@@ -276,6 +277,7 @@ function DetailSkeleton() {
    ──────────────────────────────────────────── */
 export default function AdminOrderDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const { formatAmount } = useSettings()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -418,6 +420,21 @@ export default function AdminOrderDetailPage() {
     }
   }
 
+  async function handleDeleteOrder() {
+    if (!window.confirm("Are you sure you want to permanently delete this record? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success("Record deleted forever.");
+        router.push(isProject ? "/admin/projects" : "/admin/orders");
+      } else {
+        toast.error("Failed to delete record.");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  }
+
   if (loading) return <DetailSkeleton />
   if (notFound || !order) return (
     <div className="p-20 text-center flex flex-col items-center">
@@ -443,23 +460,30 @@ export default function AdminOrderDetailPage() {
   const isProject = ['approved', 'completed'].includes(order.status)
 
   return (
-    <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">
-      {/* ── 1. Breadcrumb + Back ── */}
-      <motion.div variants={fadeUp} className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Link href="/admin" className="hover:text-foreground">Admin</Link>
+    <motion.div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto" variants={container} initial="hidden" animate="visible">
+      {/* ── 1. Header Toolbar ── */}
+      <motion.div variants={fadeUp} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card border border-border/40 shadow-sm rounded-2xl p-4">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
+          <Link href="/admin" className="hover:text-foreground transition-colors">Admin</Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href={isProject ? "/admin/projects" : "/admin/orders"} className="hover:text-foreground">
+          <Link href={isProject ? "/admin/projects" : "/admin/orders"} className="hover:text-foreground transition-colors">
             {isProject ? "Projects" : "Order Queue"}
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground font-bold">#{id.slice(0, 8)}</span>
+          <span className="text-foreground font-bold tracking-wider">#{id.slice(0, 8)}</span>
         </div>
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-          <Link href={isProject ? "/admin/projects" : "/admin/orders"}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
-          </Link>
-        </Button>
+        
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Button variant="outline" size="sm" asChild className="h-9 text-xs font-semibold flex-1 md:flex-none">
+            <Link href={isProject ? "/admin/projects" : "/admin/orders"}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            </Link>
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteOrder} className="h-9 text-xs font-bold px-3">
+            <Trash2 className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Delete Record</span>
+          </Button>
+        </div>
       </motion.div>
 
       {/* ── 2. Order Header ── */}

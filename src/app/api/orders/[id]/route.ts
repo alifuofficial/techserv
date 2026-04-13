@@ -191,3 +191,44 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const sessionUser = session.user as Record<string, unknown>;
+    const userRole = sessionUser.role as string;
+
+    if (userRole !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    const existingOrder = await db.order.findUnique({
+      where: { id },
+    });
+
+    if (!existingOrder) {
+      return NextResponse.json(
+        { error: "Order not found" },
+        { status: 404 }
+      );
+    }
+
+    await db.order.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "Order deleted successfully" });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
