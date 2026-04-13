@@ -18,7 +18,16 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { useSettings } from '@/hooks/use-settings'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Customer {
   id: string
@@ -85,29 +94,23 @@ function StatsSkeleton() {
   )
 }
 
-function CardSkeleton() {
+function TableSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-border/40 p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-36" />
+    <div className="rounded-xl border border-border/40 overflow-hidden bg-card shadow-sm">
+      <div className="p-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-border/40 py-4 last:border-0">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
             </div>
-            <Skeleton className="h-5 w-12 rounded-full" />
+            <Skeleton className="h-4 w-24 hidden sm:block" />
+            <Skeleton className="h-4 w-16 hidden sm:block" />
+            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
           </div>
-          <div className="space-y-2">
-            <Skeleton className="h-3.5 w-32" />
-            <Skeleton className="h-3.5 w-28" />
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-border/40">
-            <Skeleton className="h-3.5 w-20" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
@@ -266,90 +269,87 @@ export default function AdminCustomersPage() {
 
       <motion.div variants={fadeUp}>
         {loading ? (
-          <CardSkeleton />
+          <TableSkeleton />
         ) : filteredCustomers.length === 0 ? (
           <EmptyState hasSearch={searchQuery.trim().length > 0} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCustomers.map((customer) => {
-              const isAdmin = customer.role === 'admin'
-              return (
-                <motion.div key={customer.id} variants={fadeUp}>
-                  <Link
-                    href={`/admin/customers/${customer.id}`}
-                    className="block rounded-xl border border-border/40 p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
-                            isAdmin
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {getInitials(customer.name)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium leading-tight truncate">
-                              {customer.name}
-                            </p>
-                            <span
-                              className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
-                                isAdmin
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {customer.role}
-                            </span>
+          <div className="rounded-xl border border-border/40 shadow-sm overflow-hidden bg-card">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[300px]">Customer</TableHead>
+                    <TableHead>Contact / Source</TableHead>
+                    <TableHead className="text-center">Orders</TableHead>
+                    <TableHead className="text-right">Total Spent</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => {
+                    const isAdmin = customer.role === 'admin'
+                    const isTelegram = customer.email.includes('@telegram.user')
+                    return (
+                      <TableRow key={customer.id} className="group hover:bg-muted/20 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${isAdmin ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : 'bg-muted text-muted-foreground'}`}>
+                              {getInitials(customer.name)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                                  {customer.name}
+                                </p>
+                                {isAdmin && <Badge variant="secondary" className="px-1.5 py-0 min-w-0 text-[9px] bg-primary/10 text-primary uppercase">Admin</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {customer.email}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 min-w-0">
+                            {customer.phone && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3" /> <span className="truncate">{customer.phone}</span>
+                              </div>
+                            )}
+                            {customer.telegram && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <MessageCircle className="h-3 w-3" /> <span className="truncate">@{customer.telegram}</span>
+                              </div>
+                            )}
+                            <Badge variant="outline" className={`mt-1 text-[9px] px-1.5 py-0 uppercase border-dashed ${isTelegram ? 'border-sky-500/50 text-sky-600 bg-sky-500/5' : 'border-emerald-500/50 text-emerald-600 bg-emerald-500/5'}`}>
+                              Via {isTelegram ? 'Telegram' : 'Email'}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex items-center justify-center h-8 px-3 rounded-md bg-muted/30 border border-border/50 text-sm font-semibold tabular-nums text-foreground">
+                            {customer.orderCount}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider font-medium">Recorded</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="text-sm font-bold tabular-nums text-primary">
+                            {formatAmount(customer.totalSpent)}
                           </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
-                          customer.email.includes('@telegram.user')
-                            ? 'border-sky-500/30 bg-sky-500/10 text-sky-600'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
-                        }`}>
-                          Via {customer.email.includes('@telegram.user') ? 'Telegram' : 'Email'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3 w-3" />
-                          <span className="truncate">{customer.phone || '—'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <MessageCircle className="h-3 w-3" />
-                          <span className="truncate">{customer.telegram ? `@${customer.telegram}` : '—'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <ShoppingCart className="h-3 w-3" />
-                          <span>{customer.orderCount} order{customer.orderCount !== 1 ? 's' : ''}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-border/40">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>{format(new Date(customer.createdAt), 'MMM d, yyyy')}</span>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums text-primary">
-                          {formatAmount(customer.totalSpent)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              )
-            })}
+                          <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground mt-1 uppercase tracking-wider font-medium">
+                            <Calendar className="h-3 w-3" />
+                            Registered {format(new Date(customer.createdAt), 'MMM yyyy')}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/admin/customers/${customer.id}`} className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </motion.div>

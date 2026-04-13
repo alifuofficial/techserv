@@ -38,6 +38,7 @@ import {
   CreditCard,
   Briefcase,
   Activity,
+  Megaphone,
 } from 'lucide-react'
 
 /* ────────────────────────────────────────────
@@ -108,6 +109,7 @@ export default function AdminLayout({
     { title: 'Customers', href: '/admin/customers', icon: Users },
     { title: 'Invoices', href: '/admin/invoices', icon: FileText },
     { title: 'Payment Methods', href: '/admin/payment-methods', icon: CreditCard },
+    { title: 'Broadcasts', href: '/admin/broadcasts', icon: Megaphone },
     { title: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 
