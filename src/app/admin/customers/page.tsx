@@ -291,21 +291,33 @@ export default function AdminCustomersPage() {
                           {getInitials(customer.name)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium leading-tight truncate">
-                            {customer.name}
-                          </p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium leading-tight truncate">
+                              {customer.name}
+                            </p>
+                            <span
+                              className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
+                                isAdmin
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {customer.role}
+                            </span>
+                          </div>
                           <p className="text-xs text-muted-foreground truncate mt-0.5">
                             {customer.email}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            isAdmin
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {customer.role}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
+                          customer.email.includes('@telegram.user')
+                            ? 'border-sky-500/30 bg-sky-500/10 text-sky-600'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
+                        }`}>
+                          Via {customer.email.includes('@telegram.user') ? 'Telegram' : 'Email'}
                         </span>
                       </div>
 

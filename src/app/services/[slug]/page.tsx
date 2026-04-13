@@ -267,7 +267,7 @@ export default function ServiceDetailPage() {
                   const items = tier.features 
                     ? tier.features.split(',').map(f => f.trim()).filter(Boolean)
                     : service.features.split(',').map(f => f.trim()).filter(Boolean).slice(0, 6)
-                  const isSelected = selectedTier === tier
+                  const isSelected = selectedTier?.label === tier.label
 
                   return (
                     <button
