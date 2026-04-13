@@ -275,7 +275,7 @@ export default function ServiceDetailPage() {
                       onClick={() => setSelectedTier(tier)}
                       className={`relative flex flex-col text-left p-6 rounded-2xl border-2 transition-all duration-300 ${
                         isSelected
-                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-lg translate-y--1'
+                          ? 'border-primary bg-primary/5 ring-4 ring-primary/10 shadow-lg -translate-y-1'
                           : 'border-border/60 bg-card hover:border-primary/40 hover:shadow-md'
                       }`}
                     >

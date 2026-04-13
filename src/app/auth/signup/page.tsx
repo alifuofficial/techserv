@@ -303,18 +303,17 @@ function StepOtp({
           maxLength={6}
           value={value}
           onChange={onChange}
-          render={({ slots }) => (
-            <InputOTPGroup className="gap-2">
-              {slots.map((slot, index) => (
-                <InputOTPSlot
-                  key={index}
-                  {...slot}
-                  className="w-10 h-12 rounded-xl border-2 border-border/40 bg-muted/30 text-lg font-bold transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10"
-                />
-              ))}
-            </InputOTPGroup>
-          )}
-        />
+        >
+          <InputOTPGroup className="gap-2">
+            {[0, 1, 2, 3, 4, 5].map((idx) => (
+              <InputOTPSlot
+                key={idx}
+                index={idx}
+                className="w-10 h-12 rounded-xl border-2 border-border/40 bg-muted/30 text-lg font-bold transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10"
+              />
+            ))}
+          </InputOTPGroup>
+        </InputOTP>
         
         <p className="text-xs text-muted-foreground text-center">
           Didn't receive the code? <button className="text-primary font-semibold hover:underline">Resend</button>
