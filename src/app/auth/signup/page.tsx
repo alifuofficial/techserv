@@ -618,7 +618,7 @@ function SignUpForm() {
                 <Zap className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
               </div>
               <span className="text-2xl font-bold tracking-tight">
-                Tech<span className="text-primary">Serv</span>
+                Milky<span className="text-primary">Tech.Online</span>
               </span>
             </Link>
           </div>

@@ -172,7 +172,7 @@ function SignInContent() {
                 <Zap className="h-5 w-5" />
               </div>
               <span className="text-2xl font-bold tracking-tight">
-                Tech<span className="text-primary">Serv</span>
+                Milky<span className="text-primary">Tech.Online</span>
               </span>
             </Link>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome Back</h1>
