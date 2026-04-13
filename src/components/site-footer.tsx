@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useTelegram } from "@/components/telegram-provider";
 import { Zap, Mail, MapPin, Phone } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export function SiteFooter() {
   const { isTma } = useTelegram();
+  const { status } = useSession();
 
   if (isTma) return null;
 
@@ -47,11 +49,17 @@ export function SiteFooter() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">Quick Links</h3>
             <nav className="flex flex-col gap-2.5">
-              <Link href="/auth/signin" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                Sign In
-              </Link>
-              <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                My Dashboard
+              {status === "authenticated" ? (
+                <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/auth/signin" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Sign In
+                </Link>
+              )}
+              <Link href="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                About Us
               </Link>
               <Link href="/services" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Pricing

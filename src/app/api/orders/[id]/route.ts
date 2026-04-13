@@ -142,23 +142,30 @@ export async function PATCH(
       
       let message = "";
       if (status && status !== existingOrder.status) {
-        const statusEmoji = {
+        const statusEmoji: Record<string, string> = {
           pending: "⏳",
-          approved: "✅",
+          approved: "🚀",
           completed: "🎉",
           rejected: "❌",
-        }[status] || "ℹ️";
-        message = `<b>Order Status Update ${statusEmoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> is now <b>${status.toUpperCase()}</b>.\n\n`;
-      } else if (progress !== undefined) {
-        message = `<b>Order Progress Update 📊</b>\n\nYour <b>${updatedOrder.service.title}</b> project is now <b>${progress}%</b> complete.\n\n`;
+        };
+        const emoji = statusEmoji[status] || "ℹ️";
+        
+        if (status === 'approved') message = `<b>Payment Accepted! ${emoji}</b>\n\nYour payment for <b>${updatedOrder.service.title}</b> was verified. The project has moved to the Fulfillment Center.\n\n`;
+        else if (status === 'completed') message = `<b>Order Delivered! ${emoji}</b>\n\nYour project for <b>${updatedOrder.service.title}</b> is now fully complete.\n\n`;
+        else if (status === 'rejected') message = `<b>Order Rejected ${emoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> was rejected.\n\n`;
+        else message = `<b>Order Status: ${status.toUpperCase()} ${emoji}</b>\n\nYour order for <b>${updatedOrder.service.title}</b> has been updated.\n\n`;
+      } else if (progress !== undefined && progress !== existingOrder.progress) {
+        message = `<b>Project Progress 📊</b>\n\nYour <b>${updatedOrder.service.title}</b> project is now <b>${progress}%</b> complete.\n\n`;
       }
 
-      if (statusMessage) {
-        message += `<b>Current Milestone:</b> <i>${statusMessage}</i>\n\n`;
+      if (statusMessage && message) {
+        message += `<b>Message:</b> <i>${statusMessage}</i>\n\n`;
+      } else if (statusMessage && !message) {
+        message = `<b>Project Update (${updatedOrder.service.title}) 💬</b>\n\n<i>${statusMessage}</i>\n\n`;
       }
 
       if (message) {
-        message += `Order ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing MilkyTech.Online!`;
+        message += `Order ID: <code>${updatedOrder.id}</code>\n\nThank you for choosing MilkyTech!`;
         await sendTelegramNotification(updatedOrder.userId, message);
       }
     }

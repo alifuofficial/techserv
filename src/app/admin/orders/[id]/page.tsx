@@ -554,8 +554,8 @@ export default function AdminOrderDetailPage() {
                 <CardHeader className="pb-3"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Payment Proof</CardTitle></CardHeader>
                 <CardContent>
                   {order.screenshot ? (
-                    <div className="relative group cursor-pointer bg-muted/20 rounded-xl border border-dashed border-border aspect-square flex items-center justify-center overflow-hidden" onClick={() => setLightboxOpen(true)}>
-                      <img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="max-h-full transition-transform group-hover:scale-105" />
+                    <div className="relative group cursor-pointer bg-muted/20 rounded-xl border border-dashed border-border aspect-square w-full flex items-center justify-center overflow-hidden" onClick={() => setLightboxOpen(true)}>
+                      <img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><ImageIcon className="text-white h-6 w-6" /></div>
                     </div>
                   ) : (
@@ -707,7 +707,9 @@ export default function AdminOrderDetailPage() {
 
       {lightboxOpen && order.screenshot && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setLightboxOpen(false)}>
-          <div className="relative max-w-4xl max-h-[90vh]"><img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="max-w-full max-h-full object-contain rounded-lg" /></div>
+          <div className="relative w-full max-w-5xl flex justify-center items-center pointer-events-none">
+            <img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl pointer-events-auto" />
+          </div>
         </div>
       )}
     </motion.div>

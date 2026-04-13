@@ -140,6 +140,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send Telegram Notification (if user is linked)
+    try {
+      const { sendTelegramNotification } = await import("@/lib/telegram-notifications");
+      await sendTelegramNotification(
+        userId,
+        `🎉 <b>Order Successful!</b>\n\nYour order for <b>${order.service.title}</b> has been received and is currently Pending Review.\n\nThank you for choosing MilkyTech!`
+      );
+    } catch (telegramError) {
+      console.error("Failed to send telegram order notification:", telegramError);
+    }
+
     return NextResponse.json(order, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal server error";
