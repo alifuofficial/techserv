@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
+import { useTelegram } from '@/components/telegram-provider'
 import { useSettings } from '@/hooks/use-settings'
 
 interface PricingTier {
@@ -132,6 +133,7 @@ export default function ServiceDetailPage() {
   const { data: session, status } = useSession()
   const { toast } = useToast()
   const { formatAmount } = useSettings()
+  const { isTma } = useTelegram()
 
   const [service, setService] = useState<Service | null>(null)
   const [loading, setLoading] = useState(true)
@@ -361,8 +363,12 @@ export default function ServiceDetailPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
-            <ArrowLeft className="h-4 w-4" /> Back to Services
+          <Link 
+            href={isTma ? "/dashboard" : "/services"} 
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" /> 
+            {isTma ? "Back to Dashboard" : "Back to Services"}
           </Link>
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">

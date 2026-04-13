@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { useSettings } from '@/hooks/use-settings'
+import { useTelegram } from '@/components/telegram-provider'
 
 /* ────────────────────────────────────────────
    Types
@@ -170,6 +171,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const { formatAmount } = useSettings()
+  const { isTma } = useTelegram()
 
   useEffect(() => {
     async function fetchServices() {
@@ -211,8 +213,18 @@ export default function ServicesPage() {
           <motion.div
             initial="hidden"
             animate="visible"
-            className="text-center"
+            className="text-center relative"
           >
+            {isTma && (
+              <motion.div variants={fadeUp} custom={0} className="absolute left-0 top-0 hidden sm:block">
+                <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                  <Link href="/dashboard">
+                    &larr; Back to Dashboard
+                  </Link>
+                </Button>
+              </motion.div>
+            )}
+
             <motion.div variants={fadeUp} custom={0}>
               <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
                 <Zap className="h-3.5 w-3.5 mr-1" />

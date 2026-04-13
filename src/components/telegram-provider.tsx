@@ -60,7 +60,39 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         }}
       >
         {children}
+        <TmaNavigator />
       </TelegramContext.Provider>
     </>
   );
+}
+
+import { usePathname, useRouter } from "next/navigation";
+
+function TmaNavigator() {
+  const { isTma, webApp } = useTelegram();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isTma || !webApp || typeof webApp.BackButton === "undefined") return;
+
+    if (pathname === "/dashboard" || pathname === "/") {
+      webApp.BackButton.hide();
+    } else {
+      webApp.BackButton.show();
+    }
+
+    const handleBack = () => {
+      // In mini apps, always push explicitly to Dashboard from anywhere to prevent falling into the webview history vacuum
+      router.replace("/dashboard");
+    };
+
+    webApp.BackButton.onClick(handleBack);
+
+    return () => {
+      webApp.BackButton.offClick(handleBack);
+    };
+  }, [isTma, webApp, pathname, router]);
+
+  return null;
 }

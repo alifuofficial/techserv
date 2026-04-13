@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import {
@@ -28,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSettings } from '@/hooks/use-settings'
+import { useTelegram } from '@/components/telegram-provider'
 
 interface Service {
   id: string
@@ -143,6 +145,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const { formatAmount } = useSettings()
   const { data: session } = useSession()
+  const { isTma } = useTelegram()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isTma) {
+      router.replace('/dashboard')
+    }
+  }, [isTma, router])
 
   useEffect(() => {
     let cancelled = false
@@ -160,6 +170,8 @@ export default function Home() {
     fetchServices()
     return () => { cancelled = true }
   }, [])
+
+  if (isTma) return null
 
   return (
     <div className="flex flex-col bg-white">
