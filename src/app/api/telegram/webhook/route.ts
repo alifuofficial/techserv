@@ -15,17 +15,23 @@ async function sendMessage(botToken: string, chatId: number, text: string, reply
   });
 }
 
+async function answerInlineQuery(botToken: string, inlineQueryId: string, results: any[]) {
+  const url = `https://api.telegram.org/bot${botToken}/answerInlineQuery`;
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      inline_query_id: inlineQueryId,
+      results: results,
+      cache_time: 300, // 5 minutes cache
+    }),
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message } = body;
-
-    if (!message || !message.text) {
-      return NextResponse.json({ ok: true });
-    }
-
-    const chatId = message.chat.id;
-    const text = message.text;
+    const { message, inline_query } = body;
 
     // Fetch bot token
     const botTokenSetting = await db.setting.findUnique({
@@ -37,6 +43,52 @@ export async function POST(req: NextRequest) {
     }
 
     const botToken = botTokenSetting.value;
+
+    // Handle Inline Queries
+    if (inline_query) {
+      const query = inline_query.query || "";
+      const services = await db.service.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { title: { contains: query } },
+            { shortDescription: { contains: query } }
+          ]
+        },
+        take: 20,
+        orderBy: { sortOrder: "asc" },
+      });
+
+      const siteUrlSetting = await db.setting.findUnique({ where: { key: "site_url" } });
+      const siteUrl = siteUrlSetting?.value || process.env.NEXTAUTH_URL || "https://milkytech.online";
+
+      const results = services.map((s) => ({
+        type: "article",
+        id: s.id,
+        title: s.title,
+        input_message_content: {
+          message_text: `<b>${s.title}</b>\n\n${s.shortDescription}`,
+          parse_mode: "HTML",
+        },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🛍️ Order Now", web_app: { url: `${siteUrl}/services/${s.slug}` } }],
+          ],
+        },
+        description: s.shortDescription,
+        thumb_url: "https://milkytech.online/logo.png", // Fallback logo
+      }));
+
+      await answerInlineQuery(botToken, inline_query.id, results);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!message || !message.text) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const chatId = message.chat.id;
+    const text = message.text;
 
     if (text.startsWith("/start")) {
       const parts = text.split(" ");
@@ -86,29 +138,30 @@ export async function POST(req: NextRequest) {
     } else if (text === "/services") {
       const services = await db.service.findMany({
         where: { isActive: true },
-        take: 5,
+        take: 10,
         orderBy: { sortOrder: "asc" },
       });
 
       if (services.length === 0) {
         await sendMessage(botToken, chatId, "No services available at the moment.");
       } else {
-        const serviceList = services
-          .map((s) => `• <b>${s.title}</b>\n  ${s.shortDescription}`)
-          .join("\n\n");
-        
         const siteUrlSetting = await db.setting.findUnique({ where: { key: "site_url" } });
-        const siteUrl = siteUrlSetting?.value || process.env.NEXTAUTH_URL || "";
+        const siteUrl = siteUrlSetting?.value || process.env.NEXTAUTH_URL || "https://milkytech.online";
+
+        // Create deep-link buttons for each service
+        const keyboard = services.map((s) => [
+          { text: `${s.title}`, web_app: { url: `${siteUrl}/services/${s.slug}` } }
+        ]);
+
+        // Add additional general buttons
+        keyboard.push([{ text: "🌐 Open Website", web_app: { url: siteUrl } }]);
 
         await sendMessage(
           botToken,
           chatId,
-          `<b>Our Services:</b>\n\n${serviceList}`,
+          `<b>Our Premium Services:</b>\n\nChoose a service below to view details and place an order directly within Telegram.`,
           {
-            inline_keyboard: [
-              [{ text: "🌐 Visit Website", url: siteUrl }],
-              [{ text: "🛍️ Browse Services", url: `${siteUrl}/services` }],
-            ],
+            inline_keyboard: keyboard,
           }
         );
       }
