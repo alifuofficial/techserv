@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { useSession } from 'next-auth/react'
 import {
   ArrowRight,
   Code2,
@@ -141,6 +142,7 @@ export default function Home() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const { formatAmount } = useSettings()
+  const { data: session } = useSession()
 
   useEffect(() => {
     let cancelled = false
@@ -192,9 +194,15 @@ export default function Home() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base bg-white rounded-xl">
-                  <Link href="/auth/signup">Create Free Account</Link>
-                </Button>
+                {session ? (
+                  <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base bg-white rounded-xl">
+                    <Link href="/dashboard">Go to Dashboard</Link>
+                  </Button>
+                ) : (
+                  <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base bg-white rounded-xl">
+                    <Link href="/auth/signup">Create Free Account</Link>
+                  </Button>
+                )}
               </motion.div>
 
               <motion.div variants={reveal} custom={4} className="flex items-center gap-8 pt-6">
@@ -368,9 +376,15 @@ export default function Home() {
             Join hundreds of happy clients and gain access to premium web services, campaigns, and subscriptions today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild className="h-12 px-8 text-base bg-white text-slate-900 hover:bg-slate-100 rounded-xl">
-              <Link href="/auth/signup">Create Free Account</Link>
-            </Button>
+            {session ? (
+              <Button size="lg" asChild className="h-12 px-8 text-base bg-white text-slate-900 hover:bg-slate-100 rounded-xl">
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            ) : (
+              <Button size="lg" asChild className="h-12 px-8 text-base bg-white text-slate-900 hover:bg-slate-100 rounded-xl">
+                <Link href="/auth/signup">Create Free Account</Link>
+              </Button>
+            )}
             <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base bg-transparent border-white text-white hover:bg-white/10 rounded-xl">
               <Link href="/services">Browse Services</Link>
             </Button>

@@ -20,7 +20,7 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -389,6 +389,7 @@ function SignUpForm() {
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const { status } = useSession();
   const [direction, setDirection] = useState(1);
 
   const [step, setStep] = useState(1);
@@ -430,6 +431,11 @@ function SignUpForm() {
     }
     fetchSettings();
   }, [searchParams]);
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/dashboard");
+    }
+  }, [status, router]);
 
   const updateData = (newData: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...newData }));
