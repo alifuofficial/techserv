@@ -10,7 +10,7 @@ export async function GET() {
             "site_name", "site_description", "site_email", "currency", "currency_symbol", 
             "telegram_enabled", "telegram_bot_username", "maintenance_mode",
             "account_tier_enabled", "referral_system_enabled", "registration_enabled",
-            "tier_benefits_standard", "tier_benefits_gold", "referral_benefits",
+            "tier_benefits_standard", "tier_benefits_gold", "referral_benefits", "logo_url",
           ],
         },
       },

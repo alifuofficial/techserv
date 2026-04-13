@@ -28,6 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const seoKeywords = getSetting("seo_keywords") || "";
   const seoAuthor = getSetting("seo_author") || siteName;
 
+  const rawLogo = getSetting("logo_url") || "/logo.png";
+  const iconUrl = rawLogo.startsWith("/uploads/") ? `/api${rawLogo}` : rawLogo;
+
   return {
     title: {
       default: seoTitle,
@@ -36,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: seoDesc,
     keywords: seoKeywords,
     authors: [{ name: seoAuthor }],
-    icons: { icon: getSetting("logo_url") || "/logo.png" },
+    icons: { icon: iconUrl },
   };
 }
 
@@ -49,7 +52,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   const getSetting = (key: string) => settings.find((s) => s.key === key)?.value;
-  const logoUrl = getSetting("logo_url") || "/logo.png";
+  const rawLogo = getSetting("logo_url") || "/logo.png";
+  const logoUrl = rawLogo.startsWith("/uploads/") ? `/api${rawLogo}` : rawLogo;
   const siteName = getSetting("site_name") || "MilkyTech.Online";
 
   return (

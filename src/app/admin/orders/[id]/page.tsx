@@ -579,7 +579,7 @@ export default function AdminOrderDetailPage() {
                 <CardContent>
                   {order.screenshot ? (
                     <div className="relative group cursor-pointer bg-muted/20 rounded-xl border border-dashed border-border aspect-square w-full flex items-center justify-center overflow-hidden" onClick={() => setLightboxOpen(true)}>
-                      <img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      <img src={order.screenshot.startsWith('/uploads/') ? `/api${order.screenshot}` : order.screenshot.startsWith('/') ? order.screenshot : `/api/uploads/${order.screenshot}`} alt="proof" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><ImageIcon className="text-white h-6 w-6" /></div>
                     </div>
                   ) : (
@@ -732,7 +732,7 @@ export default function AdminOrderDetailPage() {
       {lightboxOpen && order.screenshot && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setLightboxOpen(false)}>
           <div className="relative w-full max-w-5xl flex justify-center items-center pointer-events-none">
-            <img src={order.screenshot.startsWith('/') ? order.screenshot : `/uploads/${order.screenshot}`} alt="proof" className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl pointer-events-auto" />
+            <img src={order.screenshot.startsWith('/uploads/') ? `/api${order.screenshot}` : order.screenshot.startsWith('/') ? order.screenshot : `/api/uploads/${order.screenshot}`} alt="proof" className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl pointer-events-auto" />
           </div>
         </div>
       )}
