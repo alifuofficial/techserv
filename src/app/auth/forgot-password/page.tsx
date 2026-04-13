@@ -20,6 +20,8 @@ const fadeUp = {
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [hasTelegram, setHasTelegram] = useState(false);
