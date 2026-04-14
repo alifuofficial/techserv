@@ -42,6 +42,7 @@ import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useSettings } from '@/hooks/use-settings'
 import { useTelegram } from '@/components/telegram-provider'
+import TMADashboard from '@/components/tma-dashboard'
 
 interface Order {
   id: string
@@ -234,6 +235,10 @@ export default function DashboardPage() {
   const totalSpent = userStats?.totalSpent || 0
   const recentOrders = orders.slice(0, 5)
   const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0
+
+  if (isTma) {
+    return <TMADashboard />
+  }
 
   return (
     <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">
