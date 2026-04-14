@@ -447,8 +447,9 @@ export default function TMADashboard({
         return
       }
 
-      const referralLink = `${window.location.origin}/refer/${code}`
-      const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
+      const referralLink = `https://t.me/${botUsername}/app?startapp=ref_${code}`
+      const shareText = `Join me on MilkyTech.Online and get exclusive tech services! Use my referral code: ${code}`
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`
 
       if (webApp) {
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`

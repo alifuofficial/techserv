@@ -101,7 +101,9 @@ export default function ReferralsPage() {
   if (loading) return <ReferralsSkeleton />
 
   const referralLink = typeof window !== 'undefined' && data?.referralCode
-    ? `${window.location.origin}/refer/${data.referralCode}`
+    ? (isTma 
+        ? `https://t.me/${botUsername}/app?startapp=ref_${data.referralCode}`
+        : `${window.location.origin}/refer/${data.referralCode}`)
     : ''
 
   const handleCopyLink = () => {
@@ -125,8 +127,10 @@ export default function ReferralsPage() {
     }
     
     const code = data.referralCode
-    const shareLink = `${window.location.origin}/refer/${code}`
-    const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
+    const shareLink = isTma 
+      ? `https://t.me/${botUsername}/app?startapp=ref_${code}`
+      : `${window.location.origin}/refer/${code}`
+    const shareText = `Join me on MilkyTech.Online and get exclusive tech services! Use my referral code: ${code}`
     
     if (isTma && webApp) {
       try {
