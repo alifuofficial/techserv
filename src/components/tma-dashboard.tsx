@@ -266,8 +266,8 @@ function AchievementNode({ icon: Icon, label, achieved, colorClass }: { icon: ty
   )
 }
 
-function SquadCard({ code, count, referrals, onShare }: {
-  code: string; count: number; referrals: ReferralData['referrals']; onShare: () => void;
+function SquadCard({ code, count, referrals, onShare, isSharing, codeReady }: {
+  code: string; count: number; referrals: ReferralData['referrals']; onShare: () => void; isSharing: boolean; codeReady: boolean;
 }) {
   return (
     <motion.div variants={slideUp} className="relative">
@@ -299,7 +299,8 @@ function SquadCard({ code, count, referrals, onShare }: {
                   {code || '------'}
                 </code>
                 <button
-                  className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors active:scale-90"
+                  className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors active:scale-90 disabled:opacity-40 disabled:cursor-wait"
+                  disabled={!code}
                   onClick={() => {
                     if (code) {
                       navigator.clipboard.writeText(code)
@@ -314,10 +315,27 @@ function SquadCard({ code, count, referrals, onShare }: {
 
             <button
               onClick={onShare}
-              className="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              disabled={isSharing}
+              className={cn(
+                "w-full h-11 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all",
+                codeReady
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white active:scale-[0.98]"
+                  : "bg-white/10 text-white/40 cursor-wait"
+              )}
             >
-              <Share2 className="h-4 w-4" />
-              Share & Invite via Telegram
+              {isSharing ? (
+                <>
+                  <motion.div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Sharing...
+                </>
+              ) : !codeReady ? (
+                'Loading Code...'
+              ) : (
+                <>
+                  <Share2 className="h-4 w-4" />
+                  Share & Invite via Telegram
+                </>
+              )}
             </button>
           </div>
 
@@ -395,16 +413,41 @@ export default function TMADashboard({
   const { webApp, isTma } = useTelegram()
   const [isSharing, setIsSharing] = useState(false)
 
-  const handleShare = async () => {
-    const code = referralData?.referralCode || userStats?.referralCode
-    if (!code) {
-      toast.error('No referral code found. Please ensure you are logged in.')
-      return
-    }
-    setIsSharing(true)
-    const referralLink = `${window.location.origin}/refer/${code}`
-    const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
+  const getReferralCode = async (): Promise<string | null> => {
+    let code = referralData?.referralCode || userStats?.referralCode
+    if (code) return code
+
     try {
+      const res = await fetch('/api/user/referrals')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.referralCode) return data.referralCode
+      }
+    } catch {}
+
+    try {
+      const res = await fetch('/api/user/stats')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.referralCode) return data.referralCode
+      }
+    } catch {}
+
+    return null
+  }
+
+  const handleShare = async () => {
+    setIsSharing(true)
+    try {
+      const code = await getReferralCode()
+      if (!code) {
+        toast.error('Unable to load referral code. Please try again.')
+        return
+      }
+
+      const referralLink = `${window.location.origin}/refer/${code}`
+      const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
+
       if (webApp) {
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`
         if (typeof webApp.openTelegramLink === 'function') {
@@ -418,8 +461,7 @@ export default function TMADashboard({
       }
     } catch (err) {
       console.error('Share error:', err)
-      await navigator.clipboard.writeText(referralLink)
-      toast.success('Referral link copied to clipboard')
+      toast.error('Something went wrong. Please try again.')
     } finally {
       setIsSharing(false)
     }
@@ -542,6 +584,8 @@ export default function TMADashboard({
             count={referralData?.referralCount || userStats?.referralCount || 0}
             referrals={referralData?.referrals || []}
             onShare={handleShare}
+            isSharing={isSharing}
+            codeReady={!!(referralData?.referralCode || userStats?.referralCode)}
           />
 
           {/* ── RANK UP CARD ── */}
