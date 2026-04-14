@@ -16,6 +16,22 @@ export async function GET(request: NextRequest) {
       where: { id: userId },
       select: {
         referralCode: true,
+        referrals: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            _count: {
+              select: { orders: true },
+            },
+            orders: {
+              where: { status: { in: ["completed", "approved"] } },
+              select: { amount: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
         _count: {
           select: { referrals: true },
         },
@@ -35,9 +51,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const referrals = user.referrals.map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      createdAt: r.createdAt.toISOString(),
+      ordersCount: r._count.orders,
+      totalSpent: r.orders.reduce((sum, o) => sum + o.amount, 0),
+    }));
+
     return NextResponse.json({
       referralCode: referralCode,
       referralCount: user._count.referrals || 0,
+      referrals,
     });
   } catch (error) {
     console.error("Referral API Error:", error);

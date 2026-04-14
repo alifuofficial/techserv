@@ -37,6 +37,7 @@ import {
   Activity,
   Briefcase,
   Ban,
+  Users,
 } from 'lucide-react'
 
 function BannedScreen() {
@@ -99,6 +100,7 @@ export default function DashboardLayout({
     { title: 'My Projects', href: '/dashboard/projects', icon: Briefcase },
     { title: 'My Orders', href: '/dashboard/orders', icon: ShoppingCart },
     { title: 'Invoices', href: '/dashboard/invoices', icon: FileText },
+    { title: 'Referrals', href: '/dashboard/referrals', icon: Users },
     { title: 'Account & Settings', href: '/dashboard/settings', icon: Settings },
   ]
 
