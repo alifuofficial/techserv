@@ -114,13 +114,14 @@ export default function SettingsPage() {
         if (res.ok && !cancelled) {
           const data = await res.json()
           setProfile(data)
-          setName(data.name)
+          setName(data.name || '')
           setPhone(data.phone || '')
           setTelegram(data.telegram || '')
-          setProfileLoaded(true)
         }
       } catch { 
-        toast.error('Failed to load profile')
+        if (!cancelled) {
+          toast.error('Failed to load profile')
+        }
       } finally {
         if (!cancelled) setProfileLoaded(true)
       }

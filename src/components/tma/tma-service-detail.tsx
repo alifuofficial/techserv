@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { TMACard, TMAStatusBadge } from './tma-components'
 import { useSettings } from '@/hooks/use-settings'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,15 @@ interface PaymentMethod {
   instructions: string
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = (error) => reject(error)
+  })
+}
+
 export function TMAServiceDetail({ 
   service, 
   paymentMethods,
@@ -51,6 +61,7 @@ export function TMAServiceDetail({
   userTelegram: string | null
 }) {
   const { formatAmount } = useSettings()
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | null>(null)
@@ -67,48 +78,46 @@ export function TMAServiceDetail({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({ title: 'Invalid file type', description: 'Please select an image file', variant: 'destructive' })
+        return
+      }
       setScreenshotFile(file)
       setScreenshotPreview(URL.createObjectURL(file))
     }
   }
 
   const handlePlaceOrder = async () => {
-    await onSubmit({
-      tier: selectedTier,
-      paymentMethodId: selectedPayment?.id,
-      telegramUsername: telegramUsername,
-      screenshot: screenshotFile
-    })
-  }
+    if (!selectedTier) {
+      toast({ title: 'Please select a plan', variant: 'destructive' })
+      return
+    }
+    if (!selectedPayment) {
+      toast({ title: 'Please select a payment method', variant: 'destructive' })
+      return
+    }
+    if (!telegramUsername) {
+      toast({ title: 'Please enter your Telegram username', variant: 'destructive' })
+      return
+    }
+    if (!screenshotFile) {
+      toast({ title: 'Please upload payment proof', variant: 'destructive' })
+      return
+    }
 
-  const OrderSummary = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="px-5 mb-6"
-    >
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Zap className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-white truncate">{service.title}</p>
-            <p className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-tight">{selectedTier?.label} Plan</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-black text-white">{formatAmount(selectedTier?.price || 0)}</p>
-          <button 
-            onClick={() => setStep(1)}
-            className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
-          >
-            Change
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  )
+    try {
+      const screenshotBase64 = await fileToBase64(screenshotFile)
+      await onSubmit({
+        tier: selectedTier,
+        paymentMethodId: selectedPayment.id,
+        telegramUsername: telegramUsername,
+        screenshotBase64: screenshotBase64,
+        screenshotName: screenshotFile.name
+      })
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to process screenshot', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="pb-10">
@@ -131,7 +140,34 @@ export function TMAServiceDetail({
         <div className="w-9" /> {/* Spacer */}
       </div>
 
-      {step > 1 && <OrderSummary />}
+      {step > 1 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-5 mb-6"
+        >
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Zap className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{service.title}</p>
+                <p className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-tight">{selectedTier?.label} Plan</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-white">{formatAmount(selectedTier?.price || 0)}</p>
+              <button 
+                onClick={() => setStep(1)}
+                className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <AnimatePresence mode="wait">
         {/* Step 1: Selection */}

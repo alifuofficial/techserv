@@ -369,26 +369,30 @@ export default function TMADashboard({
     }
     
     setIsSharing(true)
-    const link = `https://t.me/${botUsername}/app?startapp=ref_${code}`
-    const text = `Join me on MilkyTech.Online! Use my referral link to get exclusive rewards.`
+    const referralLink = `${window.location.origin}/refer/${code}`
+    const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
     
     try {
       if (webApp) {
-        // Use shareUrl if available (newer WebApp API)
-        if (webApp.shareUrl) {
-          webApp.shareUrl(link, text)
+        // Use Telegram's share URL format
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`
+        
+        // Try using the Telegram WebApp API first
+        if (typeof webApp.openTelegramLink === 'function') {
+          webApp.openTelegramLink(shareUrl)
         } else {
-          // Fallback to openTelegramLink with share URL
-          webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
+          // Fallback to window.open
+          window.open(shareUrl, '_blank')
         }
       } else {
-        await navigator.clipboard.writeText(link)
-        toast.success('Link copied! Share it with your friends.')
+        // Non-TMA fallback
+        await navigator.clipboard.writeText(referralLink)
+        toast.success('Referral link copied! Share it with your friends.')
       }
     } catch (err) {
       console.error('Share error:', err)
-      await navigator.clipboard.writeText(link)
-      toast.success('Link copied to clipboard')
+      await navigator.clipboard.writeText(referralLink)
+      toast.success('Referral link copied to clipboard')
     } finally {
       setIsSharing(false)
     }

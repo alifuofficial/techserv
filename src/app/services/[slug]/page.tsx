@@ -370,12 +370,17 @@ export default function ServiceDetailPage() {
           try {
             setSubmitting(true)
             
-            // 1. Upload screenshot if present
+            // 1. Upload screenshot if present (using base64)
             let screenshotUrl: string | null = null
-            if (data.screenshot) {
-              const uploadForm = new FormData()
-              uploadForm.append('file', data.screenshot)
-              const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm })
+            if (data.screenshotBase64) {
+              const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  base64: data.screenshotBase64,
+                  filename: data.screenshotName
+                }),
+              })
               if (uploadRes.ok) {
                 const uploadData = await uploadRes.json()
                 screenshotUrl = uploadData.url

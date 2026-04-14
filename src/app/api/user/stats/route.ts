@@ -23,17 +23,29 @@ export async function GET() {
     const startOfCurrentMonth = startOfMonth(now);
     const startOf7DaysAgo = subDays(now, 7);
 
-    // Basic stats
-    const [
-      userData,
-      totalOrders,
-      pendingOrders,
-      completedOrdersCount,
-      revenueResult,
-      recentOrders,
-    ] = await Promise.all([
-      db.user.findUnique({
+    // Get user data and ensure referral code exists
+    let userData = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        tier: true,
+        referralCode: true,
+        telegramId: true,
+        _count: {
+          select: { referrals: true },
+        },
+      },
+    });
+
+    if (!userData) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Generate referral code if it doesn't exist
+    if (!userData.referralCode) {
+      const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      userData = await db.user.update({
         where: { id: userId },
+        data: { referralCode: newCode },
         select: {
           tier: true,
           referralCode: true,
@@ -42,7 +54,17 @@ export async function GET() {
             select: { referrals: true },
           },
         },
-      }),
+      });
+    }
+
+    // Basic stats
+    const [
+      totalOrders,
+      pendingOrders,
+      completedOrdersCount,
+      revenueResult,
+      recentOrders,
+    ] = await Promise.all([
       db.order.count({ where: { userId } }),
       db.order.count({ where: { userId, status: "pending" } }),
       db.order.count({ where: { userId, status: { in: ["completed", "approved"] } } }),
@@ -55,10 +77,6 @@ export async function GET() {
         select: { amount: true, createdAt: true, status: true },
       }),
     ]);
-
-    if (!userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
     // Trend Calculations (Month over Month)
     const current30DaysOrders = recentOrders.filter(o => o.createdAt >= thirtyDaysAgo);

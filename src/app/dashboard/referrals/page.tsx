@@ -119,14 +119,30 @@ export default function ReferralsPage() {
   }
 
   const handleShare = async () => {
-    if (isTma && webApp && data?.referralCode) {
+    if (!data?.referralCode) {
+      toast.error('No referral code found. Please refresh and try again.')
+      return
+    }
+    
+    const code = data.referralCode
+    const shareLink = `${window.location.origin}/refer/${code}`
+    const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
+    
+    if (isTma && webApp) {
       try {
-        const tmaLink = `https://t.me/${botUsername}/app?startapp=ref_${data.referralCode}`
-        const tgLink = `https://t.me/share/url?url=${encodeURIComponent(tmaLink)}&text=${encodeURIComponent('Join me on MilkyTech.Online! Use my referral link to sign up.')}`
-        webApp.openTelegramLink(tgLink)
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(shareText)}`
+        
+        if (typeof webApp.openTelegramLink === 'function') {
+          webApp.openTelegramLink(shareUrl)
+        } else if (typeof window !== 'undefined') {
+          window.open(shareUrl, '_blank')
+        } else {
+          handleCopyLink()
+        }
         return
       } catch {
         handleCopyLink()
+        return
       }
     }
     

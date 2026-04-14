@@ -75,6 +75,7 @@ export default function DashboardLayout({
   const router = useRouter()
   const pathname = usePathname()
   const { data: session, status } = useSession()
+  const { isTma } = useTelegram()
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -89,8 +90,6 @@ export default function DashboardLayout({
       </div>
     )
   }
-
-  const { isTma } = useTelegram()
 
   if (!session) return null
 
