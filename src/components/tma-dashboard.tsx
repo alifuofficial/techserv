@@ -403,18 +403,20 @@ export default function TMADashboard({
   userStats,
   referralData,
   orders,
+  sessionUser,
   botUsername = 'milkytechonlinebot',
 }: {
   userStats: TMAUserStats | null
   referralData: ReferralData | null
   orders: TMAOrder[]
+  sessionUser?: { referralCode?: string }
   botUsername?: string
 }) {
   const { webApp, isTma } = useTelegram()
   const [isSharing, setIsSharing] = useState(false)
 
   const getReferralCode = async (): Promise<string | null> => {
-    let code = referralData?.referralCode || userStats?.referralCode
+    let code = referralData?.referralCode || userStats?.referralCode || sessionUser?.referralCode
     if (code) return code
 
     try {
@@ -580,12 +582,12 @@ export default function TMADashboard({
 
           {/* ── SQUAD CARD ── */}
           <SquadCard
-            code={referralData?.referralCode || userStats?.referralCode || ''}
+            code={referralData?.referralCode || userStats?.referralCode || sessionUser?.referralCode || ''}
             count={referralData?.referralCount || userStats?.referralCount || 0}
             referrals={referralData?.referrals || []}
             onShare={handleShare}
             isSharing={isSharing}
-            codeReady={!!(referralData?.referralCode || userStats?.referralCode)}
+            codeReady={!!(referralData?.referralCode || userStats?.referralCode || sessionUser?.referralCode)}
           />
 
           {/* ── RANK UP CARD ── */}

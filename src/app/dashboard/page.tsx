@@ -204,6 +204,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status !== 'authenticated') return
     let cancelled = false
+    let retryCount = 0
+    const maxRetries = isTma ? 2 : 0
+
     async function fetchData() {
       try {
         const [ordersRes, servicesRes, settingsRes, statsRes, referralRes] = await Promise.all([
@@ -213,18 +216,28 @@ export default function DashboardPage() {
           fetch('/api/user/stats'),
           fetch('/api/user/referrals'),
         ])
+
+        // If in TMA and we get 401, it might be a session propagation issue. Retry once.
+        if (isTma && (statsRes.status === 401 || referralRes.status === 401) && retryCount < maxRetries) {
+          retryCount++
+          setTimeout(fetchData, 1500)
+          return
+        }
+
         if (ordersRes.ok && !cancelled) setOrders(await ordersRes.json())
         if (servicesRes.ok && !cancelled) setServices(await servicesRes.json())
         if (settingsRes.ok && !cancelled) setSettings(await settingsRes.json())
         if (statsRes.ok && !cancelled) setUserStats(await statsRes.json())
         if (referralRes.ok && !cancelled) setReferralData(await referralRes.json())
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     fetchData()
     return () => { cancelled = true }
-  }, [status])
+  }, [status, isTma])
 
   if (status === 'loading' || loading) return <DashboardSkeleton />
 
@@ -242,6 +255,7 @@ export default function DashboardPage() {
         userStats={userStats as any} 
         referralData={referralData as any} 
         orders={orders as any}
+        sessionUser={session?.user as any}
         botUsername={settings.telegram_bot_username?.replace('@', '') || "milkytechonlinebot"}
       />
     )
