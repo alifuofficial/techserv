@@ -583,8 +583,6 @@ export default function TMADashboard({
             </motion.div>
           </motion.div>
       </AnimatePresence>
-
-      </AnimatePresence>
     </motion.div>
   )
 }
