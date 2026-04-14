@@ -34,6 +34,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { useSettings } from '@/hooks/use-settings'
+import { useTelegram } from '@/components/telegram-provider'
+import { TMAOrders } from '@/components/tma/tma-orders'
 
 /* ─── Types ─── */
 interface Order {
@@ -113,6 +115,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterTab>('All')
+  const { isTma } = useTelegram()
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -157,6 +160,10 @@ export default function OrdersPage() {
   }
 
   if (!session) return null
+
+  if (isTma) {
+    return <TMAOrders orders={orders as any} loading={loading} />
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl space-y-6">

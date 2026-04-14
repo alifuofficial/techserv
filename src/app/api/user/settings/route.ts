@@ -23,6 +23,14 @@ export async function GET() {
         phone: true,
         telegram: true,
         createdAt: true,
+        _count: {
+          select: {
+            orders: {
+              where: { status: 'completed' }
+            },
+            referrals: true
+          }
+        }
       },
     });
 
@@ -30,7 +38,14 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    const formattedUser = {
+      ...user,
+      completedOrders: user._count.orders,
+      referralCount: user._count.referrals,
+      _count: undefined
+    };
+
+    return NextResponse.json(formattedUser);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

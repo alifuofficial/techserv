@@ -20,6 +20,8 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react'
+import { useTelegram } from '@/components/telegram-provider'
+import { TMAProfile } from '@/components/tma/tma-profile'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +50,8 @@ interface UserProfile {
   phone: string | null
   telegram: string | null
   createdAt: string
+  completedOrders: number
+  referralCount: number
 }
 
 /* ─── Animation ─── */
@@ -211,8 +215,14 @@ export default function SettingsPage() {
     }
   }
 
+  const { isTma } = useTelegram()
+
   if (authStatus === 'loading' || !profileLoaded) return <PageSkeleton />
   if (!session) return null
+
+  if (isTma) {
+    return <TMAProfile user={profile as any} />
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-3xl space-y-6">

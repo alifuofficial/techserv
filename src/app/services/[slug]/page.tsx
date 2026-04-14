@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { useTelegram } from '@/components/telegram-provider'
 import { useSettings } from '@/hooks/use-settings'
+import { TMAServiceDetail } from '@/components/tma/tma-service-detail'
 
 interface PricingTier {
   label: string
@@ -357,6 +358,37 @@ export default function ServiceDetailPage() {
   const tiers = getParsedTiers(service.pricingTiers)
   const isSubscription = service.pricingType === 'subscription'
   const tgUsername = (userTelegram || telegramUsername).replace('@', '')
+
+  if (isTma) {
+    return (
+      <TMAServiceDetail 
+        service={service}
+        paymentMethods={paymentMethods}
+        userTelegram={userTelegram}
+        isSubmitting={submitting}
+        onSubmit={async (data) => {
+          // Sync state from component
+          setSelectedTier(data.tier)
+          setTelegramUsername(data.telegramUsername)
+          setScreenshotFile(data.screenshot)
+          // We need to find the payment method object
+          const method = paymentMethods.find(m => m.id === data.paymentMethodId)
+          if (method) setSelectedPayment(method)
+          
+          // Trigger the page's existing handleSubmit logic
+          // Note: useEffect and state updates are async, 
+          // but handleSubmit uses current refs/state if not careful.
+          // Since handleSubmit is a callback, we'll manually call it after a tick 
+          // if we want to rely on the updated state, or just call the logic directly.
+          
+          // For safety in TMA context, we'll wait for state to settle
+          setTimeout(() => {
+            handleSubmit()
+          }, 0)
+        }}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen py-8 px-4">

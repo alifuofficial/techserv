@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useTelegram } from '@/components/telegram-provider'
+import { calculateXP } from '@/lib/xp'
 
 interface TMAUserStats {
   totalOrders: number
@@ -87,17 +88,7 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
 }
 
-function calculateLevel(orders: number, referrals: number): { level: number; xp: number; xpToNext: number; progress: number } {
-  const xpFromOrders = orders * 10
-  const xpFromReferrals = referrals * 50
-  const totalXp = xpFromOrders + xpFromReferrals
-  const level = Math.floor(totalXp / 100) + 1
-  const xpInCurrentLevel = totalXp % 100
-  const xpToNext = 100
-  const progress = Math.round((xpInCurrentLevel / xpToNext) * 100)
-  
-  return { level, xp: xpInCurrentLevel, xpToNext, progress }
-}
+// Removed internal calculateLevel, using lib/xp instead
 
 function LevelBadge({ level }: { level: number }) {
   const getTierStyle = () => {
@@ -397,7 +388,7 @@ export default function TMADashboard({
 
   if (!isTma) return null
   
-  const { level, xp, xpToNext, progress } = calculateLevel(
+  const { level, currentXP, nextLevelXP, progress, label, color } = calculateXP(
     userStats?.completedOrders || 0,
     referralData?.referralCount || 0
   )
@@ -413,7 +404,7 @@ export default function TMADashboard({
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pb-24"
+      className="pb-6"
       variants={container}
       initial="hidden"
       animate="visible"
@@ -427,14 +418,14 @@ export default function TMADashboard({
                   <h1 className="text-2xl font-bold text-white">
                     Level {level}
                   </h1>
-                  <p className="text-sm text-white/60">
-                    {xp} / {xpToNext} XP
+                  <p className="text-sm font-bold text-emerald-400">
+                    {label} • {currentXP} XP
                   </p>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="bg-white/10 h-10 w-10 rounded-full">
+                <Button size="icon" variant="ghost" className="bg-white/10 h-10 w-10 rounded-2xl group active:scale-95 transition-all">
                   <Bell className="h-5 w-5 text-white" />
                 </Button>
                 <Button size="icon" variant="ghost" className="bg-white/10 h-10 w-10 rounded-full">
@@ -593,34 +584,7 @@ export default function TMADashboard({
           </motion.div>
       </AnimatePresence>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-white/10 p-3">
-        <div className="flex justify-around max-w-md mx-auto">
-          <a href="/dashboard" className="flex flex-col items-center gap-1 text-emerald-400">
-            <div className="h-10 w-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-              <Home className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-medium">Home</span>
-          </a>
-          <a href="/services" className="flex flex-col items-center gap-1 text-white/60">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-medium">Services</span>
-          </a>
-          <a href="/dashboard/orders" className="flex flex-col items-center gap-1 text-white/60">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Package className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-medium">Orders</span>
-          </a>
-          <a href="/dashboard/referrals" className="flex flex-col items-center gap-1 text-white/60">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Users className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-medium">Referrals</span>
-          </a>
-        </div>
-      </div>
+      </AnimatePresence>
     </motion.div>
   )
 }

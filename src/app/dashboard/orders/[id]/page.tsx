@@ -37,6 +37,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useSettings } from '@/hooks/use-settings'
+import { useTelegram } from '@/components/telegram-provider'
+import { TMAOrderDetail } from '@/components/tma/tma-order-detail'
 
 /* ─── Types ─── */
 interface Order {
@@ -202,6 +204,7 @@ export default function OrderDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const { isTma } = useTelegram()
 
   const id = params.id as string
 
@@ -241,6 +244,10 @@ export default function OrderDetailPage() {
         </motion.div>
       </div>
     )
+  }
+
+  if (isTma) {
+    return <TMAOrderDetail order={order as any} />
   }
 
   return (

@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useTelegram } from '@/components/telegram-provider'
+import { TMAReferrals } from '@/components/tma/tma-referrals'
 
 interface ReferralData {
   referralCode: string
@@ -155,6 +156,17 @@ export default function ReferralsPage() {
   const progressToNext = nextMilestone
     ? Math.min(Math.round(((data?.referralCount || 0) / nextMilestone.count) * 100), 100)
     : 100
+
+  if (isTma) {
+    return (
+      <TMAReferrals 
+        data={data as any} 
+        botUsername={botUsername}
+        handleShare={handleShare}
+        handleCopyCode={handleCopyCode}
+      />
+    )
+  }
 
   return (
     <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">

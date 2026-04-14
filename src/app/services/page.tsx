@@ -38,6 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { useSettings } from '@/hooks/use-settings'
 import { useTelegram } from '@/components/telegram-provider'
+import { TMAServices } from '@/components/tma/tma-services'
 
 /* ────────────────────────────────────────────
    Types
@@ -195,6 +196,17 @@ export default function ServicesPage() {
       s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.shortDescription.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  if (isTma) {
+    return (
+      <TMAServices 
+        services={filteredServices as any} 
+        loading={loading} 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen">

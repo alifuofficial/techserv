@@ -32,6 +32,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { useTelegram } from '@/components/telegram-provider'
+import { TMAProjects } from '@/components/tma/tma-projects'
 
 /* ─── Types ─── */
 interface Order {
@@ -101,7 +103,9 @@ export default function ProjectsPage() {
     o.id.toLowerCase().includes(search.toLowerCase())
   )
 
-  if (loading) {
+  const { isTma } = useTelegram()
+
+  if (loading && !isTma) {
     return (
       <div className="p-6 lg:p-8 max-w-6xl space-y-6">
         <div className="space-y-2">
@@ -118,6 +122,10 @@ export default function ProjectsPage() {
   }
 
   if (!session) return null
+
+  if (isTma) {
+    return <TMAProjects projects={filtered} loading={loading} />
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl space-y-8">

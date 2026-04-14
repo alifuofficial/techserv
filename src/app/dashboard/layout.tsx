@@ -39,6 +39,8 @@ import {
   Ban,
   Users,
 } from 'lucide-react'
+import { useTelegram } from '@/components/telegram-provider'
+import { TMALayout } from '@/components/tma/tma-layout'
 
 function BannedScreen() {
   return (
@@ -88,11 +90,22 @@ export default function DashboardLayout({
     )
   }
 
+  const { isTma } = useTelegram()
+
   if (!session) return null
 
   // Check if user is banned
   if ((session.user as any).banned) {
     return <BannedScreen />
+  }
+
+  if (isTma) {
+    return (
+      <TMALayout>
+        {children}
+        <Toaster richColors position="top-center" />
+      </TMALayout>
+    )
   }
 
   const navItems = [
