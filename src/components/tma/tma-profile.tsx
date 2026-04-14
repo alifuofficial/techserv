@@ -32,16 +32,19 @@ interface UserStats {
 
 export function TMAProfile({ user }: { user: UserStats }) {
   const { level, currentXP, nextLevelXP, progress, label, color } = calculateXP(
-    user.completedOrders,
-    user.referralCount
+    user?.completedOrders || 0,
+    user?.referralCount || 0
   )
 
   const menuItems = [
-    { icon: MessageCircle, label: 'Telegram Linking', desc: user.telegram ? `@${user.telegram}` : 'Not Linked', color: 'text-blue-400' },
+    { icon: MessageCircle, label: 'Telegram Linking', desc: user?.telegram ? `@${user.telegram}` : 'Not Linked', color: 'text-blue-400' },
     { icon: Bell, label: 'Notifications', desc: 'Enabled', color: 'text-emerald-400' },
     { icon: Shield, label: 'Privacy & Security', desc: 'Verified', color: 'text-purple-400' },
     { icon: Sparkles, label: 'Theme Preferences', desc: 'Gamified Dark', color: 'text-amber-400' },
   ]
+
+  if (!user) return <div className="p-10 text-center text-slate-500">Loading profile...</div>
+
 
   return (
     <div className="pb-10">

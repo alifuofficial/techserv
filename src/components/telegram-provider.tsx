@@ -28,7 +28,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     const tg = (window as any).Telegram?.WebApp;
     if (tg && tg.initData) {
       setWebApp(tg);
-      setIsTma(true);
+      // For TMA, we want to force dark mode for the gamified feel
+      document.documentElement.classList.add('dark')
+      setIsTma(true)
       tg.ready();
       tg.expand();
 

@@ -77,27 +77,51 @@ export function TMAServices({
 
             return (
               <Link key={service.id} href={`/services/${service.slug}`}>
-                <TMACard delay={i * 0.05} className="mb-4">
-                  <div className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center text-emerald-400 group-active:scale-95 transition-transform">
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-white mb-0.5 truncate">{service.title}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-emerald-400">
-                          From {formatAmount(price)}
-                        </span>
-                        {service.orderCount > 0 && (
-                          <span className="text-[10px] text-slate-500 font-medium bg-white/5 px-1.5 py-0.5 rounded-md">
-                            {service.orderCount} Used
-                          </span>
-                        )}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <TMACard delay={i * 0.05} className="group relative overflow-hidden bg-white/[0.02] border-white/[0.08] hover:bg-white/[0.04] hover:border-emerald-500/30 transition-all">
+                    {/* Subtle Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    
+                    <div className="p-5 flex items-center gap-5 relative z-10">
+                      {/* Icon Container with Glow */}
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:border-emerald-500/40 group-hover:scale-110 transition-all duration-300">
+                          <Icon className="w-7 h-7" />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-extrabold text-white text-base mb-1 truncate group-hover:text-emerald-300 transition-colors">
+                          {service.title}
+                        </h3>
+                        
+                        <div className="flex items-center gap-2.5">
+                          <div className="bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/10">
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tight">
+                              From {formatAmount(price)}
+                            </span>
+                          </div>
+                          
+                          {service.orderCount > 0 && (
+                            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                              <Zap className="w-3 h-3 text-amber-500" />
+                              <span>{service.orderCount} Active</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-white/5 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 transition-all">
+                        <ChevronRight className="w-5 h-5" />
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-600" />
-                  </div>
-                </TMACard>
+                  </TMACard>
+                </motion.div>
               </Link>
             )
           })

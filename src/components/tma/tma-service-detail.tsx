@@ -81,6 +81,35 @@ export function TMAServiceDetail({
     })
   }
 
+  const OrderSummary = () => (
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="px-5 mb-6"
+    >
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-white truncate">{service.title}</p>
+            <p className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-tight">{selectedTier?.label} Plan</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-black text-white">{formatAmount(selectedTier?.price || 0)}</p>
+          <button 
+            onClick={() => setStep(1)}
+            className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
+          >
+            Change
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+
   return (
     <div className="pb-10">
       {/* Header */}
@@ -101,6 +130,8 @@ export function TMAServiceDetail({
         </div>
         <div className="w-9" /> {/* Spacer */}
       </div>
+
+      {step > 1 && <OrderSummary />}
 
       <AnimatePresence mode="wait">
         {/* Step 1: Selection */}
@@ -170,8 +201,8 @@ export function TMAServiceDetail({
             className="px-5 pt-4"
           >
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Payment Method</h1>
-              <p className="text-slate-400 text-sm">Choose how you wish to pay for your service</p>
+              <h1 className="text-2xl font-bold text-white mb-2">Preferred Payment</h1>
+              <p className="text-slate-400 text-sm italic">You've selected the {selectedTier?.label} plan. Choose a payment method to see instructions.</p>
             </div>
 
             <div className="space-y-3">
@@ -223,12 +254,20 @@ export function TMAServiceDetail({
             className="px-5 pt-4"
           >
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Payment Proof</h1>
-              <p className="text-slate-400 text-sm mb-4">Transfer the {formatAmount(selectedTier?.price || 0)} using details below</p>
+              <h1 className="text-2xl font-bold text-white mb-2">Submit Proof</h1>
+              <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                Please transfer exactly <span className="text-emerald-400 font-bold">{formatAmount(selectedTier?.price || 0)}</span> to the details below:
+              </p>
               
-              <TMACard className="p-4 bg-emerald-500/5 border-emerald-500/20 mb-6">
-                <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                  {selectedPayment?.instructions || "Please complete the payment and upload the receipt screenshot below."}
+              <TMACard className="p-4 bg-emerald-500/10 border-emerald-500/30 mb-6 group">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Verified Payment Details</span>
+                </div>
+                <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                  {selectedPayment?.instructions || "Please complete the manual payment and upload the receipt screenshot below."}
                 </p>
               </TMACard>
             </div>

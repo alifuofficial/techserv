@@ -102,7 +102,7 @@ export function TMAReferrals({
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Program Progress</span>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
-              {data.referralCount} Joined
+              {data?.referralCount || 0} Joined
             </span>
           </div>
           
@@ -114,7 +114,7 @@ export function TMAReferrals({
             <Progress value={progressToNext} className="h-2 bg-white/5" />
             <p className="text-[10px] text-slate-500 font-medium">
               {nextMilestone 
-                ? `${nextMilestone.count - data.referralCount} more needed to unlock ${nextMilestone.reward}` 
+                ? `${nextMilestone.count - (data?.referralCount || 0)} more needed to unlock ${nextMilestone.reward}` 
                 : "You've reached the highest referral tier! Legendary status unlocked."}
             </p>
           </div>
@@ -146,7 +146,7 @@ export function TMAReferrals({
         </div>
 
         {/* Recent Invites */}
-        {data.referrals.length > 0 && (
+        {data?.referrals && data.referrals.length > 0 && (
           <div>
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4 ml-1">Recent Referrals</h4>
             <div className="space-y-3">
@@ -158,7 +158,14 @@ export function TMAReferrals({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">{ref.name}</p>
-                      <p className="text-[10px] text-slate-500 font-medium">Joined {format(new Date(ref.createdAt), 'MMM d')}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        Joined {ref.createdAt ? (() => {
+                          try {
+                            const d = new Date(ref.createdAt)
+                            return isNaN(d.getTime()) ? 'Recently' : format(d, 'MMM d')
+                          } catch { return 'Recently' }
+                        })() : 'Recently'}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-emerald-500 tabular-nums uppercase">+30 XP</p>

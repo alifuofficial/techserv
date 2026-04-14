@@ -359,30 +359,31 @@ export default function TMADashboard({
 
 
 
-  const handleShare = () => {
+  const [isSharing, setIsSharing] = useState(false)
+
+  const handleShare = async () => {
     const code = referralData?.referralCode || userStats?.referralCode
     if (!code) {
       toast.error('No referral code available')
       return
     }
     
-    // Direct Mini-App Link format: https://t.me/BotUsername/AppName?startapp=xyz
-    // Assuming 'app' is the short name, but if we don't know the exact app shortname, 
-    // standard bot parameterized links (e.g. t.me/bot?start=...) work, but the prompt asks for miniapp direct.
-    // If the shortname is unknown, fallback to the standard mini-app format.
+    setIsSharing(true)
     const link = `https://t.me/${botUsername}/app?startapp=ref_${code}`
-    const text = `🎁 Join me on MilkyTech.Online!\n\nUse my referral code to get exclusive rewards:\n\n🔗 Link: ${link}`
+    const text = `🎁 Join me on MilkyTech.Online!\n\nUse my referral code to get exclusive rewards and unlock premium tech services.\n\n🔗 Link: ${link}`
     
-    if (webApp) {
-      try {
+    try {
+      if (webApp) {
         webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
-      } catch {
-        navigator.clipboard.writeText(link)
-        toast.success('Link copied! Share it with friends.')
+      } else {
+        await navigator.clipboard.writeText(link)
+        toast.success('Link copied! Share it with your friends.')
       }
-    } else {
-      navigator.clipboard.writeText(link)
+    } catch {
+      await navigator.clipboard.writeText(link)
       toast.success('Link copied!')
+    } finally {
+      setIsSharing(false)
     }
   }
 
