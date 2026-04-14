@@ -367,24 +367,49 @@ export default function ServiceDetailPage() {
         userTelegram={userTelegram}
         isSubmitting={submitting}
         onSubmit={async (data) => {
-          // Sync state from component
-          setSelectedTier(data.tier)
-          setTelegramUsername(data.telegramUsername)
-          setScreenshotFile(data.screenshot)
-          // We need to find the payment method object
-          const method = paymentMethods.find(m => m.id === data.paymentMethodId)
-          if (method) setSelectedPayment(method)
-          
-          // Trigger the page's existing handleSubmit logic
-          // Note: useEffect and state updates are async, 
-          // but handleSubmit uses current refs/state if not careful.
-          // Since handleSubmit is a callback, we'll manually call it after a tick 
-          // if we want to rely on the updated state, or just call the logic directly.
-          
-          // For safety in TMA context, we'll wait for state to settle
-          setTimeout(() => {
-            handleSubmit()
-          }, 0)
+          try {
+            setSubmitting(true)
+            
+            // 1. Upload screenshot if present
+            let screenshotUrl: string | null = null
+            if (data.screenshot) {
+              const uploadForm = new FormData()
+              uploadForm.append('file', data.screenshot)
+              const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm })
+              if (uploadRes.ok) {
+                const uploadData = await uploadRes.json()
+                screenshotUrl = uploadData.url
+              }
+            }
+
+            // 2. Submit order
+            const res = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                serviceId: service.id,
+                duration: data.tier.duration,
+                telegramUsername: data.telegramUsername || userTelegram,
+                screenshot: screenshotUrl,
+                paymentMethodId: data.paymentMethodId,
+              }),
+            })
+
+            if (res.ok) {
+              toast({ 
+                title: 'Order placed!', 
+                description: 'Your order has been submitted successfully.' 
+              })
+              router.push('/dashboard/orders')
+            } else {
+              const errorData = await res.json()
+              toast({ title: 'Failed', description: errorData.error || 'Please try again.', variant: 'destructive' })
+            }
+          } catch (err) {
+            toast({ title: 'Error', description: 'Please check your connection.', variant: 'destructive' })
+          } finally {
+            setSubmitting(false)
+          }
         }}
       />
     )

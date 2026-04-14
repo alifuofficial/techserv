@@ -264,11 +264,23 @@ export function TMAServiceDetail({
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Verified Payment Details</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Payment Instructions</span>
                 </div>
-                <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                
+                <p className="text-xs text-slate-200 leading-relaxed font-medium mb-4">
                   {selectedPayment?.instructions || "Please complete the manual payment and upload the receipt screenshot below."}
                 </p>
+
+                {selectedPayment?.details && (
+                  <div className="grid grid-cols-1 gap-2 pt-2 border-t border-emerald-500/20">
+                    {Object.entries(JSON.parse(selectedPayment.details || '{}')).map(([key, value]) => (
+                      <div key={key} className="flex justify-between items-center bg-black/20 p-2.5 rounded-xl border border-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">{key}</span>
+                        <span className="text-sm text-white font-mono font-bold select-all">{value as string}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TMACard>
             </div>
 

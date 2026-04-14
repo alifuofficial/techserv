@@ -119,7 +119,11 @@ export default function SettingsPage() {
           setTelegram(data.telegram || '')
           setProfileLoaded(true)
         }
-      } catch { /* ignore */ }
+      } catch { 
+        toast.error('Failed to load profile')
+      } finally {
+        if (!cancelled) setProfileLoaded(true)
+      }
     }
     fetchProfile()
     return () => { cancelled = true }

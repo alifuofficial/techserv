@@ -364,24 +364,31 @@ export default function TMADashboard({
   const handleShare = async () => {
     const code = referralData?.referralCode || userStats?.referralCode
     if (!code) {
-      toast.error('No referral code available')
+      toast.error('No referral code found. Please ensure you are logged in.')
       return
     }
     
     setIsSharing(true)
     const link = `https://t.me/${botUsername}/app?startapp=ref_${code}`
-    const text = `🎁 Join me on MilkyTech.Online!\n\nUse my referral code to get exclusive rewards and unlock premium tech services.\n\n🔗 Link: ${link}`
+    const text = `Join me on MilkyTech.Online! Use my referral link to get exclusive rewards.`
     
     try {
       if (webApp) {
-        webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
+        // Use shareUrl if available (newer WebApp API)
+        if (webApp.shareUrl) {
+          webApp.shareUrl(link, text)
+        } else {
+          // Fallback to openTelegramLink with share URL
+          webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
+        }
       } else {
         await navigator.clipboard.writeText(link)
         toast.success('Link copied! Share it with your friends.')
       }
-    } catch {
+    } catch (err) {
+      console.error('Share error:', err)
       await navigator.clipboard.writeText(link)
-      toast.success('Link copied!')
+      toast.success('Link copied to clipboard')
     } finally {
       setIsSharing(false)
     }
