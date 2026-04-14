@@ -29,6 +29,9 @@ import {
   XCircle,
   ChevronRight,
   ExternalLink,
+  Share2,
+  UserPlus,
+  Gift,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -38,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useSettings } from '@/hooks/use-settings'
+import { useTelegram } from '@/components/telegram-provider'
 
 interface Order {
   id: string
@@ -184,6 +188,7 @@ function ConnectTelegramBanner() {
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
+  const { isTma, webApp } = useTelegram()
   const [orders, setOrders] = useState<Order[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
@@ -192,6 +197,7 @@ export default function DashboardPage() {
     referral_system_enabled: 'true',
   })
   const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const [referralData, setReferralData] = useState<{ referralCode: string; referralCount: number; referrals: any[] } | null>(null)
   const { formatAmount } = useSettings()
 
   useEffect(() => {
@@ -199,16 +205,18 @@ export default function DashboardPage() {
     let cancelled = false
     async function fetchData() {
       try {
-        const [ordersRes, servicesRes, settingsRes, statsRes] = await Promise.all([
+        const [ordersRes, servicesRes, settingsRes, statsRes, referralRes] = await Promise.all([
           fetch('/api/orders'),
           fetch('/api/services?active=true'),
           fetch('/api/settings/public'),
           fetch('/api/user/stats'),
+          fetch('/api/user/referrals'),
         ])
         if (ordersRes.ok && !cancelled) setOrders(await ordersRes.json())
         if (servicesRes.ok && !cancelled) setServices(await servicesRes.json())
         if (settingsRes.ok && !cancelled) setSettings(await settingsRes.json())
         if (statsRes.ok && !cancelled) setUserStats(await statsRes.json())
+        if (referralRes.ok && !cancelled) setReferralData(await referralRes.json())
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -482,27 +490,84 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-muted-foreground">{userStats?.referralCount || 0} people referred</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <code className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs font-mono font-bold text-center tracking-wider overflow-hidden">
-                      {userStats?.referralCode || '-------'}
-                    </code>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 rounded-lg"
-                      onClick={() => {
-                        const code = userStats?.referralCode
-                        if (code) {
-                          navigator.clipboard.writeText(`${window.location.origin}/refer/${code}`)
-                          toast.success('Referral link copied!')
-                        } else {
-                          toast.error('Code not available. Try refreshing.')
-                        }
-                      }}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  
+                  {isTma ? (
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl p-4 text-center">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-bold text-emerald-700 dark:text-emerald-300">Earn rewards by inviting friends!</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Share your referral link with friends and earn rewards when they join
+                        </p>
+                        <Button
+                          className="w-full bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() => {
+                            const code = userStats?.referralCode || referralData?.referralCode
+                            if (code && webApp) {
+                              const referralLink = `${window.location.origin}/refer/${code}`
+                              try {
+                                webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join me on MilkyTech.Online and get exclusive tech services! Use my referral link:')}`)
+                              } catch {
+                                navigator.clipboard.writeText(referralLink)
+                                toast.success('Referral link copied! Share it with friends.')
+                              }
+                            }
+                          }}
+                        >
+                          <Share2 className="h-4 w-4 mr-2" />
+                          Invite Friends via Telegram
+                        </Button>
+                      </div>
+                      
+                      {referralData?.referrals && referralData.referrals.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">People You Invited</p>
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                            {referralData.referrals.slice(0, 5).map((ref: any) => (
+                              <div key={ref.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                                    {ref.name?.charAt(0)?.toUpperCase() || '?'}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{ref.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">{format(new Date(ref.createdAt), 'MMM d, yyyy')}</p>
+                                  </div>
+                                </div>
+                                <Badge variant="secondary" className="text-[9px]">
+                                  {ref.ordersCount || 0} orders
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <code className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs font-mono font-bold text-center tracking-wider overflow-hidden">
+                        {userStats?.referralCode || referralData?.referralCode || '-------'}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 rounded-lg"
+                        onClick={() => {
+                          const code = userStats?.referralCode || referralData?.referralCode
+                          if (code) {
+                            navigator.clipboard.writeText(`${window.location.origin}/refer/${code}`)
+                            toast.success('Referral link copied!')
+                          } else {
+                            toast.error('Code not available. Try refreshing.')
+                          }
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

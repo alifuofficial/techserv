@@ -13,6 +13,7 @@ import {
   Clock,
   Link2,
   Sparkles,
+  UserPlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { useTelegram } from '@/components/telegram-provider'
 
 interface ReferralData {
   referralCode: string
@@ -67,6 +69,7 @@ function ReferralsSkeleton() {
 export default function ReferralsPage() {
   const [data, setData] = useState<ReferralData | null>(null)
   const [loading, setLoading] = useState(true)
+  const { isTma, webApp } = useTelegram()
 
   useEffect(() => {
     let cancelled = false
@@ -106,6 +109,16 @@ export default function ReferralsPage() {
   }
 
   const handleShare = async () => {
+    if (isTma && webApp && data?.referralCode) {
+      try {
+        const tgLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join me on MilkyTech.Online! Use my referral link to sign up.')}`
+        webApp.openTelegramLink(tgLink)
+        return
+      } catch {
+        handleCopyLink()
+      }
+    }
+    
     if (navigator.share && referralLink) {
       try {
         await navigator.share({
@@ -222,26 +235,55 @@ export default function ReferralsPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 flex gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-4 py-2.5 font-mono text-sm truncate border border-border/60">
-                  {referralLink || 'Loading...'}
+            {isTma ? (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl p-4 text-center">
+                  <Gift className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
+                  <h3 className="font-bold text-lg mb-1">Invite Friends & Earn Rewards</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Share your link with friends via Telegram and earn rewards when they join!
+                  </p>
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleShare}
+                    size="lg"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share via Telegram
+                  </Button>
                 </div>
-                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-lg" onClick={handleCopyLink}>
-                  <Copy className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Your Code:</span>
+                  <code className="bg-muted px-3 py-1 rounded-lg font-mono font-bold">
+                    {data?.referralCode || '...'}
+                  </code>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={handleCopyCode} className="flex-1 sm:flex-none">
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  Code: {data?.referralCode || '...'}
-                </Button>
-                <Button size="sm" onClick={handleShare} className="flex-1 sm:flex-none">
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  Share
-                </Button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 flex gap-2">
+                  <div className="flex-1 bg-muted rounded-lg px-4 py-2.5 font-mono text-sm truncate border border-border/60">
+                    {referralLink || 'Loading...'}
+                  </div>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-lg" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={handleCopyCode} className="flex-1 sm:flex-none">
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Code: {data?.referralCode || '...'}
+                  </Button>
+                  <Button size="sm" onClick={handleShare} className="flex-1 sm:flex-none">
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                    Share
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -328,8 +370,12 @@ export default function ReferralsPage() {
                   <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Your Referrals</CardTitle>
-                  <CardDescription className="text-xs mt-0.5">People who signed up using your link</CardDescription>
+                  <CardTitle className="text-base">
+                    {isTma ? 'People You Invited' : 'Your Referrals'}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    {isTma ? `${data.referrals.length} friend${data.referrals.length !== 1 ? 's' : ''} joined using your link` : 'People who signed up using your link'}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -338,25 +384,34 @@ export default function ReferralsPage() {
                 {data.referrals.map((referral) => (
                   <div
                     key={referral.id}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30"
+                    className={cn(
+                      'flex items-center justify-between p-3.5 rounded-xl',
+                      isTma ? 'bg-muted/50' : 'bg-muted/30'
+                    )}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary font-semibold text-sm">
-                        {referral.name.charAt(0).toUpperCase()}
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                        {referral.name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{referral.name}</p>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <span>{format(new Date(referral.createdAt), 'MMM d, yyyy')}</span>
                           <span className="text-border">·</span>
-                          <span>{referral.ordersCount} orders</span>
+                          <span>{referral.ordersCount || 0} orders</span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <p className="text-sm font-semibold">${referral.totalSpent.toFixed(2)}</p>
-                      <p className="text-[10px] text-muted-foreground">total spent</p>
-                    </div>
+                    {isTma ? (
+                      <Badge variant="secondary" className="text-xs">
+                        Joined
+                      </Badge>
+                    ) : (
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="text-sm font-semibold">${(referral.totalSpent || 0).toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground">total spent</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

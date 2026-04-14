@@ -20,6 +20,10 @@ import {
   Check,
   X,
   ExternalLink,
+  Settings,
+  Gift,
+  Loader2,
+  Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -27,6 +31,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useSettings } from '@/hooks/use-settings'
 
@@ -62,6 +69,14 @@ interface ReferralsResponse {
     totalReferrers: number
     topReferrers: ReferralUser[]
   }
+}
+
+interface ReferralSettings {
+  referral_system_enabled: string
+  referral_reward_amount: string
+  referral_invitation_price: string
+  referral_min_payout: string
+  referral_benefits: string
 }
 
 const container = {
@@ -162,6 +177,15 @@ export default function AdminReferralsPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [settings, setSettings] = useState<ReferralSettings>({
+    referral_system_enabled: 'true',
+    referral_reward_amount: '5',
+    referral_invitation_price: '10',
+    referral_min_payout: '50',
+    referral_benefits: '',
+  })
+  const [settingsLoading, setSettingsLoading] = useState(true)
+  const [settingsSaving, setSettingsSaving] = useState(false)
   const { formatAmount } = useSettings()
 
   const fetchReferrals = useCallback(async () => {
@@ -187,6 +211,58 @@ export default function AdminReferralsPage() {
   useEffect(() => {
     fetchReferrals()
   }, [fetchReferrals])
+
+  const fetchSettings = useCallback(async () => {
+    setSettingsLoading(true)
+    try {
+      const res = await fetch('/api/admin/settings')
+      if (res.ok) {
+        const data = await res.json()
+        const allSettings = data.settings || []
+        setSettings({
+          referral_system_enabled: allSettings.find((s: any) => s.key === 'referral_system_enabled')?.value || 'true',
+          referral_reward_amount: allSettings.find((s: any) => s.key === 'referral_reward_amount')?.value || '5',
+          referral_invitation_price: allSettings.find((s: any) => s.key === 'referral_invitation_price')?.value || '10',
+          referral_min_payout: allSettings.find((s: any) => s.key === 'referral_min_payout')?.value || '50',
+          referral_benefits: allSettings.find((s: any) => s.key === 'referral_benefits')?.value || '',
+        })
+      }
+    } finally {
+      setSettingsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
+
+  const handleSettingChange = (key: keyof ReferralSettings, value: string) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleSettingsSave = async () => {
+    setSettingsSaving(true)
+    try {
+      const settingsToSave = [
+        { key: 'referral_system_enabled', value: settings.referral_system_enabled },
+        { key: 'referral_reward_amount', value: settings.referral_reward_amount },
+        { key: 'referral_invitation_price', value: settings.referral_invitation_price },
+        { key: 'referral_min_payout', value: settings.referral_min_payout },
+        { key: 'referral_benefits', value: settings.referral_benefits },
+      ]
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: settingsToSave }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      toast.success('Referral settings saved successfully')
+    } catch (error) {
+      toast.error('Failed to save settings')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -328,6 +404,122 @@ export default function AdminReferralsPage() {
           </Card>
         </motion.div>
       )}
+
+      <motion.div variants={fadeUp}>
+        <Card className="border-border/40">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Referral Settings</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">Configure how the referral program works</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <Link2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Enable Referral System</p>
+                    <p className="text-xs text-muted-foreground">Allow users to refer others</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.referral_system_enabled === 'true'}
+                  onCheckedChange={(checked) => handleSettingChange('referral_system_enabled', String(checked))}
+                  disabled={settingsLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="referral_invitation_price" className="text-sm font-medium">Invitation Price</Label>
+                <p className="text-xs text-muted-foreground">Shown to users as the price per invitation</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">$</span>
+                  <Input
+                    id="referral_invitation_price"
+                    type="number"
+                    value={settings.referral_invitation_price}
+                    onChange={(e) => handleSettingChange('referral_invitation_price', e.target.value)}
+                    className="w-24"
+                    disabled={settingsLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="referral_reward_amount" className="text-sm font-medium">Reward Amount</Label>
+                <p className="text-xs text-muted-foreground">Credit given per successful referral</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">$</span>
+                  <Input
+                    id="referral_reward_amount"
+                    type="number"
+                    value={settings.referral_reward_amount}
+                    onChange={(e) => handleSettingChange('referral_reward_amount', e.target.value)}
+                    className="w-24"
+                    disabled={settingsLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="referral_min_payout" className="text-sm font-medium">Minimum Payout</Label>
+                <p className="text-xs text-muted-foreground">Minimum balance to request withdrawal</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">$</span>
+                  <Input
+                    id="referral_min_payout"
+                    type="number"
+                    value={settings.referral_min_payout}
+                    onChange={(e) => handleSettingChange('referral_min_payout', e.target.value)}
+                    className="w-24"
+                    disabled={settingsLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="referral_benefits" className="text-sm font-medium">Referral Benefits Description</Label>
+                <p className="text-xs text-muted-foreground">Shown to users explaining referral rewards</p>
+                <Input
+                  id="referral_benefits"
+                  value={settings.referral_benefits}
+                  onChange={(e) => handleSettingChange('referral_benefits', e.target.value)}
+                  placeholder="E.g., Earn $5 for each friend who signs up!"
+                  disabled={settingsLoading}
+                />
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            <div className="flex justify-end">
+              <Button onClick={handleSettingsSave} disabled={settingsSaving || settingsLoading}>
+                {settingsSaving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    Save Settings
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       <motion.div variants={fadeUp}>
         <Card className="border-border/40">
