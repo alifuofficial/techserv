@@ -176,12 +176,26 @@ export const authOptions: NextAuthOptions = {
         const tgUser = JSON.parse(userRaw);
         const { id, first_name, last_name, username } = tgUser;
 
+        // Extract start_param for referrals
+        const startParamRaw = params.get("start_param");
+
         // Find or create user
         let user = await db.user.findUnique({
           where: { telegramId: String(id) },
         });
 
         if (!user) {
+          let referredById = null;
+          if (startParamRaw && startParamRaw.startsWith("ref_")) {
+            const code = startParamRaw.replace("ref_", "");
+            const referer = await db.user.findUnique({
+              where: { referralCode: code },
+            });
+            if (referer) {
+              referredById = referer.id;
+            }
+          }
+
           const randomPassword = Math.random().toString(36);
           const hashedPassword = bcrypt 
             ? bcrypt.hashSync(randomPassword, 12)
@@ -200,6 +214,7 @@ export const authOptions: NextAuthOptions = {
               tier: "Standard",
               isActive: true, // Auto-activate TMA users
               emailVerified: new Date(),
+              referredById,
             },
           });
         }

@@ -32,9 +32,13 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       tg.ready();
       tg.expand();
 
-      // Set theme variables
-      document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor);
-      document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor);
+      // Set theme variables safely
+      if (tg.backgroundColor) {
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor);
+      }
+      if (tg.textColor) {
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor);
+      }
 
       // Auto-login only if not already authenticated
       if (status === "unauthenticated") {

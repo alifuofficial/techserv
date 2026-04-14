@@ -69,6 +69,7 @@ function ReferralsSkeleton() {
 export default function ReferralsPage() {
   const [data, setData] = useState<ReferralData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [botUsername, setBotUsername] = useState('milkytechonlinebot')
   const { isTma, webApp } = useTelegram()
 
   useEffect(() => {
@@ -79,6 +80,14 @@ export default function ReferralsPage() {
         if (res.ok && !cancelled) {
           const json = await res.json()
           setData(json)
+        }
+
+        const settingsRes = await fetch('/api/settings/public')
+        if (settingsRes.ok && !cancelled) {
+          const settings = await settingsRes.json()
+          if (settings.telegram_bot_username) {
+            setBotUsername(settings.telegram_bot_username.replace('@', ''))
+          }
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -111,7 +120,8 @@ export default function ReferralsPage() {
   const handleShare = async () => {
     if (isTma && webApp && data?.referralCode) {
       try {
-        const tgLink = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join me on MilkyTech.Online! Use my referral link to sign up.')}`
+        const tmaLink = `https://t.me/${botUsername}/app?startapp=ref_${data.referralCode}`
+        const tgLink = `https://t.me/share/url?url=${encodeURIComponent(tmaLink)}&text=${encodeURIComponent('Join me on MilkyTech.Online! Use my referral link to sign up.')}`
         webApp.openTelegramLink(tgLink)
         return
       } catch {

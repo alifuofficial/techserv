@@ -237,7 +237,14 @@ export default function DashboardPage() {
   const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0
 
   if (isTma) {
-    return <TMADashboard />
+    return (
+      <TMADashboard 
+        userStats={userStats as any} 
+        referralData={referralData as any} 
+        orders={orders as any}
+        botUsername={settings.telegram_bot_username?.replace('@', '') || "milkytechonlinebot"}
+      />
+    )
   }
 
   return (

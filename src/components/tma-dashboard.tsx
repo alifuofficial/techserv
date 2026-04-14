@@ -353,36 +353,20 @@ function AchievementBadge({ icon: Icon, label, achieved, color }: { icon: any; l
   )
 }
 
-export default function TMADashboard() {
+export default function TMADashboard({ 
+  userStats, 
+  referralData, 
+  orders,
+  botUsername = "milkytechonlinebot"
+}: { 
+  userStats: TMAUserStats | null;
+  referralData: ReferralData | null;
+  orders: TMAOrder[];
+  botUsername?: string;
+}) {
   const { webApp, isTma } = useTelegram()
-  const [userStats, setUserStats] = useState<TMAUserStats | null>(null)
-  const [referralData, setReferralData] = useState<ReferralData | null>(null)
-  const [orders, setOrders] = useState<TMAOrder[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!isTma) return
-    
-    let cancelled = false
-    async function fetchData() {
-      try {
-        const [statsRes, referralRes, ordersRes] = await Promise.all([
-          fetch('/api/user/stats'),
-          fetch('/api/user/referrals'),
-          fetch('/api/orders'),
-        ])
-        
-        if (statsRes.ok && !cancelled) setUserStats(await statsRes.json())
-        if (referralRes.ok && !cancelled) setReferralData(await referralRes.json())
-        if (ordersRes.ok && !cancelled) setOrders(await ordersRes.json())
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    
-    fetchData()
-    return () => { cancelled = true }
-  }, [isTma])
+
 
   const handleShare = () => {
     const code = referralData?.referralCode || userStats?.referralCode
@@ -391,8 +375,12 @@ export default function TMADashboard() {
       return
     }
     
-    const link = `${window.location.origin}/refer/${code}`
-    const text = `🎁 Join me on MilkyTech.Online!\n\nUse my referral code to get exclusive rewards:\n\n📝 Code: ${code}\n🔗 Link: ${link}`
+    // Direct Mini-App Link format: https://t.me/BotUsername/AppName?startapp=xyz
+    // Assuming 'app' is the short name, but if we don't know the exact app shortname, 
+    // standard bot parameterized links (e.g. t.me/bot?start=...) work, but the prompt asks for miniapp direct.
+    // If the shortname is unknown, fallback to the standard mini-app format.
+    const link = `https://t.me/${botUsername}/app?startapp=ref_${code}`
+    const text = `🎁 Join me on MilkyTech.Online!\n\nUse my referral code to get exclusive rewards:\n\n🔗 Link: ${link}`
     
     if (webApp) {
       try {
@@ -431,19 +419,8 @@ export default function TMADashboard() {
       animate="visible"
     >
       <AnimatePresence mode="wait">
-        {loading ? (
-          <motion.div 
-            key="loading"
-            className="flex items-center justify-center min-h-screen"
-          >
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
-              <p className="text-white/60 text-sm">Loading your dashboard...</p>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div key="content" className="space-y-6 p-4 pt-6">
-            <motion.div variants={fadeUp} className="flex items-center justify-between">
+        <motion.div key="content" className="space-y-6 p-4 pt-6">
+          <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <LevelBadge level={level} />
                 <div>
@@ -614,7 +591,6 @@ export default function TMADashboard() {
               </Card>
             </motion.div>
           </motion.div>
-        )}
       </AnimatePresence>
 
       <div className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-white/10 p-3">
