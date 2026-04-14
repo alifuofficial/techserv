@@ -1,15 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format } from 'date-fns'
 import {
   Users,
   Gift,
   Zap,
   Star,
   Trophy,
-  TrendingUp,
   ShoppingCart,
   Clock,
   CheckCircle2,
@@ -22,19 +20,19 @@ import {
   Award,
   Wallet,
   Package,
-  ArrowUp,
   Crown,
   Medal,
   Heart,
   Settings,
   Bell,
-  Home,
-  Plus,
+  Swords,
+  Shield,
+  Rocket,
+  Gem,
+  FlameKindling,
+  CircleDot,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useTelegram } from '@/components/telegram-provider'
@@ -73,146 +71,235 @@ interface TMAOrder {
   service: { title: string; icon: string }
 }
 
-const container = {
+const stagger = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+const pop = {
+  hidden: { opacity: 0, scale: 0.85, y: 8 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } },
 }
 
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.8 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
+const slideUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
 }
 
-// Removed internal calculateLevel, using lib/xp instead
-
-function LevelBadge({ level }: { level: number }) {
-  const getTierStyle = () => {
-    if (level >= 50) return { bg: 'bg-gradient-to-br from-amber-400 to-orange-500', icon: Crown, glow: 'shadow-orange-500/50' }
-    if (level >= 30) return { bg: 'bg-gradient-to-br from-purple-500 to-pink-500', icon: Award, glow: 'shadow-purple-500/50' }
-    if (level >= 20) return { bg: 'bg-gradient-to-br from-blue-500 to-cyan-500', icon: Medal, glow: 'shadow-blue-500/50' }
-    if (level >= 10) return { bg: 'bg-gradient-to-br from-emerald-500 to-teal-500', icon: Star, glow: 'shadow-emerald-500/50' }
-    return { bg: 'bg-gradient-to-br from-slate-400 to-slate-500', icon: Sparkles, glow: '' }
-  }
-  
-  const { bg, icon: Icon, glow } = getTierStyle()
-  
-  return (
-    <motion.div 
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      className={cn(
-        'h-16 w-16 rounded-full flex items-center justify-center shadow-lg',
-        bg,
-        glow && `shadow-lg ${glow}`
-      )}
-    >
-      <Icon className="h-8 w-8 text-white" />
-    </motion.div>
-  )
+const tierConfig: Record<number, { gradient: string; shadow: string; icon: typeof Star; label: string; bg: string }> = {
+  5: { gradient: 'from-amber-400 via-orange-400 to-yellow-500', shadow: 'shadow-amber-500/40', icon: Crown, label: 'Legendary', bg: 'bg-amber-500' },
+  4: { gradient: 'from-purple-500 via-violet-500 to-indigo-500', shadow: 'shadow-purple-500/40', icon: Award, label: 'Elite', bg: 'bg-purple-500' },
+  3: { gradient: 'from-blue-500 via-cyan-400 to-sky-500', shadow: 'shadow-blue-500/40', icon: Medal, label: 'Pro', bg: 'bg-blue-500' },
+  2: { gradient: 'from-emerald-400 via-green-400 to-teal-500', shadow: 'shadow-emerald-500/40', icon: Star, label: 'Apprentice', bg: 'bg-emerald-500' },
 }
 
-function AnimatedCounter({ value, className }: { value: number; className?: string }) {
-  const [display, setDisplay] = useState(0)
-  
+function getLevelTier(level: number) {
+  if (level >= 50) return tierConfig[5]
+  if (level >= 30) return tierConfig[4]
+  if (level >= 20) return tierConfig[3]
+  if (level >= 10) return tierConfig[2]
+  return { gradient: 'from-slate-400 to-slate-500', shadow: '', icon: Sparkles, label: 'Novice', bg: 'bg-slate-500' }
+}
+
+function XPRing({ progress, level, label, color }: { progress: number; level: number; label: string; color: string }) {
+  const tier = getLevelTier(level)
+  const [animatedProgress, setAnimatedProgress] = useState(0)
+  const ringRef = useRef<SVGSVGElement>(null)
+
   useEffect(() => {
-    const duration = 1000
-    const start = performance.now()
-    const startValue = 0
-    
-    function animate(currentTime: number) {
-      const elapsed = currentTime - start
-      const progress = Math.min(elapsed / duration, 1)
-      const easeOut = 1 - Math.pow(1 - progress, 3)
-      setDisplay(Math.round(startValue + (value - startValue) * easeOut))
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate)
-      }
-    }
-    
-    requestAnimationFrame(animate)
-  }, [value])
-  
-  return <span className={className}>{display}</span>
+    const timer = setTimeout(() => setAnimatedProgress(progress), 100)
+    return () => clearTimeout(timer)
+  }, [progress])
+
+  const radius = 54
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = circumference - (animatedProgress / 100) * circumference
+  const TierIcon = tier.icon
+
+  return (
+    <div className="relative flex flex-col items-center">
+      <div className="relative w-36 h-36">
+        <svg ref={ringRef} className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+          <circle
+            cx="60" cy="60" r={radius} fill="none"
+            stroke="url(#xpGradient)" strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+            className="transition-all duration-1000 ease-out"
+          />
+          <defs>
+            <linearGradient id="xpGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#10b981" />
+              <stop offset="50%" stopColor="#14b8a6" />
+              <stop offset="100%" stopColor="#06b6d4" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className={cn('h-14 w-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg', tier.gradient, tier.shadow)}>
+            <TierIcon className="h-7 w-7 text-white" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 text-center">
+        <p className="text-2xl font-black text-white tracking-tight">LVL {level}</p>
+        <p className={cn('text-sm font-bold bg-gradient-to-r bg-clip-text text-transparent', tier.gradient)}>
+          {label}
+        </p>
+      </div>
+    </div>
+  )
 }
 
-function StatCard({ icon: Icon, label, value, color, delay = 0 }: { icon: any; label: string; value: number | string; color: string; delay?: number }) {
+function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Star; label: string; value: string | number; accent: string }) {
   return (
-    <motion.div 
-      variants={scaleIn}
-      transition={{ delay }}
-      className="relative overflow-hidden"
-    >
-      <Card className="border-0 bg-black/20 backdrop-blur-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className={cn('h-12 w-12 rounded-2xl flex items-center justify-center', color)}>
-              <Icon className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">
-                <AnimatedCounter value={typeof value === 'number' ? value : 0} />
-              </p>
-              <p className="text-xs text-white/60">{label}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <motion.div variants={pop} className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-3">
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className={cn('h-7 w-7 rounded-lg flex items-center justify-center', accent)}>
+          <Icon className="h-3.5 w-3.5 text-white" />
+        </div>
+        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{label}</span>
+      </div>
+      <p className="text-xl font-black text-white">{value}</p>
     </motion.div>
   )
 }
 
-function ReferralCard({ code, count, referrals, onShare, webApp }: { 
-  code: string; 
-  count: number; 
-  referrals: ReferralData['referrals'];
-  onShare: () => void;
-  webApp: any;
+function QuestCard({ icon: Icon, title, subtitle, progress, current, target, gradient, href }: {
+  icon: typeof Star; title: string; subtitle: string; progress: number; current: number; target: number; gradient: string; href: string;
 }) {
   return (
-    <motion.div variants={fadeUp} className="relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-3xl blur-xl" />
-      
-      <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 backdrop-blur-xl overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400" />
-        
-        <CardContent className="p-5 space-y-5">
+    <motion.a
+      href={href}
+      variants={pop}
+      whileTap={{ scale: 0.97 }}
+      className="block bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4 group active:bg-white/[0.06] transition-colors"
+    >
+      <div className="flex items-start gap-3">
+        <div className={cn('h-11 w-11 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-lg', gradient)}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-white font-bold text-sm group-hover:text-emerald-400 transition-colors">{title}</h4>
+          <p className="text-white/40 text-xs mt-0.5">{subtitle}</p>
+          {progress > 0 && (
+            <div className="mt-2.5">
+              <div className="flex justify-between text-[10px] mb-1">
+                <span className="text-white/50 font-medium">{current}/{target}</span>
+                <span className="text-emerald-400 font-bold">{progress}%</span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-emerald-400 transition-colors mt-1" />
+      </div>
+    </motion.a>
+  )
+}
+
+function MissionCard({ order }: { order: TMAOrder }) {
+  const statusTheme: Record<string, { gradient: string; icon: typeof Clock; label: string }> = {
+    pending: { gradient: 'from-amber-500 to-orange-500', icon: Clock, label: 'In Queue' },
+    approved: { gradient: 'from-blue-500 to-cyan-500', icon: Zap, label: 'Active' },
+    completed: { gradient: 'from-emerald-500 to-teal-500', icon: CheckCircle2, label: 'Done' },
+    rejected: { gradient: 'from-red-500 to-rose-500', icon: Clock, label: 'Failed' },
+  }
+  const theme = statusTheme[order.status] || statusTheme.pending
+  const StatusIcon = theme.icon
+
+  return (
+    <motion.a
+      href={`/dashboard/orders/${order.id}`}
+      variants={slideUp}
+      whileTap={{ scale: 0.97 }}
+      className="block bg-white/[0.04] border border-white/[0.06] rounded-xl p-3.5 group active:bg-white/[0.06] transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn('h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0', theme.gradient)}>
+          <StatusIcon className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-medium text-sm truncate">{order.service.title}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-white/30 text-[10px] font-mono">#{order.id.slice(0, 8)}</span>
+            <span className={cn('text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r bg-clip-text text-transparent', theme.gradient)}>
+              {theme.label}
+            </span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-white font-bold text-sm">${order.amount}</p>
+          {order.progress > 0 && (
+            <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden mt-1">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full" style={{ width: `${order.progress}%` }} />
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.a>
+  )
+}
+
+function AchievementNode({ icon: Icon, label, achieved, colorClass }: { icon: typeof Star; label: string; achieved: boolean; colorClass: string }) {
+  return (
+    <motion.div variants={pop} className="flex flex-col items-center gap-1.5 min-w-[52px]">
+      <div className={cn(
+        'h-11 w-11 rounded-xl flex items-center justify-center border transition-all',
+        achieved
+          ? `${colorClass} border-white/10 shadow-lg`
+          : 'bg-white/[0.04] border-white/[0.06]'
+      )}>
+        <Icon className={cn('h-5 w-5', achieved ? 'text-white' : 'text-white/20')} />
+      </div>
+      <span className={cn('text-[9px] font-bold text-center leading-tight', achieved ? 'text-white/80' : 'text-white/25')}>
+        {label}
+      </span>
+    </motion.div>
+  )
+}
+
+function SquadCard({ code, count, referrals, onShare }: {
+  code: string; count: number; referrals: ReferralData['referrals']; onShare: () => void;
+}) {
+  return (
+    <motion.div variants={slideUp} className="relative">
+      <div className="absolute -inset-px bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-60" />
+      <div className="relative bg-white/[0.04] border border-emerald-500/20 rounded-2xl overflow-hidden">
+        <div className="h-0.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400" />
+        <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-                <Gift className="h-6 w-6 text-emerald-400" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                <Swords className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Invite Friends
-                </h3>
-                <p className="text-sm text-white/60">{count} friends joined</p>
+                <h3 className="text-white font-bold text-sm">Build Your Squad</h3>
+                <p className="text-emerald-400/70 text-xs font-medium">{count} member{count !== 1 ? 's' : ''} recruited</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-1 bg-emerald-500/20 px-3 py-1.5 rounded-full">
-              <Flame className="h-4 w-4 text-emerald-400" />
-              <span className="text-emerald-400 font-bold">{count * 50} XP</span>
+            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+              <FlameKindling className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-emerald-400 text-xs font-black">+{count * 30} XP</span>
             </div>
           </div>
-          
-          <div className="bg-black/30 rounded-2xl p-4 space-y-4">
+
+          <div className="bg-black/30 rounded-xl p-3 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-white/60 text-sm">Your Code</span>
+              <span className="text-white/40 text-xs font-bold uppercase tracking-wider">Referral Code</span>
               <div className="flex items-center gap-2">
-                <code className="bg-white/10 px-3 py-1.5 rounded-lg font-mono font-bold text-white text-lg tracking-wider">
+                <code className="bg-white/10 px-2.5 py-1 rounded-lg font-mono font-black text-white tracking-widest text-sm">
                   {code || '------'}
                 </code>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-8 w-8 bg-white/10 hover:bg-white/20"
+                <button
+                  className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors active:scale-90"
                   onClick={() => {
                     if (code) {
                       navigator.clipboard.writeText(code)
@@ -220,145 +307,92 @@ function ReferralCard({ code, count, referrals, onShare, webApp }: {
                     }
                   }}
                 >
-                  <Copy className="h-4 w-4 text-white" />
-                </Button>
+                  <Copy className="h-3.5 w-3.5 text-white/60" />
+                </button>
               </div>
             </div>
-            
-            <Button 
-              className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25"
+
+            <button
               onClick={onShare}
+              className="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             >
-              <Share2 className="h-5 w-5 mr-2" />
+              <Share2 className="h-4 w-4" />
               Share & Invite via Telegram
-            </Button>
+            </button>
           </div>
-          
+
           {referrals && referrals.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-white/60 text-xs font-medium uppercase tracking-wider">Recent Invites</p>
+            <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
-                {referrals.slice(0, 5).map((ref, i) => (
-                  <motion.div
+                {referrals.slice(0, 5).map((ref) => (
+                  <div
                     key={ref.id}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm border-2 border-black/50"
+                    className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-[10px] border-2 border-slate-950"
                     title={ref.name}
                   >
                     {ref.name?.charAt(0)?.toUpperCase() || '?'}
-                  </motion.div>
-                ))}
-                {referrals.length > 5 && (
-                  <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-medium border-2 border-black/50">
-                    +{referrals.length - 5}
                   </div>
-                )}
+                ))}
               </div>
+              {referrals.length > 5 && (
+                <span className="text-white/40 text-xs font-bold">+{referrals.length - 5} more</span>
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   )
 }
 
-function QuickAction({ icon: Icon, label, color, href, delay = 0 }: { icon: any; label: string; color: string; href: string; delay?: number }) {
+function RankUpCard({ completedOrders }: { completedOrders: number }) {
+  const target = 10
+  const percent = Math.min((completedOrders / target) * 100, 100)
   return (
-    <motion.div variants={scaleIn} transition={{ delay }}>
-      <a href={href}>
-        <Card className="border-0 bg-black/20 backdrop-blur-sm hover:bg-black/30 transition-all cursor-pointer group">
-          <CardContent className="p-4 flex flex-col items-center gap-2">
-            <div className={cn('h-12 w-12 rounded-2xl flex items-center justify-center', color)}>
-              <Icon className="h-6 w-6 text-white" />
+    <motion.div variants={slideUp} className="relative">
+      <div className="absolute -inset-px bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-2xl blur-sm opacity-60" />
+      <div className="relative bg-white/[0.04] border border-amber-500/20 rounded-2xl overflow-hidden">
+        <div className="h-0.5 bg-gradient-to-r from-amber-400 to-orange-400" />
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+              <Gem className="h-7 w-7 text-white" />
             </div>
-            <span className="text-white/80 text-xs font-medium group-hover:text-white">{label}</span>
-          </CardContent>
-        </Card>
-      </a>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-bold text-sm">Rank Up to Gold</h3>
+                <span className="text-amber-400 text-xs font-bold">{percent}%</span>
+              </div>
+              <p className="text-white/40 text-xs mt-0.5">Complete {target} orders to become Gold</p>
+              <div className="mt-2.5 h-2 bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${percent}%` }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+              <p className="text-white/30 text-[10px] mt-1.5 font-mono">{completedOrders}/{target} orders completed</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   )
 }
 
-function OrderCard({ order }: { order: TMAOrder }) {
-  const statusColors: Record<string, string> = {
-    pending: 'from-amber-500 to-orange-500',
-    approved: 'from-blue-500 to-cyan-500',
-    completed: 'from-emerald-500 to-teal-500',
-    rejected: 'from-red-500 to-rose-500',
-  }
-  
-  return (
-    <motion.div 
-      variants={fadeUp}
-      className="bg-black/20 backdrop-blur-sm rounded-2xl p-4"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className={cn('h-8 w-8 rounded-xl flex items-center justify-center bg-gradient-to-br', statusColors[order.status] || statusColors.pending)}>
-            {order.status === 'completed' ? (
-              <CheckCircle2 className="h-4 w-4 text-white" />
-            ) : order.status === 'pending' ? (
-              <Clock className="h-4 w-4 text-white" />
-            ) : (
-              <Zap className="h-4 w-4 text-white" />
-            )}
-          </div>
-          <div>
-            <p className="text-white font-medium text-sm">{order.service.title}</p>
-            <p className="text-white/40 text-xs">#{order.id.slice(0, 8)}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-white font-bold">${order.amount}</p>
-          <Badge variant="secondary" className="text-[10px] bg-white/10 text-white/80 border-0">
-            {order.status}
-          </Badge>
-        </div>
-      </div>
-      
-      {order.progress > 0 && (
-        <div className="space-y-1">
-          <Progress value={order.progress} className="h-1.5 bg-white/10" />
-          <p className="text-white/40 text-[10px]">{order.progress}% complete</p>
-        </div>
-      )}
-    </motion.div>
-  )
-}
-
-function AchievementBadge({ icon: Icon, label, achieved, color }: { icon: any; label: string; achieved: boolean; color: string }) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className={cn(
-        'h-12 w-12 rounded-2xl flex items-center justify-center',
-        achieved ? color : 'bg-white/10'
-      )}>
-        <Icon className={cn('h-5 w-5', achieved ? 'text-white' : 'text-white/30')} />
-      </div>
-      <span className={cn('text-[10px] font-medium', achieved ? 'text-white' : 'text-white/40')}>
-        {label}
-      </span>
-    </div>
-  )
-}
-
-export default function TMADashboard({ 
-  userStats, 
-  referralData, 
+export default function TMADashboard({
+  userStats,
+  referralData,
   orders,
-  botUsername = "milkytechonlinebot"
-}: { 
-  userStats: TMAUserStats | null;
-  referralData: ReferralData | null;
-  orders: TMAOrder[];
-  botUsername?: string;
+  botUsername = 'milkytechonlinebot',
+}: {
+  userStats: TMAUserStats | null
+  referralData: ReferralData | null
+  orders: TMAOrder[]
+  botUsername?: string
 }) {
   const { webApp, isTma } = useTelegram()
-
-
-
   const [isSharing, setIsSharing] = useState(false)
 
   const handleShare = async () => {
@@ -367,25 +401,18 @@ export default function TMADashboard({
       toast.error('No referral code found. Please ensure you are logged in.')
       return
     }
-    
     setIsSharing(true)
     const referralLink = `${window.location.origin}/refer/${code}`
     const shareText = `Join me on MilkyTech.Online! Use my referral code to get exclusive rewards: ${code}`
-    
     try {
       if (webApp) {
-        // Use Telegram's share URL format
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`
-        
-        // Try using the Telegram WebApp API first
         if (typeof webApp.openTelegramLink === 'function') {
           webApp.openTelegramLink(shareUrl)
         } else {
-          // Fallback to window.open
           window.open(shareUrl, '_blank')
         }
       } else {
-        // Non-TMA fallback
         await navigator.clipboard.writeText(referralLink)
         toast.success('Referral link copied! Share it with your friends.')
       }
@@ -399,201 +426,169 @@ export default function TMADashboard({
   }
 
   if (!isTma) return null
-  
+
   const { level, currentXP, nextLevelXP, progress, label, color } = calculateXP(
     userStats?.completedOrders || 0,
     referralData?.referralCount || 0
   )
 
   const achievements = [
-    { icon: Star, label: 'First Order', achieved: (userStats?.totalOrders || 0) >= 1, color: 'bg-amber-500' },
-    { icon: Trophy, label: '5 Orders', achieved: (userStats?.totalOrders || 0) >= 5, color: 'bg-orange-500' },
-    { icon: Users, label: 'First Friend', achieved: (referralData?.referralCount || 0) >= 1, color: 'bg-emerald-500' },
-    { icon: Crown, label: '5 Friends', achieved: (referralData?.referralCount || 0) >= 5, color: 'bg-purple-500' },
-    { icon: Flame, label: '10 Friends', achieved: (referralData?.referralCount || 0) >= 10, color: 'bg-red-500' },
-    { icon: Heart, label: 'Super Fan', achieved: (referralData?.referralCount || 0) >= 25, color: 'bg-pink-500' },
+    { icon: Star, label: '1st\nOrder', achieved: (userStats?.totalOrders || 0) >= 1, colorClass: 'bg-gradient-to-br from-amber-500 to-yellow-500' },
+    { icon: Trophy, label: '5\nOrders', achieved: (userStats?.totalOrders || 0) >= 5, colorClass: 'bg-gradient-to-br from-orange-500 to-red-500' },
+    { icon: Users, label: '1st\nFriend', achieved: (referralData?.referralCount || 0) >= 1, colorClass: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
+    { icon: Crown, label: '5\nFriends', achieved: (referralData?.referralCount || 0) >= 5, colorClass: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+    { icon: Flame, label: '10\nFriends', achieved: (referralData?.referralCount || 0) >= 10, colorClass: 'bg-gradient-to-br from-red-500 to-rose-500' },
+    { icon: Heart, label: 'Super\nFan', achieved: (referralData?.referralCount || 0) >= 25, colorClass: 'bg-gradient-to-br from-pink-500 to-fuchsia-500' },
   ]
 
   return (
-    <motion.div 
-      className="pb-6"
-      variants={container}
-      initial="hidden"
-      animate="visible"
-    >
+    <motion.div className="pb-6" variants={stagger} initial="hidden" animate="visible">
       <AnimatePresence mode="wait">
-        <motion.div key="content" className="space-y-6 p-4 pt-6">
-          <motion.div variants={fadeUp} className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <LevelBadge level={level} />
-                <div>
-                  <h1 className="text-2xl font-bold text-white">
-                    Level {level}
-                  </h1>
-                  <p className="text-sm font-bold text-emerald-400">
-                    {label} • {currentXP} XP
-                  </p>
-                </div>
+        <motion.div key="content" className="space-y-5 px-4 pt-4">
+
+          {/* ── HERO: Level Ring ── */}
+          <motion.div variants={slideUp} className="flex flex-col items-center pt-2">
+            <XPRing progress={progress} level={level} label={label} color={color} />
+            <div className="w-full mt-3 px-2">
+              <div className="flex items-center justify-between text-[10px] text-white/30 mb-1.5">
+                <span className="font-mono">{currentXP} XP</span>
+                <span className="font-mono">{nextLevelXP} XP</span>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="bg-white/10 h-10 w-10 rounded-2xl group active:scale-95 transition-all">
-                  <Bell className="h-5 w-5 text-white" />
-                </Button>
-                <Button size="icon" variant="ghost" className="bg-white/10 h-10 w-10 rounded-full">
-                  <Settings className="h-5 w-5 text-white" />
-                </Button>
+              <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                />
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp}>
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1.5">
-                <Progress value={progress} className="h-2 bg-white/10 rounded-full" />
-              </div>
-              <div className="flex justify-between mt-2 text-xs text-white/40">
-                <span>Level {level}</span>
-                <span>Level {level + 1}</span>
-              </div>
-            </motion.div>
-
-            <ReferralCard
-              code={referralData?.referralCode || userStats?.referralCode || ''}
-              count={referralData?.referralCount || userStats?.referralCount || 0}
-              referrals={referralData?.referrals || []}
-              onShare={handleShare}
-              webApp={webApp}
-            />
-
-            <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3">
-              <QuickAction icon={ShoppingCart} label="Browse Services" color="bg-gradient-to-br from-blue-500 to-cyan-500" href="/services" delay={0} />
-              <QuickAction icon={Package} label="My Orders" color="bg-gradient-to-br from-purple-500 to-pink-500" href="/dashboard/orders" delay={0.1} />
-              <QuickAction icon={Users} label="Referrals" color="bg-gradient-to-br from-emerald-500 to-teal-500" href="/dashboard/referrals" delay={0.2} />
-            </motion.div>
-
-            <motion.div variants={fadeUp}>
-              <Card className="border-0 bg-black/20 backdrop-blur-sm">
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-white font-bold flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-amber-400" />
-                      Achievements
-                    </h3>
-                    <span className="text-white/40 text-sm">
-                      {achievements.filter(a => a.achieved).length}/{achievements.length}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    {achievements.map((achievement, i) => (
-                      <AchievementBadge 
-                        key={i}
-                        {...achievement}
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-400" />
-                  Recent Orders
-                </h3>
-                <a href="/dashboard/orders" className="text-emerald-400 text-sm font-medium flex items-center gap-1">
-                  View All <ChevronRight className="h-4 w-4" />
-                </a>
-              </div>
-              
-              {orders.length > 0 ? (
-                <div className="space-y-2">
-                  {orders.slice(0, 3).map((order) => (
-                    <OrderCard key={order.id} order={order} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="border-0 bg-black/20 backdrop-blur-sm">
-                  <CardContent className="p-8 text-center">
-                    <Package className="h-12 w-12 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/60 text-sm">No orders yet</p>
-                    <a href="/services">
-                      <Button className="mt-4 bg-gradient-to-r from-blue-500 to-cyan-500">
-                        Browse Services
-                      </Button>
-                    </a>
-                  </CardContent>
-                </Card>
-              )}
-            </motion.div>
-
-            <motion.div variants={fadeUp}>
-              <Card className="border-0 bg-gradient-to-r from-amber-900/40 to-orange-900/40 backdrop-blur-xl overflow-hidden">
-                <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
-                      <Target className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">Complete 10 Orders</h3>
-                      <p className="text-white/60 text-sm">Become a Gold member</p>
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs text-white/40 mb-1">
-                          <span>{userStats?.completedOrders || 0}/10 orders</span>
-                          <span>{Math.min(((userStats?.completedOrders || 0) / 10) * 100, 100)}%</span>
-                        </div>
-                        <Progress value={Math.min(((userStats?.completedOrders || 0) / 10) * 100, 100)} className="h-1.5 bg-white/10" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="grid grid-cols-2 gap-3">
-              <StatCard 
-                icon={ShoppingCart} 
-                label="Total Orders" 
-                value={userStats?.totalOrders || 0} 
-                color="bg-gradient-to-br from-blue-500 to-cyan-500"
-                delay={0}
-              />
-              <StatCard 
-                icon={Users} 
-                label="Referrals" 
-                value={referralData?.referralCount || 0} 
-                color="bg-gradient-to-br from-emerald-500 to-teal-500"
-                delay={0.1}
-              />
-            </motion.div>
-
-            <motion.div variants={fadeUp}>
-              <Card className="border-0 bg-gradient-to-r from-purple-900/40 to-pink-900/40 backdrop-blur-xl">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-bold flex items-center gap-2">
-                      <Wallet className="h-5 w-5 text-purple-400" />
-                      Quick Stats
-                    </h3>
-                    <Badge className="bg-purple-500/20 text-purple-300 border-0">
-                      {userStats?.tier || 'Standard'}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-white/40 text-xs">Total Spent</p>
-                      <p className="text-2xl font-bold text-white">${(userStats?.totalSpent || 0).toFixed(0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-white/40 text-xs">Pending</p>
-                      <p className="text-2xl font-bold text-amber-400">{userStats?.pendingOrders || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+            <div className="flex items-center gap-3 mt-4">
+              <a href="/dashboard/settings" className="h-10 w-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center active:scale-90 transition-transform">
+                <Settings className="h-4.5 w-4.5 text-white/50" />
+              </a>
+              <button className="h-10 w-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center active:scale-90 transition-transform">
+                <Bell className="h-4.5 w-4.5 text-white/50" />
+              </button>
+            </div>
           </motion.div>
+
+          {/* ── STATS ROW ── */}
+          <motion.div variants={stagger} className="grid grid-cols-2 gap-3">
+            <MiniStat icon={ShoppingCart} label="Orders" value={userStats?.totalOrders || 0} accent="bg-gradient-to-br from-blue-500 to-cyan-500" />
+            <MiniStat icon={Users} label="Referrals" value={referralData?.referralCount || 0} accent="bg-gradient-to-br from-emerald-500 to-teal-500" />
+            <MiniStat icon={Wallet} label="Spent" value={`$${(userStats?.totalSpent || 0).toFixed(0)}`} accent="bg-gradient-to-br from-violet-500 to-purple-500" />
+            <MiniStat icon={Clock} label="Pending" value={userStats?.pendingOrders || 0} accent="bg-gradient-to-br from-amber-500 to-orange-500" />
+          </motion.div>
+
+          {/* ── QUEST CARDS ── */}
+          <motion.div variants={stagger} className="space-y-3">
+            <motion.h3 variants={slideUp} className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+              Quick Actions
+            </motion.h3>
+            <QuestCard
+              icon={Rocket}
+              title="Browse Services"
+              subtitle="Explore what you can order"
+              progress={0}
+              current={0}
+              target={1}
+              gradient="from-blue-500 to-cyan-500"
+              href="/services"
+            />
+            <QuestCard
+              icon={Package}
+              title="My Orders"
+              subtitle={`${userStats?.totalOrders || 0} total • ${userStats?.pendingOrders || 0} active`}
+              progress={userStats?.completedOrders || 0 > 0 ? Math.min(((userStats?.completedOrders || 0) / Math.max(userStats?.totalOrders || 1, 1)) * 100, 100) : 0}
+              current={userStats?.completedOrders || 0}
+              target={userStats?.totalOrders || 0}
+              gradient="from-purple-500 to-pink-500"
+              href="/dashboard/orders"
+            />
+            <QuestCard
+              icon={Swords}
+              title="Squad Referrals"
+              subtitle={`Earn 30 XP per recruit`}
+              progress={0}
+              current={referralData?.referralCount || 0}
+              target={999}
+              gradient="from-emerald-500 to-teal-500"
+              href="/dashboard/referrals"
+            />
+          </motion.div>
+
+          {/* ── ACHIEVEMENTS ── */}
+          <motion.div variants={slideUp}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+                Achievements
+              </h3>
+              <span className="text-[10px] font-bold text-emerald-400/60">
+                {achievements.filter(a => a.achieved).length}/{achievements.length}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              {achievements.map((achievement, i) => (
+                <AchievementNode key={i} {...achievement} />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* ── SQUAD CARD ── */}
+          <SquadCard
+            code={referralData?.referralCode || userStats?.referralCode || ''}
+            count={referralData?.referralCount || userStats?.referralCount || 0}
+            referrals={referralData?.referrals || []}
+            onShare={handleShare}
+          />
+
+          {/* ── RANK UP CARD ── */}
+          <RankUpCard completedOrders={userStats?.completedOrders || 0} />
+
+          {/* ── ACTIVE MISSIONS ── */}
+          <motion.div variants={stagger}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+                Active Missions
+              </h3>
+              {orders.length > 0 && (
+                <a href="/dashboard/orders" className="text-emerald-400 text-xs font-bold flex items-center gap-0.5">
+                  All <ChevronRight className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+
+            {orders.length > 0 ? (
+              <div className="space-y-2">
+                {orders.slice(0, 3).map((order) => (
+                  <MissionCard key={order.id} order={order} />
+                ))}
+              </div>
+            ) : (
+              <motion.div variants={slideUp} className="flex flex-col items-center py-8 text-center">
+                <div className="h-16 w-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-3">
+                  <Package className="h-8 w-8 text-white/15" />
+                </div>
+                <p className="text-white/40 text-sm font-medium">No missions yet</p>
+                <a href="/services" className="mt-3 h-10 px-5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-bold flex items-center gap-2 active:scale-95 transition-transform">
+                  <Rocket className="h-4 w-4" />
+                  Start First Mission
+                </a>
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* ── TIER BADGE ── */}
+          <motion.div variants={slideUp} className="flex justify-center pb-4">
+            <div className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-full px-4 py-2">
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-white/50 text-xs font-bold">{userStats?.tier || 'Standard'} Tier</span>
+            </div>
+          </motion.div>
+
+        </motion.div>
       </AnimatePresence>
     </motion.div>
   )
