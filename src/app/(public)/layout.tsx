@@ -4,9 +4,17 @@ import { Send, Facebook, Instagram, Twitter, Heart } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { HeaderAuth } from "@/components/header-auth";
+import { getSystemSetting } from "@/modules/settings/settings-service";
+import { TelegramSplash } from "@/components/telegram-splash";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
+  const webEnabled = await getSystemSetting("web_enabled", "true");
+
+  if (webEnabled === "false") {
+    return <TelegramSplash />;
+  }
+
 
   return (
     <>

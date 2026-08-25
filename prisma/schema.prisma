@@ -164,3 +164,9 @@ model LedgerTransaction {
 
   account       LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
 }
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
