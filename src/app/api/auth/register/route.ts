@@ -1,122 +1,52 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sendOtpEmail } from "@/lib/email";
+import bcrypt from "bcryptjs";
 
-// Try to load bcryptjs, fallback to sha256 hashing
-let bcrypt: typeof import("bcryptjs") | null = null;
-try {
-  bcrypt = require("bcryptjs");
-} catch {}
-
-function hashPassword(password: string): string {
-  if (bcrypt) return bcrypt.hashSync(password, 12);
-  return "sha256$" + createHash("sha256").update(password).digest("hex");
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { name, email, password, telegram, referralCode: providedReferralCode } = body;
+    const { email, phone, password } = await req.json();
 
-    // Check if registration is enabled
-    const registrationSetting = await (db.setting as any).findUnique({
-      where: { key: "registration_enabled" }
-    });
-    
-    if (registrationSetting && registrationSetting.value === "false") {
-      return NextResponse.json(
-        { error: "Registration is currently disabled by the administrator." },
-        { status: 403 }
-      );
+    if (!email || !phone || !password) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: "Name, email, and password are required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { email },
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { phone }
+        ]
+      }
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "User with this email or phone already exists" }, { status: 400 });
     }
 
-    // Hash password
-    const hashedPassword = hashPassword(password);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate a simple unique referral code
-    const newReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-
-    // Check for referral code if provided
-    let referredById: any = null;
-    if (providedReferralCode) {
-      const referrer = await (db.user as any).findUnique({
-        where: { referralCode: providedReferralCode } as any,
-        select: { id: true },
-      });
-      if (referrer) {
-        referredById = referrer.id;
-      }
-    }
-
-    // Check if email OTP is enabled
-    const otpSetting = await (db.setting as any).findUnique({
-      where: { key: "email_otp_enabled" }
-    });
-    const isOtpEnabled = otpSetting && otpSetting.value === "true";
-
-    // Create user
-    const user = await (db.user as any).create({
+    const user = await db.user.create({
       data: {
-        name,
         email,
+        phone,
         password: hashedPassword,
-        telegram: telegram || null,
-        role: "user",
-        tier: "Standard",
-        referralCode: newReferralCode,
-        referredById,
-        isActive: !isOtpEnabled, // Deactivate if OTP is required
-      },
+        role: "USER"
+      }
     });
 
-    if (isOtpEnabled) {
-      // Generate 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Initialize Ledger account for new user
+    await db.ledgerAccount.create({
+      data: {
+        userId: user.id,
+        balance: 0,
+        currency: "ETB"
+      }
+    });
 
-      await (db as any).verificationToken.create({
-        data: {
-          email,
-          token: otp,
-          expires,
-        },
-      });
+    return NextResponse.json({ success: true, userId: user.id });
 
-      await sendOtpEmail(email, otp);
-      
-      return NextResponse.json({ 
-        message: "OTP sent to your email. Please verify to complete registration.",
-        requiresVerification: true,
-        email 
-      }, { status: 201 });
-    }
-
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
-
-    return NextResponse.json(userWithoutPassword, { status: 201 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error: any) {
+    console.error("Registration Error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

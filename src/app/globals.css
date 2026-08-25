@@ -164,3 +164,20 @@
     linear-gradient(90deg, oklch(0.6 0.1 155 / 0.08) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+.quill-container .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  padding: 12px;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+.quill-container .ql-container.ql-snow {
+  border: none;
+  background-color: #f8fafc;
+  font-family: inherit;
+  font-size: 0.875rem;
+  height: 12rem;
+}
+.quill-container .ql-editor {
+  padding: 1rem;
+}

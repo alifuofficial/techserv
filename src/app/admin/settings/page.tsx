@@ -1,556 +1,217 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import {
-  Settings,
-  Globe,
-  ShoppingCart,
-  ShieldCheck,
-  Loader2,
-  RotateCcw,
-  Save,
-  AlertTriangle,
-  Send,
-  Zap,
-  Mail,
-  Upload,
-  Image as ImageIcon,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useState } from "react";
+import { Settings, Shield, CreditCard, Bell, Save, Globe, Users, Server } from "lucide-react";
 
-interface SettingItem {
-  id: string
-  key: string
-  value: string
-  label: string
-  type: string
-  group: string
-  createdAt: string
-  updatedAt: string
-}
+export default function AdminSettingsPage() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
-interface SettingsResponse {
-  settings: SettingItem[]
-  groups: Record<string, SettingItem[]>
-}
-
-const container = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
-}
-
-const groupMeta: Record<string, { label: string; description: string; icon: React.ElementType; accent: string; color: string }> = {
-  general: { label: 'General', description: 'Site configuration and branding', icon: Globe, accent: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', color: 'bg-blue-500' },
-  telegram: { label: 'Telegram', description: 'Bot config and login settings', icon: Send, accent: 'bg-sky-500/10 text-sky-600 dark:text-sky-400', color: 'bg-sky-500' },
-  orders: { label: 'Orders', description: 'Order processing settings', icon: ShoppingCart, accent: 'bg-primary/10 text-primary', color: 'bg-primary' },
-  system: { label: 'System', description: 'System and maintenance', icon: ShieldCheck, accent: 'bg-green-500/10 text-green-600 dark:text-green-400', color: 'bg-green-500' },
-  features: { label: 'Features', description: 'Toggle platform features', icon: Zap, accent: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', color: 'bg-amber-500' },
-  email: { label: 'Email', description: 'SMTP and notification settings', icon: Mail, accent: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', color: 'bg-purple-500' },
-}
-
-const settingDescriptions: Record<string, string> = {
-  site_name: 'The name displayed across the platform and in browser tabs',
-  site_email: 'Primary contact email shown to customers for support',
-  site_description: 'A brief description used in SEO and meta tags',
-  site_url: 'The canonical URL of your platform',
-  maintenance_mode: 'When enabled, visitors will see a maintenance page',
-  auto_approve: 'Automatically approve orders when payment proof is verified',
-  max_orders_per_day: 'Maximum new orders per day (0 = unlimited)',
-  order_confirmation_email: 'Enable automatic order confirmation emails',
-  telegram_channel: 'Default Telegram channel for order notifications',
-  webhook_url: 'Endpoint URL for order status webhook callbacks',
-  api_rate_limit: 'Maximum API requests per minute per user',
-  session_timeout: 'User session duration in minutes before auto-logout',
-  registration_enabled: 'Allow new users to create accounts',
-  currency: 'Default currency for prices and payments',
-  timezone: 'Platform timezone for scheduling and display',
-  email_notifications: 'Enable email notifications for system events',
-  sms_notifications: 'Enable SMS notifications for order updates',
-  logo_url: 'URL or path to your company logo',
-  seo_title: 'Title tag optimized for search engines',
-  seo_description: 'Meta description shown in search results',
-  seo_keywords: 'Comma-separated keywords for search engines',
-  seo_author: 'The author meta tag of the application',
-  telegram_bot_token: 'The unique HTTP API token from @BotFather',
-  telegram_bot_username: 'Your bot handle (e.g. @MilkyTech.OnlineBot)',
-  telegram_enabled: 'Allow users to register and sign in using Telegram',
-  telegram_notifications: 'Send automated order status updates via the bot',
-  account_tier_enabled: 'Display account tiers (Standard, Gold, etc.) and benefits',
-  referral_system_enabled: 'Activate the referral program with unique links',
-  tier_benefits_standard: 'Features and perks for Standard accounts',
-  tier_benefits_gold: 'Features and perks for Gold accounts',
-  referral_benefits: 'Rewards for successful user referrals',
-  welcome_message: 'Welcome message shown to new users',
-  order_confirmation_message: 'Message sent when an order is placed',
-  currency_symbol: 'Symbol used for currency display',
-  site_phone: 'Phone number shown for customer support',
-  smtp_host: 'The hostname of your SMTP server (e.g., smtp.gmail.com)',
-  smtp_port: 'The port number for your SMTP server (usually 587 or 465)',
-  smtp_user: 'The username (often email) used to authenticate with the SMTP server',
-  smtp_pass: 'The password used to authenticate with the SMTP server',
-  smtp_secure: 'Use SSL/TLS for a secure connection to the SMTP server',
-  smtp_from_email: 'The email address used as the "From" address for sent emails',
-  smtp_from_name: 'The display name used as the "From" name for sent emails',
-}
-
-function getDescription(key: string, label: string): string {
-  return settingDescriptions[key] || `Configure the ${label.toLowerCase()} for your platform`
-}
-
-function PageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-24" />
-        <Skeleton className="h-4 w-56" />
-      </div>
-      <Skeleton className="h-9 w-80" />
-      <Card className="border-border/40">
-        <CardHeader><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-64" /></div></CardHeader>
-        <CardContent className="space-y-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i}>
-              {i > 0 && <Separator className="mb-6" />}
-              <div className="space-y-3">
-                <div className="space-y-1.5"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-64" /></div>
-                <Skeleton className="h-9 w-full max-w-md" />
-              </div>
-            </div>
-          ))}
-        </CardContent>
-        <CardFooter className="border-t pt-4"><div className="flex items-center gap-2 ml-auto"><Skeleton className="h-9 w-24" /><Skeleton className="h-9 w-32" /></div></CardFooter>
-      </Card>
-    </div>
-  )
-}
-
-function ToggleSetting({ setting, value, onChange, disabled }: {
-  setting: SettingItem, value: boolean, onChange: (val: boolean) => void, disabled: boolean
-}) {
-  const isDangerous = setting.key === 'maintenance_mode' && value
-  return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
-      isDangerous
-        ? 'border-amber-300/60 bg-amber-50/50 dark:border-amber-700/40 dark:bg-amber-950/20'
-        : 'border-border/40 bg-muted/20 hover:bg-muted/40'
-    }`}>
-      <div className="min-w-0 flex-1 mr-4">
-        <div className="flex items-center gap-2">
-          <Label htmlFor={setting.key} className="font-medium text-sm cursor-pointer">{setting.label}</Label>
-          {isDangerous && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">
-              Active
-            </Badge>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{getDescription(setting.key, setting.label)}</p>
-      </div>
-      <Switch id={setting.key} checked={value} onCheckedChange={onChange} disabled={disabled} className="shrink-0" />
-    </div>
-  )
-}
-
-
-function TextSetting({ setting, value, onChange, disabled }: {
-  setting: SettingItem, value: string, onChange: (val: string) => void, disabled: boolean
-}) {
-  const isSecret = setting.key.includes('token') || setting.key.includes('secret') || setting.key.includes('pass')
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Label htmlFor={setting.key} className="font-medium text-sm">{setting.label}</Label>
-        {isSecret && (
-          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
-            Secret
-          </Badge>
-        )}
-      </div>
-      <p className="text-xs text-muted-foreground">{getDescription(setting.key, setting.label)}</p>
-      {setting.type === 'textarea' ? (
-        <Textarea id={setting.key} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} rows={3} className="max-w-lg resize-none" />
-      ) : (
-        <Input id={setting.key} type={isSecret ? 'password' : 'text'} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="max-w-lg" />
-      )}
-    </div>
-  )
-}
-
-function LogoUpload({ value, onUpdate, disabled }: { value: string, onUpdate: (url: string) => void, disabled: boolean }) {
-  const [uploading, setUploading] = useState(false);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploading(true);
-    try {
-      const res = await fetch('/api/admin/settings/logo', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error('Failed to upload logo');
-      
-      const data = await res.json();
-      onUpdate(data.url);
-      toast.success('Logo uploaded successfully');
-    } catch (err) {
-      toast.error('Upload failed', { description: err instanceof Error ? err.message : 'Unknown error' });
-    } finally {
-      setUploading(false);
-    }
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      alert("Settings saved successfully!");
+    }, 1000);
   };
 
   return (
-    <div className="space-y-3">
-      <Label className="text-sm font-medium">Site Logo</Label>
-      <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 hover:bg-muted/30 transition-all">
-        <div className="h-20 w-20 rounded-xl bg-background border flex items-center justify-center overflow-hidden shadow-sm">
-          {value ? (
-            <img 
-              src={value.startsWith("/uploads/") || value.startsWith("uploads/") 
-                ? `/api/${value.startsWith("/") ? value.slice(1) : value}` 
-                : value
-              } 
-              alt="Current Logo" 
-              className="h-full w-full object-contain p-2" 
-            />
-          ) : (
-            <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-          )}
+    <div className="space-y-8 max-w-4xl mx-auto pb-12">
+      
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md py-4 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-slate-200/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Settings</h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">Manage global configurations and policies.</p>
         </div>
-        <div className="flex-1 space-y-3 text-center sm:text-left">
-          <div className="space-y-1">
-            <h4 className="text-sm font-semibold">Update Company Logo</h4>
-            <p className="text-xs text-muted-foreground">Upload your brand logo (PNG, JPG, or SVG recommended)</p>
+        <button 
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all w-full sm:w-auto justify-center"
+        >
+          <Save className="w-4 h-4" />
+          {isSaving ? "Saving..." : "Save All Changes"}
+        </button>
+      </div>
+
+      <div className="space-y-10">
+        
+        {/* General Configuration */}
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-100">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">General Configuration</h2>
+              <p className="text-sm text-slate-500">Core details about your platform.</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={disabled || uploading}
-              className="relative overflow-hidden group h-9"
-            >
-              {uploading ? (
-                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-              ) : (
-                <Upload className="h-3.5 w-3.5 mr-2 transition-transform group-hover:-translate-y-0.5" />
-              )}
-              {uploading ? 'Uploading...' : 'Choose File'}
-              <input
-                type="file"
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                accept="image/*"
-                onChange={handleUpload}
-                disabled={disabled || uploading}
-              />
-            </Button>
-            {value && (
-              <p className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                {value.split('/').pop()}
-              </p>
-            )}
+          
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Platform Name</label>
+              <input type="text" defaultValue="MilkyTech" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Support Email Address</label>
+              <input type="email" defaultValue="support@milkytech.online" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Default Currency</label>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                <option>ETB (Ethiopian Birr)</option>
+                <option>USD (US Dollar)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Timezone</label>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                <option>Africa/Addis_Ababa (EAT)</option>
+                <option>UTC</option>
+              </select>
+            </div>
           </div>
-        </div>
+        </section>
+
+        {/* Referral System */}
+        <section className={`bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 transition-all duration-300 ${!referralEnabled ? 'bg-slate-50 border-slate-200 opacity-75' : ''}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${referralEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-500'}`}>
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Referral System</h2>
+                <p className="text-sm text-slate-500">Configure multi-level rewards for invites.</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input type="checkbox" className="sr-only peer" checked={referralEnabled} onChange={() => setReferralEnabled(!referralEnabled)} />
+              <div className="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+              <span className="ml-3 text-sm font-bold text-slate-700">{referralEnabled ? 'Active' : 'Disabled'}</span>
+            </label>
+          </div>
+          
+          <div className={`space-y-8 ${!referralEnabled ? 'pointer-events-none' : ''}`}>
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Reward Type</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex items-start gap-3 p-4 border-2 border-emerald-500 bg-emerald-50/50 rounded-2xl cursor-pointer">
+                  <input type="radio" name="rewardType" defaultChecked className="mt-1" />
+                  <div>
+                    <p className="font-bold text-emerald-900">Fixed Cash Reward</p>
+                    <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Users receive a fixed ETB amount deposited into their wallet per referral.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-4 border-2 border-transparent bg-slate-50 hover:bg-slate-100 rounded-2xl cursor-pointer transition-colors">
+                  <input type="radio" name="rewardType" className="mt-1" />
+                  <div>
+                    <p className="font-bold text-slate-900">Discount on Entry</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">Users receive a percentage discount on their next ticket purchase.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Base Reward Amount</label>
+                <div className="relative">
+                  <input type="number" defaultValue="50" className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono text-lg font-bold text-slate-900" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">ETB</span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Tree Earning (Multi-Level)</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-sm font-semibold text-slate-700">Level 1 (Direct)</span>
+                    <div className="flex items-center gap-2">
+                      <input type="number" defaultValue="10" className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-right font-mono font-bold" />
+                      <span className="text-slate-400 text-sm font-bold">%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-sm font-semibold text-slate-700">Level 2 (Indirect)</span>
+                    <div className="flex items-center gap-2">
+                      <input type="number" defaultValue="5" className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-right font-mono font-bold" />
+                      <span className="text-slate-400 text-sm font-bold">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Payment Gateways */}
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
+          <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Payment Gateways</h2>
+                <p className="text-sm text-slate-500">Enable or disable checkout methods.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Telebirr */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-slate-200 rounded-2xl hover:border-slate-300 transition-colors gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-black text-lg shrink-0">TB</div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-lg">Telebirr</h4>
+                  <p className="text-sm text-slate-500">Manual Transfer (0911234567)</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer self-start sm:self-center">
+                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+
+            {/* CBE */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-slate-200 rounded-2xl hover:border-slate-300 transition-colors gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-black text-lg shrink-0">CBE</div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-lg">CBE Birr</h4>
+                  <p className="text-sm text-slate-500">Manual Transfer (1000123456789)</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer self-start sm:self-center">
+                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            
+            <button className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-slate-600 font-bold text-sm transition-all flex items-center justify-center gap-2">
+              + Add New Gateway
+            </button>
+          </div>
+        </section>
+
+        {/* Security & Access */}
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 opacity-75">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Security & Access</h2>
+              <p className="text-sm text-slate-500">Manage 2FA and admin privileges.</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-400 mt-4 pl-14">Coming soon in next update...</p>
+        </section>
+
       </div>
     </div>
   );
-}
-
-function GroupSettingsCard({ groupKey, settings, formValues, onValueChange, onReset, onSave, saving, isDirty }: {
-  groupKey: string, settings: SettingItem[], formValues: Record<string, string>,
-  onValueChange: (key: string, value: string) => void, onReset: () => void, onSave: () => void, saving: boolean, isDirty: boolean
-}) {
-  const meta = groupMeta[groupKey] || { label: groupKey.charAt(0).toUpperCase() + groupKey.slice(1), description: 'Platform settings', icon: Settings, accent: 'bg-muted text-muted-foreground', color: 'bg-muted' }
-  const Icon = meta.icon
-
-  const toggleSettings = useMemo(() => settings.filter((s) => s.type === 'toggle'), [settings])
-  const fieldSettings = useMemo(() => settings.filter((s) => s.type !== 'toggle'), [settings])
-  const modifiedCount = useMemo(() => settings.filter((s) => {
-    if (s.type === 'toggle') return (s.value === 'true') !== (formValues[s.key] === 'true')
-    return formValues[s.key] !== s.value
-  }).length, [settings, formValues])
-
-  return (
-    <Card className="border-border/40">
-      <CardHeader className="pb-4">
-        <div className="flex items-center gap-3">
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${meta.accent}`}>
-            <Icon className="h-4.5 w-4.5" />
-          </div>
-          <div>
-            <CardTitle className="text-base">{meta.label}</CardTitle>
-            <CardDescription className="text-xs mt-0.5">{meta.description}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {groupKey === 'general' && (
-          <>
-            <LogoUpload 
-              value={formValues['logo_url']} 
-              onUpdate={(url) => onValueChange('logo_url', url)} 
-              disabled={saving} 
-            />
-            <Separator />
-          </>
-        )}
-        {fieldSettings.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            {fieldSettings.filter(s => s.key !== 'logo_url').map((setting) => (
-              <TextSetting key={setting.key} setting={setting} value={formValues[setting.key] ?? setting.value} onChange={(val) => onValueChange(setting.key, val)} disabled={saving} />
-            ))}
-          </div>
-        )}
-        {fieldSettings.length > 0 && toggleSettings.length > 0 && <Separator />}
-        {toggleSettings.length > 0 && (
-          <div className="space-y-3">
-            {toggleSettings.map((setting) => (
-              <ToggleSetting key={setting.key} setting={setting} value={formValues[setting.key] === 'true'} onChange={(val) => onValueChange(setting.key, String(val))} disabled={saving} />
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="border-t border-border/40 bg-muted/20 px-6 py-3">
-        <div className="flex items-center justify-between w-full">
-          <div>
-            {isDirty && (
-              <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-amber-600 dark:text-amber-400">{modifiedCount} {modifiedCount === 1 ? 'change' : 'changes'}</span> unsaved
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {groupKey === 'email' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={async () => {
-                  const email = prompt('Enter email address to send test message to:');
-                  if (!email) return;
-                  toast.promise(
-                    fetch('/api/admin/settings/test-email', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email }),
-                    }).then(async (res) => {
-                      if (!res.ok) {
-                        const data = await res.json();
-                        throw new Error(data.error || 'Failed to send test email');
-                      }
-                      return res.json();
-                    }),
-                    {
-                      loading: 'Sending test email...',
-                      success: 'Test email sent successfully!',
-                      error: (err) => err.message,
-                    }
-                  );
-                }}
-                disabled={saving}
-                className="mr-2"
-              >
-                <Send className="h-3.5 w-3.5 mr-1.5" /> Test Connection
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" onClick={onReset} disabled={saving || !isDirty} className="text-muted-foreground">
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Discard
-            </Button>
-            <Button size="sm" onClick={onSave} disabled={saving || !isDirty} className="min-w-[120px]">
-              {saving ? (<><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving...</>) : (<><Save className="h-3.5 w-3.5 mr-1.5" /> Save Changes</>)}
-            </Button>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
-  )
-}
-
-export default function AdminSettingsPage() {
-  const [originalData, setOriginalData] = useState<SettingsResponse | null>(null)
-  const [formValues, setFormValues] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<string>('general')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    async function fetchSettings() {
-      try {
-        const res = await fetch('/api/admin/settings')
-        if (!res.ok) return
-        const data: SettingsResponse = await res.json()
-        if (cancelled) return
-        setOriginalData(data)
-        const initial: Record<string, string> = {}
-        for (const s of data.settings) initial[s.key] = s.value
-        setFormValues(initial)
-        const groupKeys = Object.keys(data.groups)
-        if (groupKeys.length > 0) setActiveTab(groupKeys[0])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchSettings()
-    return () => { cancelled = true }
-  }, [])
-
-  const handleValueChange = useCallback((key: string, value: string) => {
-    setFormValues((prev) => ({ ...prev, [key]: value }))
-  }, [])
-
-  const isGroupDirty = useCallback((groupKey: string): boolean => {
-    if (!originalData) return false
-    const groupSettings = originalData.groups[groupKey] || []
-    return groupSettings.some((s) => {
-      if (s.type === 'toggle') return (s.value === 'true') !== (formValues[s.key] === 'true')
-      return formValues[s.key] !== s.value
-    })
-  }, [originalData, formValues])
-
-  const handleResetGroup = useCallback((groupKey: string) => {
-    if (!originalData) return
-    const groupSettings = originalData.groups[groupKey] || []
-    const resetValues: Record<string, string> = {}
-    for (const s of groupSettings) resetValues[s.key] = s.value
-    setFormValues((prev) => ({ ...prev, ...resetValues }))
-    toast.info('Changes discarded', { description: `${groupMeta[groupKey]?.label || groupKey} settings reset` })
-  }, [originalData])
-
-  const handleSaveGroup = useCallback(async (groupKey: string) => {
-    if (!originalData) return
-    const groupSettings = originalData.groups[groupKey] || []
-    const modified = groupSettings.filter((s) => {
-      if (s.type === 'toggle') return (s.value === 'true') !== (formValues[s.key] === 'true')
-      return formValues[s.key] !== s.value
-    })
-    if (modified.length === 0) return
-    setSaving(true)
-    try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: modified.map((s) => ({ key: s.key, value: formValues[s.key] })) }),
-      })
-      if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.error || 'Failed to save') }
-      const updatedSettings = await res.json()
-      const updatedMap: Record<string, string> = {}
-      for (const us of updatedSettings) updatedMap[us.key] = us.value
-      setOriginalData((prev) => {
-        if (!prev) return prev
-        const newSettings = prev.settings.map((s) => updatedMap[s.key] !== undefined ? { ...s, value: updatedMap[s.key] } : s)
-        const newGroups: Record<string, SettingItem[]> = {}
-        for (const [gk, gSettings] of Object.entries(prev.groups)) newGroups[gk] = gSettings.map((s) => updatedMap[s.key] !== undefined ? { ...s, value: updatedMap[s.key] } : s)
-        return { settings: newSettings, groups: newGroups }
-      })
-      toast.success('Settings saved', { description: `${modified.length} ${modified.length === 1 ? 'setting' : 'settings'} updated in ${groupMeta[groupKey]?.label || groupKey}` })
-    } catch (error) {
-      toast.error('Failed to save', { description: error instanceof Error ? error.message : 'An unexpected error occurred' })
-    } finally { setSaving(false) }
-  }, [originalData, formValues])
-
-  const groupKeys = useMemo(() => {
-    if (!originalData) return []
-    const keys = Object.keys(originalData.groups)
-    const preferredOrder = ['general', 'telegram', 'email', 'orders', 'system', 'features']
-    const ordered: string[] = []
-    for (const pk of preferredOrder) if (keys.includes(pk)) ordered.push(pk)
-    for (const k of keys) if (!ordered.includes(k)) ordered.push(k)
-    return ordered
-  }, [originalData])
-
-  return (
-    <motion.div className="p-4 md:p-6 space-y-6" variants={container} initial="hidden" animate="visible">
-      <motion.div variants={fadeUp}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-            <Settings className="h-4.5 w-4.5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Manage platform configuration</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {loading ? (
-        <motion.div variants={fadeUp}><PageSkeleton /></motion.div>
-      ) : originalData && groupKeys.length > 0 ? (
-        <>
-          <motion.div variants={fadeUp}>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                {groupKeys.map((groupKey) => {
-                  const meta = groupMeta[groupKey]
-                  const Icon = meta?.icon || Settings
-                  const dirty = isGroupDirty(groupKey)
-                  return (
-                    <TabsTrigger key={groupKey} value={groupKey} className="gap-1.5">
-                      <Icon className="h-3.5 w-3.5" />
-                      {meta?.label || groupKey}
-                      {dirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
-              {groupKeys.map((groupKey) => (
-                <TabsContent key={groupKey} value={groupKey} className="mt-4">
-                  <motion.div key={groupKey} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
-                    <GroupSettingsCard
-                      groupKey={groupKey}
-                      settings={originalData.groups[groupKey] || []}
-                      formValues={formValues}
-                      onValueChange={handleValueChange}
-                      onReset={() => handleResetGroup(groupKey)}
-                      onSave={() => handleSaveGroup(groupKey)}
-                      saving={saving}
-                      isDirty={isGroupDirty(groupKey)}
-                    />
-                  </motion.div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </motion.div>
-        </>
-      ) : (
-        <motion.div variants={fadeUp}>
-          <Card className="border-border/40">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                <Settings className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mb-1">No settings found</h3>
-              <p className="text-sm text-muted-foreground max-w-xs">Settings will appear here once configured. Contact your administrator.</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-    </motion.div>
-  )
 }

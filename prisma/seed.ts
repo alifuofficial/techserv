@@ -14,27 +14,65 @@ function hashPassword(password: string): string {
 }
 
 async function seed() {
-  console.log("🌱 Seeding admin user...\n");
+  console.log("🌱 Seeding demo accounts...\n");
 
+  // 1. Admin
   const adminPassword = hashPassword("admin123");
   const admin = await db.user.upsert({
     where: { email: "admin@milkytech.online" },
     update: {},
     create: {
-      name: "Admin",
+      name: "Admin Demo",
       email: "admin@milkytech.online",
       password: adminPassword,
-      role: "admin",
+      role: "ADMIN",
       phone: "+251911000000",
-      telegram: "@milkytech_online_admin",
     },
   });
 
-  console.log("✅ Admin user ready:", admin.email);
-  console.log("\n📋 Admin Credentials:");
+  // 2. Regular User
+  const userPassword = hashPassword("user123");
+  const user = await db.user.upsert({
+    where: { email: "user@milkytech.online" },
+    update: {},
+    create: {
+      name: "Regular User Demo",
+      email: "user@milkytech.online",
+      password: userPassword,
+      role: "USER",
+      phone: "+251911000001",
+    },
+  });
+
+  // 3. Merchant
+  const merchantPassword = hashPassword("merchant123");
+  const merchant = await db.user.upsert({
+    where: { email: "merchant@milkytech.online" },
+    update: {},
+    create: {
+      name: "Merchant Demo",
+      email: "merchant@milkytech.online",
+      password: merchantPassword,
+      role: "MERCHANT",
+      phone: "+251911000002",
+    },
+  });
+
+  console.log("✅ Accounts ready!");
+  console.log("\n📋 Demo Credentials:");
+  console.log("\n[ADMIN]");
   console.log("   Email: admin@milkytech.online");
   console.log("   Password: admin123");
-  console.log("\n⚠️  Please change the admin password after first login!");
+  
+  console.log("\n[USER]");
+  console.log("   Email: user@milkytech.online");
+  console.log("   Password: user123");
+
+  console.log("\n[MERCHANT]");
+  console.log("   Email: merchant@milkytech.online");
+  console.log("   Password: merchant123");
+  
+  console.log("\n⚠️  Please change the admin password after first login in production!");
   console.log("\n🎉 Done!");
 }
 
