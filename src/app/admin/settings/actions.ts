@@ -3,9 +3,10 @@
 import { setSystemSetting } from '@/modules/settings/settings-service';
 import { revalidatePath } from 'next/cache';
 
-export async function savePlatformSettings(webEnabled: boolean, telegramEnabled: boolean) {
-  await setSystemSetting('web_enabled', webEnabled.toString());
-  await setSystemSetting('telegram_enabled', telegramEnabled.toString());
+export async function savePlatformSettings(settings: Record<string, string>) {
+  for (const [key, value] of Object.entries(settings)) {
+    await setSystemSetting(key, value);
+  }
   revalidatePath('/');
   revalidatePath('/admin/settings');
   return { success: true };
