@@ -1,5 +1,6 @@
 import Script from "next/script";
 import { getSystemSetting } from "@/modules/settings/settings-service";
+import { Providers } from "@/components/providers";
 
 export default async function TelegramLayout({ children }: { children: React.ReactNode }) {
   const telegramEnabled = await getSystemSetting("telegram_enabled", "true");
@@ -16,9 +17,11 @@ export default async function TelegramLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white selection:bg-emerald-500/30">
-      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
-      {children}
-    </div>
+    <Providers>
+      <div className="min-h-screen bg-[#0B0F19] text-white selection:bg-emerald-500/30">
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        {children}
+      </div>
+    </Providers>
   );
 }
