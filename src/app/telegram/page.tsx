@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { Loader2, Ticket, Wallet, Trophy, Activity, ChevronRight, AlertTriangle, User } from "lucide-react";
+import { Loader2, Ticket, Wallet, Trophy, Activity, ChevronRight, AlertTriangle, User, Users } from "lucide-react";
+import Link from "next/link";
+import { getTelegramDashboardData } from "./actions";
 
 export default function TelegramMiniApp() {
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<{ balance: number, campaigns: any[] } | null>(null);
 
   useEffect(() => {
     // Only run auth if we are strictly unauthenticated
@@ -31,6 +34,10 @@ export default function TelegramMiniApp() {
         // Not opened inside Telegram
         setError("Please open this app inside Telegram.");
       }
+    }
+
+    if (status === "authenticated") {
+      getTelegramDashboardData().then(data => setDashboardData(data)).catch(console.error);
     }
   }, [status]);
 
@@ -67,14 +74,14 @@ export default function TelegramMiniApp() {
   return (
     <div className="pb-24">
       {/* Top Bar */}
-      <div className="px-5 pt-6 pb-4 flex justify-between items-center sticky top-0 bg-[#0B0F19]/80 backdrop-blur-lg z-10">
+      <div className="px-5 pt-14 pb-4 flex justify-between items-center sticky top-0 bg-[#0B0F19]/80 backdrop-blur-lg z-10">
         <div>
           <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Welcome back</p>
           <h1 className="text-xl font-bold text-white mt-0.5">{session?.user?.email?.split('@')[0].replace('telegram_', 'User ')}</h1>
         </div>
-        <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
+        <Link href="/telegram/profile" className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
           <User className="w-5 h-5 text-slate-400" />
-        </div>
+        </Link>
       </div>
 
       <div className="px-5 space-y-6 mt-2">
@@ -86,7 +93,7 @@ export default function TelegramMiniApp() {
             <div>
               <p className="text-emerald-100 text-sm font-medium">Available Balance</p>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-3xl font-black text-white">0.00</span>
+                <span className="text-3xl font-black text-white">{dashboardData?.balance?.toFixed(2) || "0.00"}</span>
                 <span className="text-emerald-200 font-bold text-sm">ETB</span>
               </div>
             </div>
@@ -96,29 +103,35 @@ export default function TelegramMiniApp() {
           </div>
           
           <div className="mt-6 flex gap-3">
-            <button className="flex-1 bg-white text-emerald-600 font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95">
+            <Link href="/dashboard/wallet?action=deposit" className="flex-1 bg-white text-emerald-600 font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 text-center">
               Deposit
-            </button>
-            <button className="flex-1 bg-emerald-700/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 border border-emerald-400/30">
+            </Link>
+            <Link href="/dashboard/wallet?action=withdraw" className="flex-1 bg-emerald-700/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 border border-emerald-400/30 text-center">
               Withdraw
-            </button>
+            </Link>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
+        <div className="grid grid-cols-3 gap-3">
+          <Link href="/telegram/campaigns" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
             <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
               <Ticket className="w-6 h-6" />
             </div>
-            <span className="text-white font-medium text-sm">Buy Tickets</span>
-          </div>
-          <div className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
+            <span className="text-white font-medium text-sm">Play</span>
+          </Link>
+          <Link href="/telegram/wins" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
             <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center">
               <Trophy className="w-6 h-6" />
             </div>
             <span className="text-white font-medium text-sm">My Wins</span>
-          </div>
+          </Link>
+          <Link href="/telegram/referrals" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
+            <span className="text-white font-medium text-sm text-center leading-tight">Refer<br/>& Earn</span>
+          </Link>
         </div>
 
         {/* Active Campaigns */}
@@ -129,25 +142,33 @@ export default function TelegramMiniApp() {
           </div>
           
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 border border-white/5">
-                  <span className="text-slate-500 text-xs font-bold">IMAGE</span>
+            {dashboardData?.campaigns?.map((campaign: any) => (
+              <Link href={`/telegram/campaigns/${campaign.slug}`} key={campaign.id} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4 active:bg-slate-800 transition-colors">
+                <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
+                  {campaign.image ? (
+                    <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-slate-500 text-xs font-bold">IMG</span>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-white font-bold text-sm">iPhone 16 Pro Max</h3>
+                  <h3 className="text-white font-bold text-sm">{campaign.title}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-emerald-400 font-bold text-xs">250 ETB</span>
+                    <span className="text-emerald-400 font-bold text-xs">{campaign.ticketPrice} ETB</span>
                     <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                    <span className="text-slate-500 text-xs font-medium">Draw in 2 days</span>
+                    <span className="text-slate-500 text-xs font-medium">
+                      {new Date(campaign.drawDate).toLocaleDateString()}
+                    </span>
                   </div>
-                  {/* Progress Bar */}
                   <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '65%' }}></div>
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (campaign.entriesCount / campaign.maxEntries) * 100)}%` }}></div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
+            {dashboardData?.campaigns?.length === 0 && (
+              <p className="text-slate-500 text-sm text-center py-4">No active campaigns at the moment.</p>
+            )}
           </div>
         </div>
       </div>
