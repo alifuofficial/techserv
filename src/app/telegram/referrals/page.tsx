@@ -12,6 +12,12 @@ export default async function ReferralsPage() {
   const referralCode = `MILKY-${session?.user?.id?.substring(0,6).toUpperCase()}`;
   const referralLink = `https://t.me/milkytechonlinebot?start=${referralCode}`;
   
+  const referredUsers = session?.user?.id ? await db.user.findMany({
+    where: { referredById: session.user.id as string },
+    select: { id: true, name: true, createdAt: true, email: true },
+    orderBy: { createdAt: 'desc' }
+  }) : [];
+
   return (
     <div className="pb-24 px-5">
       <div className="pt-14 pb-6 flex items-center gap-4 sticky top-0 bg-[#0B0F19]/80 backdrop-blur-lg z-10">
@@ -35,14 +41,35 @@ export default async function ReferralsPage() {
       </div>
 
       <div className="mt-8">
-        <h3 className="text-lg font-bold text-white mb-4">Your Referrals</h3>
-        <div className="bg-[#121826] border border-slate-800/60 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-slate-500" />
+        <h3 className="text-lg font-bold text-white mb-4">Your Referrals ({referredUsers.length})</h3>
+        {referredUsers.length === 0 ? (
+          <div className="bg-[#121826] border border-slate-800/60 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+              <Users className="w-8 h-8 text-slate-500" />
+            </div>
+            <p className="text-white font-bold mb-1">No referrals yet</p>
+            <p className="text-slate-400 text-sm">Share your link to start earning!</p>
           </div>
-          <p className="text-white font-bold mb-1">No referrals yet</p>
-          <p className="text-slate-400 text-sm">Share your link to start earning!</p>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            {referredUsers.map((user) => (
+              <div key={user.id} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center">
+                    <Users className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">{user.name || user.email?.split('@')[0].replace('telegram_', 'User ')}</p>
+                    <p className="text-slate-400 text-xs">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full">
+                  +10 ETB
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

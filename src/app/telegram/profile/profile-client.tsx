@@ -6,7 +6,7 @@ import Link from "next/link";
 import { updateProfile } from "./actions";
 
 export default function ProfileClient({ dbUser, telegramId }: { dbUser: any, telegramId: string }) {
-  const [name, setName] = useState(dbUser.name || "");
+  const [name, setName] = useState(dbUser?.name || "");
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +34,7 @@ export default function ProfileClient({ dbUser, telegramId }: { dbUser: any, tel
           <User className="w-10 h-10 text-emerald-500" />
         </div>
         <h2 className="text-xl font-bold text-white mb-1">{name || "User " + telegramId}</h2>
-        <p className="text-slate-400 text-sm">{dbUser.email}</p>
+        <p className="text-slate-400 text-sm">{dbUser?.email}</p>
         <span className="mt-3 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full uppercase tracking-widest">VERIFIED</span>
       </div>
 
@@ -54,7 +54,7 @@ export default function ProfileClient({ dbUser, telegramId }: { dbUser: any, tel
             />
             <button 
               onClick={handleSave}
-              disabled={isSaving || name === (dbUser.name || "")}
+              disabled={isSaving || name === (dbUser?.name || "")}
               className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white p-3 rounded-xl transition-colors flex items-center justify-center shrink-0 w-12"
             >
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}

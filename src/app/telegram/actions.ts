@@ -12,7 +12,7 @@ export async function getTelegramDashboardData() {
 
   const user = await db.user.findUnique({
     where: { email: session.user.email },
-    select: { balance: true }
+    select: { id: true, balance: true }
   });
 
   const campaigns = await db.campaign.findMany({
@@ -21,8 +21,18 @@ export async function getTelegramDashboardData() {
     take: 5
   });
 
+  const ticketsCount = user ? await db.entry.count({
+    where: { userId: user.id }
+  }) : 0;
+
+  const winsCount = user ? await db.winner.count({
+    where: { userId: user.id }
+  }) : 0;
+
   return {
     balance: user?.balance || 0,
-    campaigns
+    campaigns,
+    ticketsCount,
+    winsCount
   };
 }

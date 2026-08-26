@@ -117,12 +117,35 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
+          let referredById = null;
+          try {
+            const params = new URLSearchParams(credentials.initData);
+            const startParam = params.get('start_param');
+            if (startParam && startParam.startsWith('MILKY-')) {
+              const referrerIdFragment = startParam.replace('MILKY-', '');
+              const referrer = await db.user.findFirst({
+                where: {
+                  id: {
+                    startsWith: referrerIdFragment,
+                    mode: 'insensitive'
+                  }
+                }
+              });
+              if (referrer) {
+                referredById = referrer.id;
+              }
+            }
+          } catch (e) {
+            console.error("Referral error", e);
+          }
+
           user = await db.user.create({
             data: {
               name: telegramUser.first_name + (telegramUser.last_name ? ` ${telegramUser.last_name}` : ''),
               email: `telegram_${telegramId}@milkytech.online`,
               role: 'USER',
               password: '', // No password for telegram users
+              referredById: referredById
             }
           });
         }

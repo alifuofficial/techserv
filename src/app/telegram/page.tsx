@@ -9,7 +9,7 @@ import { getTelegramDashboardData } from "./actions";
 export default function TelegramMiniApp() {
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<{ balance: number, campaigns: any[] } | null>(null);
+  const [dashboardData, setDashboardData] = useState<{ balance: number, campaigns: any[], ticketsCount: number, winsCount: number } | null>(null);
 
   useEffect(() => {
     // Only run auth if we are strictly unauthenticated
@@ -114,17 +114,27 @@ export default function TelegramMiniApp() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3">
-          <Link href="/telegram/campaigns" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
-            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+          <Link href="/telegram/tickets" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors relative">
+            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center relative">
               <Ticket className="w-6 h-6" />
+              {dashboardData && dashboardData.ticketsCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#121826]">
+                  {dashboardData.ticketsCount}
+                </div>
+              )}
             </div>
-            <span className="text-white font-medium text-sm">Play</span>
+            <span className="text-white font-medium text-sm text-center leading-tight">My<br/>Tickets</span>
           </Link>
-          <Link href="/telegram/wins" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center">
+          <Link href="/telegram/wins" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors relative">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center relative">
               <Trophy className="w-6 h-6" />
+              {dashboardData && dashboardData.winsCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#121826]">
+                  {dashboardData.winsCount}
+                </div>
+              )}
             </div>
-            <span className="text-white font-medium text-sm">My Wins</span>
+            <span className="text-white font-medium text-sm text-center leading-tight">My<br/>Wins</span>
           </Link>
           <Link href="/telegram/referrals" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors">
             <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
