@@ -23,6 +23,8 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         cbe_enabled: settings.cbeEnabled.toString(),
         verify_et_api_key: settings.verifyEtApiKey,
         telegram_bot_token: settings.telegramBotToken,
+        telegram_bot_username: settings.telegramBotUsername,
+        telegram_auth_only: settings.telegramAuthOnly.toString(),
         platform_name: settings.platformName,
         support_email: settings.supportEmail,
       });
@@ -133,6 +135,22 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-slate-200 rounded-2xl hover:border-slate-300 transition-colors gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-lg">Telegram Login Only (Web)</h4>
+                  <p className="text-sm text-slate-500">Disable traditional email registration/login on the Web version.</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer self-start sm:self-center">
+                <input type="checkbox" checked={settings.telegramAuthOnly} onChange={(e) => updateSetting('telegramAuthOnly', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -172,6 +190,19 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 placeholder="123456789:ABCDefghIJKLmnopQRSTuvwxyz"
                 value={settings.telegramBotToken} 
                 onChange={(e) => updateSetting('telegramBotToken', e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex justify-between">
+                <span>Telegram Bot Username</span>
+                <span className="text-slate-400 font-normal">Required for Web Login Widget (without @)</span>
+              </label>
+              <input 
+                type="text" 
+                placeholder="milkytech_bot"
+                value={settings.telegramBotUsername} 
+                onChange={(e) => updateSetting('telegramBotUsername', e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono" 
               />
             </div>

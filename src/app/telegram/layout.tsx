@@ -18,9 +18,11 @@ export default async function TelegramLayout({ children }: { children: React.Rea
 
   return (
     <Providers>
-      <div className="min-h-screen bg-[#0B0F19] text-white selection:bg-emerald-500/30">
-        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
-        {children}
+      <div className="min-h-screen bg-black sm:bg-[#05080f] flex justify-center selection:bg-emerald-500/30">
+        <div className="w-full max-w-md bg-[#0B0F19] min-h-screen relative shadow-2xl overflow-x-hidden border-x border-white/5">
+          <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+          {children}
+        </div>
       </div>
     </Providers>
   );
