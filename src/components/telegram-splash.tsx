@@ -24,7 +24,7 @@ export function TelegramSplash() {
           </p>
 
           <a 
-            href="https://t.me/milkytech_bot" 
+            href="https://t.me/milkytechonlinebot" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-500/25 transition-all transform hover:scale-[1.02]"

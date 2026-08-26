@@ -44,7 +44,7 @@ export function MaintenancePage() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
           <Button variant="outline" className="h-12 px-8 rounded-2xl border-2 font-black gap-2 group" asChild>
-            <Link href="https://t.me/milkytech_online" target="_blank">
+            <Link href="https://t.me/milkytechonlinebot" target="_blank">
               Join Updates
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>

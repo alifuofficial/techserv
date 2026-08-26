@@ -9,7 +9,7 @@ export default async function AdminSettingsPage() {
     cbeEnabled: (await getSystemSetting('cbe_enabled', 'true')) === 'true',
     verifyEtApiKey: await getSystemSetting('verify_et_api_key', ''),
     telegramBotToken: await getSystemSetting('telegram_bot_token', ''),
-    telegramBotUsername: await getSystemSetting('telegram_bot_username', 'milkytech_bot'),
+    telegramBotUsername: await getSystemSetting('telegram_bot_username', 'milkytechonlinebot'),
     telegramAuthOnly: (await getSystemSetting('telegram_auth_only', 'false')) === 'true',
     platformName: await getSystemSetting('platform_name', 'MilkyTech'),
     supportEmail: await getSystemSetting('support_email', 'support@milkytech.online')

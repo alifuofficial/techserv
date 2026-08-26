@@ -10,7 +10,7 @@ export default async function ReferralsPage() {
   
   // Create a placeholder referral code for now based on user id
   const referralCode = `MILKY-${session?.user?.id?.substring(0,6).toUpperCase()}`;
-  const referralLink = `https://t.me/milkytech_bot?start=${referralCode}`;
+  const referralLink = `https://t.me/milkytechonlinebot?start=${referralCode}`;
   
   return (
     <div className="pb-24 px-5">

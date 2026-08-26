@@ -200,7 +200,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
               </label>
               <input 
                 type="text" 
-                placeholder="milkytech_bot"
+                placeholder="milkytechonlinebot"
                 value={settings.telegramBotUsername} 
                 onChange={(e) => updateSetting('telegramBotUsername', e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono" 
