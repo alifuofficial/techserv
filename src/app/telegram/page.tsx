@@ -103,10 +103,10 @@ export default function TelegramMiniApp() {
           </div>
           
           <div className="mt-6 flex gap-3">
-            <Link href="/dashboard/wallet?action=deposit" className="flex-1 bg-white text-emerald-600 font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 text-center">
+            <Link href="/telegram/deposit" className="flex-1 bg-white text-emerald-600 font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 text-center">
               Deposit
             </Link>
-            <Link href="/dashboard/wallet?action=withdraw" className="flex-1 bg-emerald-700/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 border border-emerald-400/30 text-center">
+            <Link href="/telegram/withdraw" className="flex-1 bg-emerald-700/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 border border-emerald-400/30 text-center">
               Withdraw
             </Link>
           </div>

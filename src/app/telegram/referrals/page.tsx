@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { ChevronLeft, Gift, Copy, Users } from "lucide-react";
+import { ChevronLeft, Gift, Users } from "lucide-react";
+import ReferralClient from "./referral-client";
 
 export default async function ReferralsPage() {
   const session = await getServerSession(authOptions);
@@ -29,15 +30,7 @@ export default async function ReferralsPage() {
           <h2 className="text-2xl font-black text-white mb-2">Invite Friends, Get Rewarded</h2>
           <p className="text-indigo-100 text-sm mb-6">Earn 10 ETB for every friend who joins and plays their first campaign.</p>
           
-          <div className="w-full bg-[#0B0F19]/50 rounded-xl p-4 flex items-center justify-between border border-white/10 backdrop-blur-sm">
-            <div className="text-left">
-              <p className="text-indigo-200 text-xs mb-1">Your Invite Link</p>
-              <p className="text-white font-mono text-sm truncate max-w-[200px]">{referralLink}</p>
-            </div>
-            <button className="w-10 h-10 bg-white text-indigo-600 rounded-lg flex items-center justify-center shrink-0 active:scale-95 transition-transform">
-              <Copy className="w-5 h-5" />
-            </button>
-          </div>
+          <ReferralClient referralLink={referralLink} />
         </div>
       </div>
 
