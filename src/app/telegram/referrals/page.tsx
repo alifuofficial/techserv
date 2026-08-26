@@ -8,8 +8,8 @@ export default async function ReferralsPage() {
   const session = await getServerSession(authOptions);
   
   // Create a placeholder referral code for now based on user id
-  const referralCode = \MILKY-\\;
-  const referralLink = \https://t.me/milkytech_bot?start=\\;
+  const referralCode = `MILKY-${session?.user?.id?.substring(0,6).toUpperCase()}`;
+  const referralLink = `https://t.me/milkytech_bot?start=${referralCode}`;
   
   return (
     <div className="pb-24 px-5">
