@@ -112,6 +112,11 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
       });
 
       if (res.ok && res.data.success) {
+        if (typeof res.data.newBalance === "number") {
+          setUser((prev: any) => (prev ? { ...prev, balance: res.data.newBalance } : prev));
+        } else if (provider === "WALLET") {
+          setUser((prev: any) => (prev ? { ...prev, balance: Math.max(0, prev.balance - totalPrice) } : prev));
+        }
         setSuccessData({
           tickets: res.data.tickets,
           message: res.data.message,

@@ -26,6 +26,13 @@ export default function TelegramMiniApp() {
     // Initial fetch on mount
     loadDashboard();
 
+    const handleFocus = () => {
+      loadDashboard();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.ready();
@@ -42,6 +49,11 @@ export default function TelegramMiniApp() {
         loadDashboard();
       }).catch(console.error);
     }
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
   }, [status]);
 
   const userName =

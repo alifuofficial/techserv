@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
       const purchaseResult = await db.$transaction(async (tx) => {
         // Debit Ledger
-        await tx.ledgerAccount.update({
+        const updatedLedger = await tx.ledgerAccount.update({
           where: { id: ledger.id },
           data: { balance: { decrement: totalAmount } },
         });
@@ -112,16 +112,24 @@ export async function POST(req: Request) {
           createdTickets.push(`TKT-${prefix}-${entryNum}`);
         }
 
-        return { payment, tickets: createdTickets };
+        return { payment, tickets: createdTickets, newBalance: updatedLedger.balance };
       });
 
-      return NextResponse.json({
-        success: true,
-        message: "Purchase successful! Your entry tickets are ready.",
-        tickets: purchaseResult.tickets,
-        totalAmount,
-        currency: campaign.currency,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Purchase successful! Your entry tickets are ready.",
+          tickets: purchaseResult.tickets,
+          totalAmount,
+          currency: campaign.currency,
+          newBalance: purchaseResult.newBalance,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          },
+        }
+      );
     }
 
     // 3. Handle Manual Payment (Telebirr, CBE)
@@ -161,12 +169,19 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      pending: true,
-      message: "Payment submitted with screenshot for review! Your tickets will be generated once verified by admin.",
-      paymentId: manualPayment.id,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        pending: true,
+        message: "Payment submitted with screenshot for review! Your tickets will be generated once verified by admin.",
+        paymentId: manualPayment.id,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("[POST /api/telegram/checkout error]", error);
     return NextResponse.json({ success: false, error: error.message || "Checkout failed" }, { status: 500 });

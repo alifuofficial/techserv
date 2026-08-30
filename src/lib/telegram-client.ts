@@ -1,5 +1,6 @@
 /**
- * Client helper to make API requests to /api/telegram/* with automatic x-telegram-init-data attachment.
+ * Client helper to make API requests to /api/telegram/* with automatic x-telegram-init-data attachment
+ * and aggressive cache-busting for Telegram WebViews.
  */
 export async function fetchTelegramApi(path: string, options: RequestInit = {}) {
   let initData = "";
@@ -12,6 +13,9 @@ export async function fetchTelegramApi(path: string, options: RequestInit = {}) 
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
     ...(options.headers as Record<string, string> || {}),
   };
 
@@ -19,8 +23,13 @@ export async function fetchTelegramApi(path: string, options: RequestInit = {}) 
     headers["x-telegram-init-data"] = initData;
   }
 
-  const res = await fetch(path, {
+  const isGet = !options.method || options.method.toUpperCase() === "GET";
+  const separator = path.includes("?") ? "&" : "?";
+  const finalUrl = isGet ? `${path}${separator}_t=${Date.now()}` : path;
+
+  const res = await fetch(finalUrl, {
     ...options,
+    cache: "no-store",
     headers,
   });
 

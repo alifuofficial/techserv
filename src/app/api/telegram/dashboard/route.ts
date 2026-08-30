@@ -35,17 +35,30 @@ export async function GET(req: Request) {
 
     const user = await getTelegramUserFromRequest(req);
 
+    const headers = {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+    };
+
     if (!user) {
-      return NextResponse.json({
-        success: true,
-        authenticated: false,
-        balance: 0,
-        campaigns: mappedCampaigns,
-        ticketsCount: 0,
-        winsCount: 0,
-        user: null,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          authenticated: false,
+          balance: 0,
+          campaigns: mappedCampaigns,
+          ticketsCount: 0,
+          winsCount: 0,
+          user: null,
+        },
+        { headers }
+      );
     }
+
+    // Always fetch fresh ledger balance directly from database
+    const freshLedger = await db.ledgerAccount.findUnique({
+      where: { userId: user.id },
+    });
 
     const userEntries = await db.entry.findMany({
       where: { userId: user.id },
@@ -64,24 +77,27 @@ export async function GET(req: Request) {
           })
         : 0;
 
-    return NextResponse.json({
-      success: true,
-      authenticated: true,
-      balance: user.ledgerAccount?.balance || 0,
-      campaigns: mappedCampaigns,
-      ticketsCount: userEntries.length,
-      winsCount,
-      user: {
-        id: user.id,
-        name: user.name || "",
-        email: user.email || "",
+    return NextResponse.json(
+      {
+        success: true,
+        authenticated: true,
+        balance: freshLedger?.balance || 0,
+        campaigns: mappedCampaigns,
+        ticketsCount: userEntries.length,
+        winsCount,
+        user: {
+          id: user.id,
+          name: user.name || "",
+          email: user.email || "",
+        },
       },
-    });
+      { headers }
+    );
   } catch (error: any) {
     console.error("[GET /api/telegram/dashboard error]", error);
     return NextResponse.json(
       { success: false, error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }
