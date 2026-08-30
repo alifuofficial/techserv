@@ -1,62 +1,64 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getTelegramUserFromRequest } from '@/lib/telegram-auth';
 
 export async function POST(req: Request) {
   try {
+    const user = await getTelegramUserFromRequest(req);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized. Please open via Telegram.' }, { status: 401 });
+    }
+
     const body = await req.json();
-    const { amount, provider, txId, senderName, date, screenshot } = body;
+    const { amount, provider = 'TELEBIRR', txId, senderName, screenshot } = body;
 
-    if (!amount || !provider || !txId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const depositAmount = Number(amount);
+    if (!depositAmount || depositAmount < 50) {
+      return NextResponse.json({ error: 'Minimum deposit amount is 50 ETB' }, { status: 400 });
     }
 
-    // Since we don't have NextAuth session perfectly set up in this demo handler, 
-    // we will attach the deposit to the demo "User" we created.
-    let user = await db.user.findUnique({
-      where: { email: 'user@milkytech.online' }
-    });
+    if (!txId || !txId.trim()) {
+      return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
+    }
 
-    if (!user) {
-        // Fallback if demo user isn't found
-        user = await db.user.findFirst({ where: { role: 'USER' }});
+    if (!screenshot) {
+      return NextResponse.json({ error: 'Payment receipt screenshot is required' }, { status: 400 });
     }
-    
-    if (!user) {
-        return NextResponse.json({ error: 'No user found to attach payment to' }, { status: 400 });
-    }
+
+    const cleanTxId = txId.trim();
 
     // To prevent duplicate transaction IDs for the same provider
     const existingPayment = await db.payment.findUnique({
       where: {
         provider_transactionId: {
           provider,
-          transactionId: txId,
-        }
-      }
+          transactionId: cleanTxId,
+        },
+      },
     });
 
     if (existingPayment) {
-      return NextResponse.json({ error: 'Transaction ID has already been used' }, { status: 400 });
+      return NextResponse.json({ error: 'This Transaction ID has already been submitted' }, { status: 400 });
     }
 
     // Save payment
     const payment = await db.payment.create({
       data: {
         userId: user.id,
-        amount: Number(amount), // Storing direct amount for MVP simplicity
+        amount: depositAmount,
         currency: 'ETB',
         provider,
-        transactionId: txId,
-        screenshotUrl: screenshot, // storing base64 or null
+        transactionId: cleanTxId,
+        screenshotUrl: screenshot,
         status: 'PENDING',
-        adminNote: `Sender: ${senderName} | Date: ${date}` // Store sender name in adminNote
-      }
+        adminNote: `Deposit via Telegram | Sender: ${senderName || 'N/A'} | User: ${user.name || user.email}`,
+      },
     });
-    
-    return NextResponse.json({ success: true, payment });
 
+    return NextResponse.json({ success: true, payment });
   } catch (error: any) {
     console.error('[WALLET_DEPOSIT_API_ERROR]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to process deposit. Please try again.' }, { status: 500 });
   }
 }

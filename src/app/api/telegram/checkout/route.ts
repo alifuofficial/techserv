@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { campaignId, quantity = 1, provider = "WALLET", txId } = body;
+    const { campaignId, quantity = 1, provider = "WALLET", txId, screenshot, senderName } = body;
 
     const qty = Math.max(1, parseInt(quantity, 10) || 1);
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       if (!ledger || ledger.balance < totalAmount) {
         return NextResponse.json({
           success: false,
-          error: `Insufficient wallet balance. You have ${(ledger?.balance || 0).toFixed(2)} ETB, but need ${totalAmount.toFixed(2)} ETB.`,
+          error: `Insufficient wallet balance. You have ${(ledger?.balance || 0).toFixed(2)} ETB, but need ${totalAmount.toFixed(2)} ETB. Please deposit funds first.`,
         }, { status: 400 });
       }
 
@@ -97,7 +97,6 @@ export async function POST(req: Request) {
 
         let nextNumber = (lastEntry?.entryNumber || 0) + 1;
         const createdTickets: string[] = [];
-
         const prefix = campaign.id.substring(0, 4).toUpperCase();
 
         for (let i = 0; i < qty; i++) {
@@ -126,15 +125,21 @@ export async function POST(req: Request) {
     }
 
     // 3. Handle Manual Payment (Telebirr, CBE)
-    if (!txId) {
+    if (!txId || !txId.trim()) {
       return NextResponse.json({ success: false, error: "Transaction ID is required for manual payment." }, { status: 400 });
     }
+
+    if (!screenshot) {
+      return NextResponse.json({ success: false, error: "Payment screenshot receipt is required for manual payment." }, { status: 400 });
+    }
+
+    const cleanTxId = txId.trim();
 
     const existingPayment = await db.payment.findUnique({
       where: {
         provider_transactionId: {
           provider,
-          transactionId: txId.trim(),
+          transactionId: cleanTxId,
         },
       },
     });
@@ -149,15 +154,17 @@ export async function POST(req: Request) {
         amount: totalAmount,
         currency: campaign.currency,
         provider,
-        transactionId: txId.trim(),
+        transactionId: cleanTxId,
+        screenshotUrl: screenshot,
         status: "PENDING",
+        adminNote: `Manual checkout for ${qty} ticket(s) of ${campaign.title} | Sender: ${senderName || 'N/A'}`,
       },
     });
 
     return NextResponse.json({
       success: true,
       pending: true,
-      message: "Payment submitted for review. Your tickets will be generated once verified.",
+      message: "Payment submitted with screenshot for review! Your tickets will be generated once verified by admin.",
       paymentId: manualPayment.id,
     });
   } catch (error: any) {
