@@ -2,49 +2,25 @@
 
 import { 
   Users, Trophy, Ticket, Wallet, Calendar, ArrowUpRight, 
-  MoreVertical, CheckCircle2, ShieldAlert, CircleDashed, CheckCircle, Database, Phone, HardDrive, Award
+  MoreVertical, CheckCircle2, ShieldAlert, CircleDashed, CheckCircle, Database, Phone, HardDrive, Award, Sparkles
 } from "lucide-react";
 import { 
-  LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Area, AreaChart,
-  PieChart, Pie, Cell
+  ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Area, AreaChart,
+  PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 
-// Dummy Data matching the screenshot exactly
-const revenueData = [
-  { name: 'May 18', value: 300000 },
-  { name: 'May 21', value: 600000 },
-  { name: 'May 25', value: 450000 },
-  { name: 'May 28', value: 900000 },
-  { name: 'Jun 1', value: 750000 },
-  { name: 'Jun 4', value: 1300000 },
-  { name: 'Jun 8', value: 1100000 },
-  { name: 'Jun 11', value: 1600000 },
-  { name: 'Jun 16', value: 1400000 },
-];
-
-const pieData = [
-  { name: 'Active', value: 10, color: '#10B981' },
-  { name: 'Ending Soon', value: 5, color: '#F59E0B' },
-  { name: 'Upcoming', value: 2, color: '#3B82F6' },
-  { name: 'Paused', value: 1, color: '#94A3B8' },
-];
-
-const topCampaigns = [
-  { name: 'iPhone 17 Pro Max 256GB', time: 'Ends in 5d 08h', img: '/images/iphone.jpg', sold: '2,560', total: '3,000', rev: '256,000 ETB', conv: '85.3%', status: 'Active', statusColor: 'text-emerald-600 bg-emerald-100' },
-  { name: 'Tesla Model 3 Standard', time: 'Ends in 12d 22h', img: '/images/hero.jpg', sold: '1,890', total: '2,500', rev: '189,000 ETB', conv: '75.6%', status: 'Active', statusColor: 'text-emerald-600 bg-emerald-100' },
-  { name: 'MacBook Pro 16" M4', time: 'Ends in 8d 14h', img: '/images/macbook.jpg', sold: '1,245', total: '2,000', rev: '149,400 ETB', conv: '62.3%', status: 'Ending Soon', statusColor: 'text-amber-600 bg-amber-100' },
-  { name: 'PlayStation 5 Bundle', time: 'Ends in 15d 09h', img: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=200&auto=format&fit=crop', sold: '980', total: '1,500', rev: '117,600 ETB', conv: '65.3%', status: 'Active', statusColor: 'text-emerald-600 bg-emerald-100' },
-  { name: 'Samsung Galaxy S25 Ultra', time: 'Ends in 3d 20h', img: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=200&auto=format&fit=crop', sold: '756', total: '1,000', rev: '90,720 ETB', conv: '75.6%', status: 'Ending Soon', statusColor: 'text-amber-600 bg-amber-100' },
-];
-
-const miniChartData1 = [{v:10},{v:15},{v:8},{v:22},{v:18},{v:30},{v:25},{v:35}];
-const miniChartData2 = [{v:30},{v:25},{v:35},{v:15},{v:20},{v:10},{v:28},{v:22}];
+const miniChartData1 = [{v:10},{v:15},{v:12},{v:22},{v:18},{v:30},{v:25},{v:35}];
+const miniChartData2 = [{v:4},{v:6},{v:5},{v:8},{v:10},{v:9},{v:12},{v:15}];
 const miniChartData3 = [{v:5},{v:12},{v:8},{v:20},{v:15},{v:35},{v:25},{v:40}];
 const miniChartData4 = [{v:20},{v:30},{v:25},{v:45},{v:35},{v:50},{v:40},{v:60}];
 
 export default function AdminDashboardClient({ data }: { data: any }) {
+  const totalCampaignPie = data.pieData?.reduce((acc: number, item: any) => acc + item.value, 0) || 1;
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
@@ -54,10 +30,14 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           </h1>
           <p className="text-slate-500 text-sm mt-1">Here's what's happening with your platform today.</p>
         </div>
-        <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
-          <Calendar className="w-4 h-4 text-slate-400" />
-          May 18 - Jun 16, 2025
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/draws"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
+          >
+            <Sparkles className="w-4 h-4" /> Live Draw Room
+          </Link>
+        </div>
       </div>
 
       {/* 4 Stats Cards */}
@@ -75,8 +55,8 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> 12.5%</span>
-              <span className="text-[10px] text-slate-400">from last month</span>
+              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Live</span>
+              <span className="text-[10px] text-slate-400">registered accounts</span>
             </div>
             <div className="w-24 h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -101,8 +81,8 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> 4</span>
-              <span className="text-[10px] text-slate-400">new this week</span>
+              <span className="text-purple-600 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Live Draws</span>
+              <span className="text-[10px] text-slate-400">ready for participation</span>
             </div>
             <div className="w-24 h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -121,14 +101,14 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <Ticket className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Total Campaigns</div>
-              <div className="text-2xl font-bold text-slate-900">{data.totalCampaigns}</div>
+              <div className="text-sm font-medium text-slate-500 mb-1">Tickets Sold</div>
+              <div className="text-2xl font-bold text-slate-900">{data.totalTicketsCount.toLocaleString()}</div>
             </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> 8.1%</span>
-              <span className="text-[10px] text-slate-400">vs last month</span>
+              <span className="text-blue-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> {data.totalCampaigns}</span>
+              <span className="text-[10px] text-slate-400">total campaigns</span>
             </div>
             <div className="w-24 h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -148,13 +128,15 @@ export default function AdminDashboardClient({ data }: { data: any }) {
             </div>
             <div>
               <div className="text-sm font-medium text-slate-500 mb-1">Total Revenue</div>
-              <div className="text-2xl font-bold text-slate-900">{(data.totalRevenue).toLocaleString()}<span className="text-sm text-slate-500 ml-1">ETB</span></div>
+              <div className="text-2xl font-bold text-slate-900">
+                {(data.totalRevenue).toLocaleString()}<span className="text-sm text-slate-500 ml-1">ETB</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> 18.9%</span>
-              <span className="text-[10px] text-slate-400">from last month</span>
+              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Approved</span>
+              <span className="text-[10px] text-slate-400">verified payments</span>
             </div>
             <div className="w-24 h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -170,25 +152,22 @@ export default function AdminDashboardClient({ data }: { data: any }) {
       {/* Middle Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Main Chart */}
+        {/* Main Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-base font-bold text-slate-900 mb-2">Revenue Overview</h2>
               <div className="flex items-end gap-3">
-                <span className="text-3xl font-bold text-slate-900">15,680,350 ETB</span>
-                <span className="text-emerald-500 text-sm font-bold flex items-center mb-1"><ArrowUpRight className="w-4 h-4 mr-0.5" /> 18.9% <span className="text-slate-400 font-medium ml-1">vs last month</span></span>
+                <span className="text-3xl font-bold text-slate-900">{data.totalRevenue.toLocaleString()} ETB</span>
+                <span className="text-emerald-500 text-sm font-bold flex items-center mb-1">
+                  <ArrowUpRight className="w-4 h-4 mr-0.5" /> Live Verified
+                </span>
               </div>
             </div>
-            <select className="bg-white border border-slate-200 text-slate-600 text-sm rounded-lg px-3 py-1.5 focus:outline-none">
-              <option>This Month</option>
-              <option>Last Month</option>
-              <option>This Year</option>
-            </select>
           </div>
           <div className="flex-1 min-h-[250px] w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <AreaChart data={data.revenueData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
@@ -212,97 +191,70 @@ export default function AdminDashboardClient({ data }: { data: any }) {
         {/* Donut Chart & Feed Column */}
         <div className="space-y-6">
           {/* Campaign Performance */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-[calc(50%-12px)]">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-base font-bold text-slate-900">Campaign Performance</h2>
-              <button className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</button>
+              <h2 className="text-base font-bold text-slate-900">Campaign Status</h2>
+              <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
             </div>
-            <div className="flex items-center h-full pb-6">
-              <div className="w-1/2 h-40 relative">
+            <div className="flex items-center h-full pb-2 pt-2">
+              <div className="w-1/2 h-36 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
-                      {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                    <Pie data={data.pieData} innerRadius={40} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
+                      {data.pieData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-slate-900 leading-none">18</span>
+                  <span className="text-xl font-bold text-slate-900 leading-none">{data.totalCampaigns}</span>
                   <span className="text-[10px] text-slate-500 font-medium">Total</span>
                 </div>
               </div>
-              <div className="w-1/2 pl-4 space-y-3">
-                {pieData.map((item, i) => (
+              <div className="w-1/2 pl-4 space-y-2">
+                {data.pieData.map((item: any, i: number) => (
                   <div key={i} className="flex flex-col">
                     <div className="flex items-center gap-2 mb-0.5">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
                       <span className="text-xs font-semibold text-slate-700">{item.name}</span>
                     </div>
-                    <div className="text-[11px] text-slate-500 ml-4">{item.value} ({Math.round(item.value/18*100)}%)</div>
+                    <div className="text-[11px] text-slate-500 ml-4">
+                      {item.value} ({Math.round((item.value / totalCampaignPie) * 100)}%)
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-[calc(50%-12px)] flex flex-col">
+          {/* Real Recent Activity */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
             <div className="flex justify-between items-center mb-4 shrink-0">
-              <h2 className="text-base font-bold text-slate-900">Recent Activity</h2>
-              <button className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</button>
+              <h2 className="text-base font-bold text-slate-900">Recent Live Activity</h2>
             </div>
-            <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-1">
-              
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500">
-                  <Trophy className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-700 leading-tight">New campaign <b>"iPhone 17 Pro Max"</b> created by merchant TechStore</div>
-                  <div className="text-[10px] text-slate-400 mt-1">2m ago</div>
-                </div>
-              </div>
+            <div className="space-y-3.5 overflow-y-auto custom-scrollbar pr-1 max-h-[220px]">
+              {data.activities?.map((act: any, idx: number) => {
+                const timeAgo = formatDistanceToNow(new Date(act.createdAt), { addSuffix: true });
+                return (
+                  <div key={idx} className="flex gap-3 items-start">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      act.type === 'USER' ? 'bg-blue-50 text-blue-500' :
+                      act.type === 'PAYMENT' ? 'bg-emerald-50 text-emerald-500' : 'bg-purple-50 text-purple-500'
+                    }`}>
+                      {act.type === 'USER' && <Users className="w-4 h-4" />}
+                      {act.type === 'PAYMENT' && <Wallet className="w-4 h-4" />}
+                      {act.type === 'WINNER' && <Award className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{act.title}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{act.subtitle} • {timeAgo}</div>
+                    </div>
+                  </div>
+                );
+              })}
 
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center shrink-0 text-purple-500">
-                  <Wallet className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-700 leading-tight">Payment received<br/><span className="text-emerald-600 font-medium">125 ETB</span> from user @alex_90</div>
-                  <div className="text-[10px] text-slate-400 mt-1">5m ago</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-blue-500">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-700 leading-tight">New user registered<br/><span className="text-slate-500">@mike_eth joined the platform</span></div>
-                  <div className="text-[10px] text-slate-400 mt-1">12m ago</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center shrink-0 text-amber-500">
-                  <CircleDashed className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-700 leading-tight">Campaign <b>"Tesla Model 3"</b> has ended</div>
-                  <div className="text-[10px] text-slate-400 mt-1">25m ago</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500">
-                  <Award className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-700 leading-tight">Winner selected<br/><span className="text-slate-500">@sara_won won MacBook Pro</span></div>
-                  <div className="text-[10px] text-slate-400 mt-1">1h ago</div>
-                </div>
-              </div>
-
+              {(!data.activities || data.activities.length === 0) && (
+                <p className="text-xs text-slate-400 py-4 text-center">No recent activity recorded yet.</p>
+              )}
             </div>
           </div>
         </div>
@@ -311,11 +263,11 @@ export default function AdminDashboardClient({ data }: { data: any }) {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Table */}
+        {/* Real Top Performing Campaigns Table */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-base font-bold text-slate-900">Top Performing Campaigns</h2>
-            <button className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All Campaigns</button>
+            <h2 className="text-base font-bold text-slate-900">Active & Recent Campaigns</h2>
+            <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
           </div>
           
           <div className="overflow-x-auto">
@@ -325,23 +277,24 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                   <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-2/5">Campaign</th>
                   <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entries Sold</th>
                   <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Conversion</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progress</th>
                   <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
-                  <th className="pb-3"></th>
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {(data.campaigns.length > 0 ? data.campaigns : topCampaigns).map((camp: any, i: number) => (
+                {data.campaigns?.map((camp: any, i: number) => (
                   <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         {camp.img ? (
                           <img src={camp.img} alt={camp.name} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-bold border border-slate-200">IMG</div>
+                          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold border border-emerald-100">
+                            <Trophy className="w-5 h-5" />
+                          </div>
                         )}
-                        <div>
-                          <div className="font-bold text-slate-900">{camp.name}</div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 truncate max-w-[180px]">{camp.name}</div>
                           <div className="text-[10px] text-slate-400">{camp.time}</div>
                         </div>
                       </div>
@@ -352,102 +305,78 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                     <td className="py-4 font-bold text-slate-700">{camp.rev?.toLocaleString()} ETB</td>
                     <td className="py-4 font-semibold text-slate-700">{camp.conv}</td>
                     <td className="py-4 text-center">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${camp.status === 'ACTIVE' ? 'text-emerald-600 bg-emerald-100' : 'text-slate-600 bg-slate-100'}`}>
+                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
+                        camp.status === 'ACTIVE' ? 'text-emerald-600 bg-emerald-100' :
+                        camp.status === 'COMPLETED' ? 'text-blue-600 bg-blue-100' : 'text-slate-600 bg-slate-100'
+                      }`}>
                         {camp.status}
                       </span>
                     </td>
-                    <td className="py-4 text-right">
-                      <button className="text-slate-400 hover:text-slate-600"><MoreVertical className="w-4 h-4" /></button>
-                    </td>
                   </tr>
                 ))}
+
+                {(!data.campaigns || data.campaigns.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-xs text-slate-400">No campaigns found.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          <div className="mt-4 text-[11px] text-slate-400">Showing 5 of 18 campaigns</div>
         </div>
 
-        {/* Right side widgets */}
+        {/* Real Payment Methods Breakdown */}
         <div className="space-y-6">
-          {/* Payment Methods */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-base font-bold text-slate-900">Payment Methods</h2>
-              <button className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</button>
+              <h2 className="text-base font-bold text-slate-900">Payment Breakdown</h2>
+              <Link href="/admin/payments" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
             </div>
             
             <div className="space-y-5">
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700 flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-emerald-500"/> TeleBirr</span>
-                  <div className="text-slate-400"><span className="text-slate-700 font-bold">8,250,000 ETB</span> (52.6%)</div>
+              {data.paymentMethods?.map((pm: any, idx: number) => (
+                <div key={idx}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-semibold text-slate-700 flex items-center gap-2">
+                      {pm.icon === "telebirr" && <Phone className="w-3.5 h-3.5 text-emerald-500" />}
+                      {pm.icon === "cbe" && <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />}
+                      {pm.icon === "wallet" && <Wallet className="w-3.5 h-3.5 text-emerald-600" />}
+                      {pm.name}
+                    </span>
+                    <div className="text-slate-400">
+                      <span className="text-slate-700 font-bold">{pm.amount.toLocaleString()} ETB</span> ({pm.percentage}%)
+                    </div>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(2, pm.percentage)}%`, backgroundColor: pm.color }}></div>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{width: '52.6%'}}></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700 flex items-center gap-2"><ShieldAlert className="w-3.5 h-3.5 text-blue-500"/> CBE Birr</span>
-                  <div className="text-slate-400"><span className="text-slate-700 font-bold">4,120,300 ETB</span> (26.3%)</div>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{width: '26.3%'}}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700 flex items-center gap-2"><Database className="w-3.5 h-3.5 text-purple-500"/> Bank Transfer</span>
-                  <div className="text-slate-400"><span className="text-slate-700 font-bold">2,180,050 ETB</span> (13.9%)</div>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-purple-500 h-full rounded-full" style={{width: '13.9%'}}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700 flex items-center gap-2"><HardDrive className="w-3.5 h-3.5 text-slate-500"/> Other Methods</span>
-                  <div className="text-slate-400"><span className="text-slate-700 font-bold">1,130,000 ETB</span> (7.2%)</div>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-slate-400 h-full rounded-full" style={{width: '7.2%'}}></div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* System Health */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-base font-bold text-slate-900">System Health</h2>
-              <button className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View Details</button>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-bold text-slate-900">System Status</h2>
             </div>
             
             <div className="space-y-3">
               <div className="flex justify-between items-center py-1">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Database
+                  <CheckCircle className="w-4 h-4 text-emerald-500" /> PostgreSQL Database
                 </div>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
               </div>
               <div className="flex justify-between items-center py-1">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Payment Gateway
+                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Telegram Mini App & Bot
                 </div>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
               </div>
               <div className="flex justify-between items-center py-1">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Telegram Bot
-                </div>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Storage
+                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Provably Fair RNG
                 </div>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
               </div>
@@ -457,11 +386,11 @@ export default function AdminDashboardClient({ data }: { data: any }) {
         </div>
       </div>
 
-      {/* Footer text matching screenshot */}
-      <div className="flex flex-col sm:flex-row justify-between items-center pt-2 pb-6 text-[11px] text-slate-400">
-        <p>© 2025 MilkyTech. All rights reserved.</p>
-        <p className="flex items-center gap-1 mt-2 sm:mt-0">
-          Built with <span className="text-red-500">❤️</span> for winners everywhere.
+      {/* Footer */}
+      <div className="flex flex-col sm:flex-row justify-between items-center pt-4 text-[11px] text-slate-400 border-t border-slate-200/60">
+        <p>© {new Date().getFullYear()} MilkyTech. All rights reserved.</p>
+        <p className="flex items-center gap-1 mt-2 sm:mt-0 font-medium">
+          MilkyTech Platform Portal
         </p>
       </div>
 

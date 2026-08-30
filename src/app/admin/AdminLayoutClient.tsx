@@ -48,6 +48,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           <nav className="space-y-1">
             {[
               { icon: Trophy, label: "Campaigns", href: "/admin/campaigns" },
+              { icon: Sparkles, label: "Live Draw Room", href: "/admin/draws" },
               { icon: Ticket, label: "Entries", href: "/admin/entries" },
               { icon: Users, label: "Users", href: "/admin/users" },
               { icon: Wallet, label: "Payments", href: "/admin/payments" },
