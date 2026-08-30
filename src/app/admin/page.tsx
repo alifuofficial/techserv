@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import AdminDashboardClient from "./admin-client";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +19,16 @@ export default async function AdminDashboardPage() {
     recentUsers,
     recentDraws,
   ] = await Promise.all([
-    db.user.count(),
-    db.campaign.count(),
-    db.campaign.count({ where: { status: "ACTIVE" } }),
-    db.campaign.count({ where: { status: "COMPLETED" } }),
-    db.campaign.count({ where: { status: "DRAFT" } }),
+    db.user.count().catch(() => 0),
+    db.campaign.count().catch(() => 0),
+    db.campaign.count({ where: { status: "ACTIVE" } }).catch(() => 0),
+    db.campaign.count({ where: { status: "COMPLETED" } }).catch(() => 0),
+    db.campaign.count({ where: { status: "DRAFT" } }).catch(() => 0),
     db.payment.aggregate({
       _sum: { amount: true },
       where: { status: "APPROVED" },
-    }),
-    db.entry.count(),
+    }).catch(() => ({ _sum: { amount: 0 } })),
+    db.entry.count().catch(() => 0),
     db.campaign.findMany({
       include: {
         _count: {
@@ -37,7 +37,7 @@ export default async function AdminDashboardPage() {
       },
       orderBy: { createdAt: "desc" },
       take: 6,
-    }),
+    }).catch(() => []),
     db.payment.findMany({
       where: { status: "APPROVED" },
       select: {
@@ -46,19 +46,19 @@ export default async function AdminDashboardPage() {
         createdAt: true,
       },
       orderBy: { createdAt: "asc" },
-    }),
+    }).catch(() => []),
     db.payment.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { name: true, email: true } },
       },
-    }),
+    }).catch(() => []),
     db.user.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, email: true, createdAt: true },
-    }),
+    }).catch(() => []),
     db.draw.findMany({
       where: { status: "COMPLETED", winningEntryId: { not: null } },
       take: 3,
@@ -66,12 +66,12 @@ export default async function AdminDashboardPage() {
       include: {
         campaign: { select: { title: true } },
       },
-    }),
+    }).catch(() => []),
   ]);
 
-  const totalRevenue = totalRevenueAgg._sum.amount || 0;
+  const totalRevenue = totalRevenueAgg?._sum?.amount || 0;
 
-  // 1. Calculate Real Revenue Chart (Last 7 intervals / days)
+  // 1. Calculate Real Revenue Chart (Last 7 days)
   const revenueByDayMap = new Map<string, number>();
   for (let i = 6; i >= 0; i--) {
     const d = subDays(new Date(), i);
@@ -80,10 +80,12 @@ export default async function AdminDashboardPage() {
   }
 
   approvedPayments.forEach((p) => {
-    const key = format(new Date(p.createdAt), "MMM d");
-    if (revenueByDayMap.has(key)) {
-      revenueByDayMap.set(key, (revenueByDayMap.get(key) || 0) + p.amount);
-    }
+    try {
+      const key = format(new Date(p.createdAt), "MMM d");
+      if (revenueByDayMap.has(key)) {
+        revenueByDayMap.set(key, (revenueByDayMap.get(key) || 0) + (p.amount || 0));
+      }
+    } catch (e) {}
   });
 
   const revenueData = Array.from(revenueByDayMap.entries()).map(([name, value]) => ({
@@ -106,7 +108,7 @@ export default async function AdminDashboardPage() {
   const providerSums: Record<string, number> = {};
   approvedPayments.forEach((p) => {
     const prov = p.provider?.toUpperCase() || "OTHER";
-    providerSums[prov] = (providerSums[prov] || 0) + p.amount;
+    providerSums[prov] = (providerSums[prov] || 0) + (p.amount || 0);
   });
 
   const totalProvRevenue = Math.max(1, totalRevenue);
@@ -134,7 +136,7 @@ export default async function AdminDashboardPage() {
     percentage: Math.round((pm.amount / totalProvRevenue) * 100),
   }));
 
-  // 4. Real Recent Activity Feed
+  // 4. Real Recent Activity Feed (Strict ISO String serialization)
   const activityList: any[] = [];
 
   recentUsers.forEach((u) => {
@@ -142,25 +144,29 @@ export default async function AdminDashboardPage() {
       type: "USER",
       title: `New user registered: ${u.name || "User"}`,
       subtitle: u.email || `@user_${u.id.slice(-4)}`,
-      createdAt: u.createdAt,
+      createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+      formattedTime: u.createdAt ? format(new Date(u.createdAt), "MMM d, HH:mm") : "",
     });
   });
 
   recentPayments.forEach((p) => {
     activityList.push({
       type: "PAYMENT",
-      title: `Payment ${p.status.toLowerCase()}: ${p.amount.toLocaleString()} ${p.currency}`,
+      title: `Payment ${(p.status || "APPROVED").toLowerCase()}: ${(p.amount || 0).toLocaleString()} ${p.currency || "ETB"}`,
       subtitle: `${p.provider} (${p.transactionId || "Direct"}) • ${p.user?.name || "User"}`,
-      createdAt: p.createdAt,
+      createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
+      formattedTime: p.createdAt ? format(new Date(p.createdAt), "MMM d, HH:mm") : "",
     });
   });
 
   recentDraws.forEach((d) => {
+    const drawDate = d.completedAt || d.createdAt;
     activityList.push({
       type: "WINNER",
-      title: `Winner selected for "${d.campaign.title}"`,
+      title: `Winner selected for "${d.campaign?.title || "Campaign"}"`,
       subtitle: `Provably fair draw completed`,
-      createdAt: d.completedAt || d.createdAt,
+      createdAt: drawDate ? new Date(drawDate).toISOString() : new Date().toISOString(),
+      formattedTime: drawDate ? format(new Date(drawDate), "MMM d, HH:mm") : "",
     });
   });
 
@@ -168,29 +174,39 @@ export default async function AdminDashboardPage() {
   const finalActivities = activityList.slice(0, 6);
 
   // 5. Top Campaigns
-  const mappedCampaigns = campaigns.map((c) => ({
-    id: c.id,
-    name: c.title,
-    time: `Ends ${format(new Date(c.endsAt), "MMM d, yyyy")}`,
-    img: c.imageUrl || "",
-    sold: c._count.entries,
-    total: c.maxEntries,
-    rev: c.entryPrice * c._count.entries,
-    conv: `${Math.min(100, Math.round((c._count.entries / (c.maxEntries || 1)) * 100))}%`,
-    status: c.status,
-  }));
+  const mappedCampaigns = campaigns.map((c) => {
+    let formattedEndsAt = "";
+    try {
+      formattedEndsAt = c.endsAt ? `Ends ${format(new Date(c.endsAt), "MMM d, yyyy")}` : "";
+    } catch (e) {}
+
+    const entriesSold = c._count?.entries || 0;
+    const max = c.maxEntries || 1;
+
+    return {
+      id: c.id,
+      name: c.title,
+      time: formattedEndsAt,
+      img: c.imageUrl || "",
+      sold: entriesSold,
+      total: c.maxEntries || 0,
+      rev: (c.entryPrice || 0) * entriesSold,
+      conv: `${Math.min(100, Math.round((entriesSold / max) * 100))}%`,
+      status: c.status,
+    };
+  });
 
   const dashboardData = {
-    totalUsers,
-    totalCampaigns,
-    activeCampaigns,
-    totalRevenue,
-    totalTicketsCount,
-    revenueData,
-    pieData,
-    paymentMethods,
-    activities: finalActivities,
-    campaigns: mappedCampaigns,
+    totalUsers: totalUsers || 0,
+    totalCampaigns: totalCampaigns || 0,
+    activeCampaigns: activeCampaigns || 0,
+    totalRevenue: totalRevenue || 0,
+    totalTicketsCount: totalTicketsCount || 0,
+    revenueData: revenueData || [],
+    pieData: pieData || [],
+    paymentMethods: paymentMethods || [],
+    activities: finalActivities || [],
+    campaigns: mappedCampaigns || [],
   };
 
   return <AdminDashboardClient data={dashboardData} />;
