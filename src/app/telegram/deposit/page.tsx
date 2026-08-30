@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { ChevronLeft, ShieldCheck, Upload, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ShieldCheck, Upload, CheckCircle2, AlertCircle, X, Loader2, Copy, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchTelegramApi } from "@/lib/telegram-client";
 
@@ -18,6 +18,40 @@ function DepositForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Dynamic Payment Settings
+  const [paymentSettings, setPaymentSettings] = useState<{
+    telebirr: { enabled: boolean; accountName: string; accountNumber: string; instructions: string };
+    cbe: { enabled: boolean; accountName: string; accountNumber: string; instructions: string };
+  }>({
+    telebirr: {
+      enabled: true,
+      accountName: "MilkyTech Online",
+      accountNumber: "0911000000",
+      instructions: "Transfer to the Telebirr number above and upload your screenshot receipt.",
+    },
+    cbe: {
+      enabled: true,
+      accountName: "MilkyTech Online PLC",
+      accountNumber: "1000123456789",
+      instructions: "Transfer to the CBE account number above and upload your screenshot receipt.",
+    },
+  });
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.settings) {
+          setPaymentSettings({
+            telebirr: data.settings.telebirr || paymentSettings.telebirr,
+            cbe: data.settings.cbe || paymentSettings.cbe,
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const amt = searchParams.get("amount");
@@ -25,6 +59,14 @@ function DepositForm() {
       setAmount(amt);
     }
   }, [searchParams]);
+
+  const handleCopyAccount = (text: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +139,8 @@ function DepositForm() {
     );
   }
 
+  const activePayment = provider === "TELEBIRR" ? paymentSettings.telebirr : paymentSettings.cbe;
+
   return (
     <div className="pb-24 px-5 min-h-screen bg-[#0B0F19] text-white">
       <div className="pt-14 pb-6 flex items-center gap-4 sticky top-0 bg-[#0B0F19]/90 backdrop-blur-lg z-10">
@@ -120,11 +164,13 @@ function DepositForm() {
                 : "border-slate-700/60 bg-slate-800/40 text-slate-400"
             }`}
           >
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mb-2 font-black text-emerald-600 text-[10px]">
-              TELE
+            <div className="w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center mb-2 font-black text-[10px]">
+              TB
             </div>
             <p className="text-sm font-bold text-white">Telebirr</p>
-            <p className="text-[11px] text-emerald-400 mt-0.5">0911000000</p>
+            <p className="text-[11px] font-mono text-emerald-400 mt-0.5 truncate">
+              {paymentSettings.telebirr.accountNumber}
+            </p>
           </button>
 
           <button
@@ -140,12 +186,32 @@ function DepositForm() {
               CBE
             </div>
             <p className="text-sm font-bold text-white">CBE Birr</p>
-            <p className="text-[11px] text-purple-300 mt-0.5">1000123456789</p>
+            <p className="text-[11px] font-mono text-purple-300 mt-0.5 truncate">
+              {paymentSettings.cbe.accountNumber}
+            </p>
           </button>
         </div>
 
-        <div className="p-3 bg-[#0B0F19] border border-slate-800 rounded-xl text-xs text-slate-400">
-          Transfer to the account above, then enter the Transaction ID and upload your screenshot below.
+        {/* Dynamic Account Info Card */}
+        <div className="p-4 bg-[#0B0F19] border border-slate-800 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400 font-semibold">Account Name:</span>
+            <span className="text-white font-bold">{activePayment.accountName}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400 font-semibold">Account Number:</span>
+            <button
+              type="button"
+              onClick={() => handleCopyAccount(activePayment.accountNumber)}
+              className="flex items-center gap-1 font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20"
+            >
+              <span>{activePayment.accountNumber}</span>
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
+            {activePayment.instructions}
+          </p>
         </div>
       </div>
 
@@ -181,20 +247,20 @@ function DepositForm() {
             type="text" 
             value={txId}
             onChange={(e) => setTxId(e.target.value)}
-            placeholder="e.g. 7ED8912..."
-            className="w-full bg-[#121826] border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 uppercase font-mono transition-colors"
+            placeholder="e.g. TB123456789 or CBE-REF-001"
+            className="w-full bg-[#121826] border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors font-mono"
           />
         </div>
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-            Sender Name / Phone (Optional)
+            Sender Name (Optional)
           </label>
           <input 
             type="text" 
             value={senderName}
             onChange={(e) => setSenderName(e.target.value)}
-            placeholder="Name on Telebirr account"
+            placeholder="Name on bank account"
             className="w-full bg-[#121826] border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
@@ -204,42 +270,41 @@ function DepositForm() {
             Payment Receipt Screenshot <span className="text-red-400">*</span>
           </label>
           {screenshot ? (
-            <div className="relative w-full h-44 bg-slate-900 rounded-2xl overflow-hidden border border-emerald-500/50">
-              <img src={screenshot} alt="Receipt" className="w-full h-full object-contain" />
-              <button
-                type="button"
+            <div className="relative rounded-2xl overflow-hidden border border-emerald-500/50 bg-[#121826]">
+              <img src={screenshot} alt="Receipt" className="w-full max-h-48 object-cover" />
+              <button 
+                type="button" 
                 onClick={() => setScreenshot("")}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600"
+                className="absolute top-2 right-2 p-1.5 bg-black/70 text-white rounded-full hover:bg-black"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="w-full border-2 border-dashed border-slate-700 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-colors relative bg-[#121826]">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <Upload className="w-7 h-7 text-emerald-400 mb-1.5" />
-              <span className="text-xs text-white font-semibold">Tap to upload receipt screenshot</span>
-              <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG up to 5MB</span>
-            </div>
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-emerald-500 bg-[#121826] rounded-2xl p-6 cursor-pointer transition-colors">
+              <Upload className="w-8 h-8 text-slate-400 mb-2" />
+              <span className="text-xs font-bold text-slate-300">Upload Receipt Screenshot</span>
+              <span className="text-[10px] text-slate-500 mt-1">PNG, JPG, or JPEG</span>
+              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            </label>
           )}
         </div>
 
-        <button 
+        <button
           type="button"
           onClick={handleDeposit}
           disabled={isSubmitting}
-          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
+          className="w-full mt-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 disabled:opacity-50 text-white font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
         >
           {isSubmitting ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Submitting Deposit...</span>
+            </>
           ) : (
             <>
-              <ShieldCheck className="w-5 h-5" /> Submit Deposit ({amount || "0"} ETB)
+              <ShieldCheck className="w-5 h-5" />
+              <span>Submit for Verification</span>
             </>
           )}
         </button>
@@ -250,14 +315,11 @@ function DepositForm() {
 
 export default function DepositPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#0B0F19] text-white flex flex-col items-center justify-center p-6 space-y-4">
-          <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-          <span className="text-slate-400 text-sm">Loading deposit...</span>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    }>
       <DepositForm />
     </Suspense>
   );

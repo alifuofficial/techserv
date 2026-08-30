@@ -139,7 +139,51 @@ export async function getOrCreateTelegramUser(initData: string) {
     });
 
     user.ledgerAccount = ledger;
-  } else {
+
+    // Process referral reward if user was referred
+    if (referredById) {
+      try {
+        const [bonusSetting, enabledSetting] = await Promise.all([
+          db.systemSetting.findUnique({ where: { key: "referral_bonus_amount" } }),
+          db.systemSetting.findUnique({ where: { key: "referral_enabled" } }),
+        ]);
+
+        const isEnabled = enabledSetting?.value !== "false";
+        const bonusAmount = parseFloat(bonusSetting?.value || "10") || 10;
+
+        if (isEnabled && bonusAmount > 0) {
+          const referrerLedger = await db.ledgerAccount.upsert({
+            where: { userId: referredById },
+            create: { userId: referredById, balance: bonusAmount, currency: "ETB" },
+            update: { balance: { increment: bonusAmount } },
+          });
+
+          await db.ledgerTransaction.create({
+            data: {
+              accountId: referrerLedger.id,
+              amount: bonusAmount,
+              referenceType: "REFERRAL_REWARD",
+              referenceId: user.id,
+              description: `Referral reward for inviting ${fullName}`,
+            },
+          });
+
+          const referrerUser = await db.user.findUnique({ where: { id: referredById } });
+
+          // Send automated Telegram notification to referrer
+          const { sendEventNotification } = await import("./telegram-notifications");
+          sendEventNotification("REFERRAL_REWARD", referredById, {
+            user_name: referrerUser?.name || "Member",
+            referred_name: fullName,
+            reward_amount: bonusAmount,
+            currency: "ETB",
+            new_balance: referrerLedger.balance,
+          }).catch(console.error);
+        }
+      } catch (refErr) {
+        console.error("[Referral Reward Credit Error]", refErr);
+      }
+    }
     // Ensure ledger account exists
     if (!user.ledgerAccount) {
       const ledger = await db.ledgerAccount.upsert({

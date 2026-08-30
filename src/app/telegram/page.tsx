@@ -2,14 +2,65 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { Loader2, Ticket, Wallet, Trophy, AlertTriangle, User, Users } from "lucide-react";
+import {
+  Ticket,
+  Wallet,
+  Trophy,
+  User,
+  Users,
+  Sparkles,
+  ChevronRight,
+  Flame,
+  ShieldCheck,
+  Zap,
+  Gift,
+  ArrowUpRight,
+  PlusCircle,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 import { fetchTelegramApi } from "@/lib/telegram-client";
 
+interface CampaignItem {
+  id: string;
+  title: string;
+  slug: string;
+  image: string | null;
+  prizeTitle: string;
+  prizeValue: number;
+  ticketPrice: number;
+  currency: string;
+  drawDate: string;
+  maxEntries: number;
+  entriesCount: number;
+  percentage: number;
+  remainingTickets: number;
+}
+
+interface RecentWinnerItem {
+  id: string;
+  winnerName: string;
+  prizeTitle: string;
+  ticketNumber: string;
+  drawDate: string;
+}
+
+interface DashboardData {
+  balance: number;
+  campaigns: CampaignItem[];
+  recentWinners: RecentWinnerItem[];
+  ticketsCount: number;
+  winsCount: number;
+  referralBonus: number;
+  referralCurrency: string;
+  user?: { id: string; name: string; email: string };
+}
+
 export default function TelegramMiniApp() {
   const { data: session, status } = useSession();
-  const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<{ balance: number; campaigns: any[]; ticketsCount: number; winsCount: number; user?: any } | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const loadDashboard = async () => {
     try {
@@ -19,11 +70,12 @@ export default function TelegramMiniApp() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Initial fetch on mount
     loadDashboard();
 
     const handleFocus = () => {
@@ -37,17 +89,19 @@ export default function TelegramMiniApp() {
     if (tg) {
       tg.ready();
       tg.expand();
-      tg.setHeaderColor("#0B0F19");
-      tg.setBackgroundColor("#0B0F19");
+      tg.setHeaderColor("#070A11");
+      tg.setBackgroundColor("#070A11");
     }
 
     if (status === "unauthenticated" && tg && tg.initData) {
       signIn("telegram", {
         initData: tg.initData,
         redirect: false,
-      }).then(() => {
-        loadDashboard();
-      }).catch(console.error);
+      })
+        .then(() => {
+          loadDashboard();
+        })
+        .catch(console.error);
     }
 
     return () => {
@@ -60,119 +114,307 @@ export default function TelegramMiniApp() {
     dashboardData?.user?.name ||
     session?.user?.name ||
     session?.user?.email?.split("@")[0].replace("telegram_", "User ") ||
-    "User";
+    "Lucky Player";
+
+  const totalLiveTickets = dashboardData?.ticketsCount || 0;
+  const totalWins = dashboardData?.winsCount || 0;
+  const referralBonus = dashboardData?.referralBonus || 10;
+  const currency = dashboardData?.referralCurrency || "ETB";
 
   return (
-    <div className="pb-24">
-      {/* Top Bar */}
-      <div className="px-5 pt-14 pb-4 flex justify-between items-center sticky top-0 bg-[#0B0F19]/80 backdrop-blur-lg z-10">
-        <div>
-          <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Welcome back</p>
-          <h1 className="text-xl font-bold text-white mt-0.5">{userName}</h1>
-        </div>
-        <Link href="/telegram/profile" className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden active:scale-95 transition-transform">
-          <User className="w-5 h-5 text-slate-400" />
-        </Link>
+    <div className="min-h-screen bg-[#070A11] text-white pb-24 overflow-x-hidden selection:bg-emerald-500/30">
+      
+      {/* Background Ambient Cyber Glows */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-emerald-500/15 rounded-full blur-[90px]"></div>
+        <div className="absolute top-10 -right-20 w-64 h-64 bg-indigo-600/15 rounded-full blur-[90px]"></div>
       </div>
 
-      <div className="px-5 space-y-6 mt-2">
-        {/* Wallet Card */}
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-6 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-8 -translate-y-8 pointer-events-none"></div>
-          
-          <div className="relative z-10 flex justify-between items-start">
-            <div>
-              <p className="text-emerald-100 text-sm font-medium">Available Balance</p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-3xl font-black text-white">{dashboardData?.balance?.toFixed(2) || "0.00"}</span>
-                <span className="text-emerald-200 font-bold text-sm">ETB</span>
+      <div className="relative z-10">
+        
+        {/* Top Header / Player Profile Status */}
+        <div className="px-5 pt-12 pb-3 flex justify-between items-center sticky top-0 bg-[#070A11]/85 backdrop-blur-xl z-20 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 p-[2px] shadow-lg shadow-emerald-500/20">
+                <div className="w-full h-full bg-[#0D1424] rounded-[14px] flex items-center justify-center font-black text-emerald-400 text-sm">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#070A11] flex items-center justify-center">
+                <Zap className="w-2.5 h-2.5 text-black fill-black" />
               </div>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
-              <Wallet className="w-5 h-5 text-white" />
+
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5" /> VIP Player
+                </span>
+              </div>
+              <h1 className="text-base font-extrabold text-white leading-tight mt-0.5 truncate max-w-[170px]">
+                {userName}
+              </h1>
             </div>
           </div>
-          
-          <div className="mt-6 flex gap-3">
-            <Link href="/telegram/deposit" className="flex-1 bg-white text-emerald-600 font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 text-center shadow-md">
-              Deposit
-            </Link>
-            <Link href="/telegram/withdraw" className="flex-1 bg-emerald-700/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-transform active:scale-95 border border-emerald-400/30 text-center">
-              Withdraw
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/telegram/profile"
+              className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all shadow-inner"
+            >
+              <User className="w-4 h-4" />
             </Link>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-3">
-          <Link href="/telegram/tickets" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors relative shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center relative">
-              <Ticket className="w-6 h-6" />
-              {dashboardData && dashboardData.ticketsCount > 0 && (
-                <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#121826]">
-                  {dashboardData.ticketsCount}
-                </div>
-              )}
+        {/* Live Winner Ticker Bar */}
+        <div className="px-5 mt-3">
+          <div className="bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-emerald-500/15 border border-amber-500/30 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-sm">
+            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <Trophy className="w-3.5 h-3.5" />
             </div>
-            <span className="text-white font-medium text-sm text-center leading-tight">My<br/>Tickets</span>
-          </Link>
-          <Link href="/telegram/wins" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors relative shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center relative">
-              <Trophy className="w-6 h-6" />
-              {dashboardData && dashboardData.winsCount > 0 && (
-                <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#121826]">
-                  {dashboardData.winsCount}
-                </div>
-              )}
+            <div className="flex-1 overflow-hidden text-xs">
+              <p className="text-amber-200 font-bold truncate text-[11px]">
+                {dashboardData?.recentWinners?.[0]
+                  ? `🎉 ${dashboardData.recentWinners[0].winnerName} won ${dashboardData.recentWinners[0].prizeTitle}!`
+                  : "🔥 Live Provably Fair Draws • Real Cash & Gadget Prizes!"}
+              </p>
             </div>
-            <span className="text-white font-medium text-sm text-center leading-tight">My<br/>Wins</span>
-          </Link>
-          <Link href="/telegram/referrals" className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 active:bg-slate-800 transition-colors shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <Users className="w-6 h-6" />
-            </div>
-            <span className="text-white font-medium text-sm text-center leading-tight">Refer<br/>& Earn</span>
-          </Link>
+            <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase shrink-0">
+              LIVE
+            </span>
+          </div>
         </div>
 
-        {/* Active Campaigns */}
-        <div>
-          <div className="flex justify-between items-end mb-4">
-            <h2 className="text-lg font-bold text-white">Hot Campaigns</h2>
-            <Link href="/telegram/campaigns" className="text-emerald-400 text-xs font-bold uppercase tracking-wider hover:underline">
-              See All
-            </Link>
-          </div>
+        <div className="px-5 space-y-5 mt-4">
           
-          <div className="space-y-3">
-            {dashboardData?.campaigns?.map((campaign: any) => (
-              <Link href={`/telegram/campaigns/${campaign.slug}`} key={campaign.id} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4 active:bg-slate-800 transition-colors hover:border-slate-700">
-                <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
-                  {campaign.image ? (
-                    <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-slate-500 text-xs font-bold">IMG</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-bold text-sm leading-tight">{campaign.title}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-emerald-400 font-bold text-xs">{campaign.ticketPrice} {campaign.currency || "ETB"}</span>
-                    <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                    <span className="text-slate-400 text-xs font-medium">
-                      {new Date(campaign.drawDate).toLocaleDateString()}
+          {/* Gamified Luxury Wallet Card */}
+          <div className="relative rounded-3xl p-6 overflow-hidden bg-gradient-to-br from-[#0E3B2E] via-[#0D2922] to-[#091A18] border border-emerald-500/40 shadow-2xl shadow-emerald-950/50">
+            {/* Shimmer Light Effects */}
+            <div className="absolute top-0 right-0 w-44 h-44 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none transform translate-x-12 -translate-y-12"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-400/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div className="relative z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-300/90">
+                      Your Vault Balance
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1.5">
+                    <span className="text-4xl font-black text-white tracking-tight drop-shadow-sm">
+                      {dashboardData?.balance !== undefined ? dashboardData.balance.toFixed(2) : "0.00"}
+                    </span>
+                    <span className="text-emerald-300 font-extrabold text-sm uppercase tracking-wider">
+                      {currency}
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, Math.max(5, (campaign.entriesCount / (campaign.maxEntries || 1)) * 100))}%` }}></div>
-                  </div>
                 </div>
-              </Link>
-            ))}
-            {dashboardData?.campaigns?.length === 0 && (
-              <p className="text-slate-500 text-sm text-center py-4">No active campaigns at the moment.</p>
-            )}
+
+                <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl flex items-center justify-center text-emerald-300 shadow-inner">
+                  <Wallet className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <Link
+                  href="/telegram/deposit"
+                  className="bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 text-center"
+                >
+                  <PlusCircle className="w-4 h-4 fill-slate-950 text-emerald-400" />
+                  <span>+ Deposit</span>
+                </Link>
+
+                <Link
+                  href="/telegram/withdraw"
+                  className="bg-white/10 hover:bg-white/15 text-white font-bold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all border border-white/15 backdrop-blur-md text-center"
+                >
+                  <span>Withdraw</span>
+                  <ArrowUpRight className="w-4 h-4 text-slate-300" />
+                </Link>
+              </div>
+            </div>
           </div>
+
+          {/* Gamified 3-Card Interactive HUD */}
+          <div className="grid grid-cols-3 gap-2.5">
+            
+            {/* Card 1: My Tickets */}
+            <Link
+              href="/telegram/tickets"
+              className="bg-gradient-to-b from-[#111A2E] to-[#0C1220] border border-blue-500/25 hover:border-blue-500/50 rounded-2xl p-3.5 flex flex-col items-center justify-between text-center relative active:scale-95 transition-all shadow-lg shadow-blue-950/30 group"
+            >
+              <div className="relative mb-2">
+                <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-400/30 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Ticket className="w-5 h-5" />
+                </div>
+                {totalLiveTickets > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-black text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-[#0C1220] shadow-sm">
+                    {totalLiveTickets}
+                  </span>
+                )}
+              </div>
+              <span className="text-white font-extrabold text-xs leading-tight">My Tickets</span>
+              <span className="text-[10px] text-blue-300/80 font-medium mt-0.5">
+                {totalLiveTickets > 0 ? `${totalLiveTickets} in Play` : "Enter Draw"}
+              </span>
+            </Link>
+
+            {/* Card 2: My Wins */}
+            <Link
+              href="/telegram/wins"
+              className="bg-gradient-to-b from-[#241C10] to-[#140F08] border border-amber-500/30 hover:border-amber-500/60 rounded-2xl p-3.5 flex flex-col items-center justify-between text-center relative active:scale-95 transition-all shadow-lg shadow-amber-950/30 group"
+            >
+              <div className="relative mb-2">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                {totalWins > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-[#140F08] shadow-sm">
+                    {totalWins}
+                  </span>
+                )}
+              </div>
+              <span className="text-white font-extrabold text-xs leading-tight">My Wins</span>
+              <span className="text-[10px] text-amber-300/80 font-medium mt-0.5">
+                {totalWins > 0 ? `${totalWins} Prize Won!` : "Vault"}
+              </span>
+            </Link>
+
+            {/* Card 3: Refer & Earn */}
+            <Link
+              href="/telegram/referrals"
+              className="bg-gradient-to-b from-[#1C142E] to-[#100C1C] border border-purple-500/25 hover:border-purple-500/50 rounded-2xl p-3.5 flex flex-col items-center justify-between text-center relative active:scale-95 transition-all shadow-lg shadow-purple-950/30 group"
+            >
+              <div className="relative mb-2">
+                <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <span className="absolute -top-1.5 -right-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-[9px] px-1.5 py-0.5 rounded-full border-2 border-[#100C1C] shadow-sm">
+                  +{referralBonus}
+                </span>
+              </div>
+              <span className="text-white font-extrabold text-xs leading-tight">Refer & Earn</span>
+              <span className="text-[10px] text-purple-300/80 font-medium mt-0.5">Free Bonus</span>
+            </Link>
+
+          </div>
+
+          {/* Active Campaigns Header */}
+          <div className="pt-2">
+            <div className="flex justify-between items-center mb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                <h2 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-orange-400 fill-orange-400" /> Hot Prize Draws
+                </h2>
+              </div>
+              <Link
+                href="/telegram/campaigns"
+                className="text-emerald-400 text-xs font-bold uppercase tracking-wider hover:text-emerald-300 flex items-center gap-0.5"
+              >
+                <span>View All</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Campaign Cards List */}
+            <div className="space-y-3.5">
+              {dashboardData?.campaigns?.map((campaign) => (
+                <Link
+                  href={`/telegram/campaigns/${campaign.slug}`}
+                  key={campaign.id}
+                  className="block bg-gradient-to-r from-[#0E1526] to-[#0A0F1D] border border-slate-800/80 hover:border-emerald-500/50 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-black/40 group relative overflow-hidden"
+                >
+                  {/* Subtle Card Glow */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none"></div>
+
+                  <div className="flex items-center gap-3.5">
+                    {/* Prize Image */}
+                    <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/10 overflow-hidden relative shadow-inner">
+                      {campaign.image ? (
+                        <img
+                          src={campaign.image}
+                          alt={campaign.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <Trophy className="w-8 h-8 text-slate-600" />
+                      )}
+                      <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-md text-[9px] font-black text-emerald-400 px-1.5 py-0.5 rounded-md border border-white/10">
+                        {campaign.ticketPrice} {campaign.currency}
+                      </div>
+                    </div>
+
+                    {/* Campaign Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          {new Date(campaign.drawDate).toLocaleDateString()}
+                        </span>
+                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          {campaign.percentage}% Sold
+                        </span>
+                      </div>
+
+                      <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-emerald-300 transition-colors">
+                        {campaign.title}
+                      </h3>
+
+                      {/* Progress Bar */}
+                      <div className="mt-2.5">
+                        <div className="flex justify-between text-[10px] text-slate-400 font-semibold mb-1">
+                          <span>{campaign.entriesCount} sold</span>
+                          <span>{campaign.remainingTickets} left</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
+                            style={{ width: `${Math.min(100, Math.max(8, campaign.percentage))}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Bar on Card */}
+                  <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
+                    <div className="text-[11px] font-medium text-slate-400">
+                      Max Entries: <b className="text-white">{campaign.maxEntries.toLocaleString()}</b>
+                    </div>
+                    <div className="inline-flex items-center gap-1 font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform text-xs">
+                      <span>Enter Draw</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+
+              {dashboardData?.campaigns?.length === 0 && (
+                <div className="bg-[#0D1424] border border-slate-800 rounded-3xl p-8 text-center space-y-2">
+                  <Trophy className="w-10 h-10 text-slate-600 mx-auto" />
+                  <p className="text-sm font-bold text-slate-300">No active campaigns yet</p>
+                  <p className="text-xs text-slate-500">Check back soon for exciting new prize draws!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Trust & Provably Fair Footer Card */}
+          <div className="p-4 bg-gradient-to-r from-slate-900/60 to-slate-950/80 rounded-2xl border border-white/5 text-center space-y-1 mt-6">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+              <ShieldCheck className="w-4 h-4" /> Provably Fair Random Draws
+            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              Every winner is cryptographically selected using SHA-256 random seeds.
+            </p>
+          </div>
+
         </div>
       </div>
     </div>

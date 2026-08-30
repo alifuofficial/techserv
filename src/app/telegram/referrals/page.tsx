@@ -11,6 +11,9 @@ export default function ReferralsPage() {
     referralLink?: string;
     referredCount?: number;
     totalEarned?: number;
+    bonusAmount?: number;
+    currency?: string;
+    customText?: string;
     referredUsers?: any[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,8 @@ export default function ReferralsPage() {
       });
   }, []);
 
+  const bonusAmount = data?.bonusAmount || 10;
+  const currency = data?.currency || "ETB";
   const referralLink = data?.referralLink || "https://t.me/milkytechonlinebot?start=MILKY-JOIN";
   const referredUsers = data?.referredUsers || [];
 
@@ -40,7 +45,7 @@ export default function ReferralsPage() {
     }
   };
 
-  const shareText = encodeURIComponent("🎁 Join MilkyTech and win incredible prizes! Use my link to get lucky tickets:");
+  const shareText = encodeURIComponent(`🎁 Join MilkyTech and win incredible prizes! Use my link to get lucky tickets & ${bonusAmount} ${currency} bonus:`);
   const shareUrl = encodeURIComponent(referralLink);
   const telegramShareLink = `https://t.me/share/url?url=${shareUrl}&text=${shareText}`;
 
@@ -75,8 +80,8 @@ export default function ReferralsPage() {
             <Gift className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-black text-white mb-2">Invite Friends, Get Rewarded</h2>
-          <p className="text-indigo-100 text-xs mb-6 max-w-xs">
-            Earn 10 ETB bonus for every friend who joins MilkyTech using your link!
+          <p className="text-indigo-100 text-xs mb-6 max-w-xs leading-relaxed">
+            Earn <b>{bonusAmount} {currency}</b> bonus for every friend who joins MilkyTech using your link!
           </p>
 
           <div className="w-full bg-[#0B0F19]/60 rounded-2xl p-4 flex items-center justify-between border border-white/10 backdrop-blur-sm">
@@ -112,7 +117,9 @@ export default function ReferralsPage() {
         </div>
         <div className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 text-center">
           <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Total Rewards</span>
-          <span className="text-2xl font-black text-emerald-400 mt-1 block">{referredUsers.length * 10} ETB</span>
+          <span className="text-2xl font-black text-emerald-400 mt-1 block">
+            {(referredUsers.length * bonusAmount).toLocaleString()} {currency}
+          </span>
         </div>
       </div>
 
@@ -137,8 +144,8 @@ export default function ReferralsPage() {
                 className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400">
-                    <Users className="w-5 h-5" />
+                  <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400 font-bold text-sm">
+                    {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-white font-bold text-sm">{user.name}</p>
@@ -146,7 +153,7 @@ export default function ReferralsPage() {
                   </div>
                 </div>
                 <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full">
-                  +{user.bonus || 10} ETB
+                  +{user.bonus || bonusAmount} {currency}
                 </div>
               </div>
             ))}

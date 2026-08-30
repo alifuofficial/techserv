@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getTelegramUserFromRequest } from "@/lib/telegram-auth";
+import { getSystemSetting } from "@/modules/settings/settings-service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    const [bonusAmountSetting, currencySetting, customTextSetting, botUsernameSetting] = await Promise.all([
+      getSystemSetting("referral_bonus_amount", "10"),
+      getSystemSetting("referral_currency", "ETB"),
+      getSystemSetting("referral_custom_text", "Earn bonus for every friend who joins MilkyTech using your link!"),
+      getSystemSetting("telegram_bot_username", "milkytechonlinebot"),
+    ]);
+
+    const bonusAmount = parseFloat(bonusAmountSetting) || 10;
+    const currency = currencySetting || "ETB";
+    const botUsername = botUsernameSetting || "milkytechonlinebot";
+
     const referralCode = user.referralCode || `MILKY-${user.id.substring(0, 6).toUpperCase()}`;
-    const referralLink = `https://t.me/milkytechonlinebot?start=${referralCode}`;
+    const referralLink = `https://t.me/${botUsername}?start=${referralCode}`;
 
     // Find all users who were referred by this user
-    // We check both referredById === user.id AND users who joined with this user's referral code or providerId
     const referredUsers = await db.user.findMany({
       where: {
         OR: [
@@ -48,7 +59,7 @@ export async function GET(req: Request) {
         id: u.id,
         name: displayName,
         joinedAt: u.createdAt.toISOString(),
-        bonus: 10,
+        bonus: bonusAmount,
       };
     });
 
@@ -56,8 +67,11 @@ export async function GET(req: Request) {
       success: true,
       referralCode,
       referralLink,
+      bonusAmount,
+      currency,
+      customText: customTextSetting,
       referredCount: mappedReferredUsers.length,
-      totalEarned: mappedReferredUsers.length * 10,
+      totalEarned: mappedReferredUsers.length * bonusAmount,
       referredUsers: mappedReferredUsers,
     });
   } catch (error: any) {
