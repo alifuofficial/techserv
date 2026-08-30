@@ -19,9 +19,10 @@ export async function GET(req: Request) {
             select: { entries: true },
           },
           prizes: true,
+          draw: true,
         },
         orderBy: { createdAt: "desc" },
-        take: 10,
+        take: 12,
       }),
       db.draw.findMany({
         where: { status: "COMPLETED", winningEntryId: { not: null } },
@@ -37,21 +38,46 @@ export async function GET(req: Request) {
       getSystemSetting("referral_currency", "ETB"),
     ]);
 
-    const mappedCampaigns = campaigns.map((c) => ({
-      id: c.id,
-      title: c.title,
-      slug: c.slug,
-      image: c.imageUrl || null,
-      prizeTitle: c.prizes?.[0]?.title || c.title,
-      prizeValue: c.prizes?.[0]?.value || c.entryPrice * c.maxEntries,
-      ticketPrice: c.entryPrice,
-      currency: c.currency || "ETB",
-      drawDate: c.endsAt,
-      maxEntries: c.maxEntries,
-      entriesCount: c._count.entries,
-      percentage: Math.min(100, Math.round((c._count.entries / (c.maxEntries || 1)) * 100)),
-      remainingTickets: Math.max(0, c.maxEntries - c._count.entries),
-    }));
+    const mappedCampaigns = await Promise.all(
+      campaigns.map(async (c) => {
+        const isCompleted = c.status === "COMPLETED" || (c.draw && c.draw.status === "COMPLETED" && !!c.draw.winningEntryId);
+        let winnerName: string | null = null;
+        let winningTicketNumber: string | null = null;
+
+        if (isCompleted && c.draw?.winningEntryId) {
+          const entry = await db.entry.findUnique({
+            where: { id: c.draw.winningEntryId },
+            include: { user: { select: { name: true, email: true } } },
+          });
+          if (entry) {
+            winnerName = entry.user.name || "Lucky Winner";
+            const prefix = c.id.substring(0, 4).toUpperCase();
+            winningTicketNumber = `TKT-${prefix}-${entry.entryNumber}`;
+          }
+        }
+
+        return {
+          id: c.id,
+          title: c.title,
+          slug: c.slug,
+          image: c.imageUrl || null,
+          prizeTitle: c.prizes?.[0]?.title || c.title,
+          prizeValue: c.prizes?.[0]?.value || c.entryPrice * c.maxEntries,
+          ticketPrice: c.entryPrice,
+          currency: c.currency || "ETB",
+          drawDate: c.endsAt,
+          maxEntries: c.maxEntries,
+          entriesCount: c._count.entries,
+          percentage: Math.min(100, Math.round((c._count.entries / (c.maxEntries || 1)) * 100)),
+          remainingTickets: Math.max(0, c.maxEntries - c._count.entries),
+          isCompleted: !!isCompleted,
+          status: isCompleted ? "COMPLETED" : c.status,
+          winnerName,
+          winningTicketNumber,
+          completedAt: c.draw?.completedAt?.toISOString() || null,
+        };
+      })
+    );
 
     // Find winner details for recent draws
     const recentWinners = await Promise.all(

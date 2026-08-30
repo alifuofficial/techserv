@@ -15,6 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           select: { entries: true },
         },
         prizes: true,
+        draw: true,
       },
     });
 
@@ -23,6 +24,37 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         { success: false, error: "Campaign not found" },
         { status: 404, headers: { "Cache-Control": "no-store" } }
       );
+    }
+
+    const isCompleted =
+      campaign.status === "COMPLETED" ||
+      (campaign.draw && campaign.draw.status === "COMPLETED" && !!campaign.draw.winningEntryId);
+
+    let winnerInfo: {
+      name: string;
+      ticketNumber: string;
+      wonAt: string;
+      prizeTitle: string;
+      snapshotHash?: string | null;
+      randomSeed?: string | null;
+    } | null = null;
+
+    if (isCompleted && campaign.draw?.winningEntryId) {
+      const entry = await db.entry.findUnique({
+        where: { id: campaign.draw.winningEntryId },
+        include: { user: { select: { name: true, email: true } } },
+      });
+      if (entry) {
+        const prefix = campaign.id.substring(0, 4).toUpperCase();
+        winnerInfo = {
+          name: entry.user.name || "Lucky Winner",
+          ticketNumber: `TKT-${prefix}-${entry.entryNumber}`,
+          wonAt: (campaign.draw.completedAt || campaign.draw.createdAt).toISOString(),
+          prizeTitle: campaign.prizes?.[0]?.title || campaign.title,
+          snapshotHash: campaign.draw.snapshotHash,
+          randomSeed: campaign.draw.randomSeed,
+        };
+      }
     }
 
     const user = await getTelegramUserFromRequest(req);
@@ -50,8 +82,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           startsAt: campaign.startsAt,
           maxEntries: campaign.maxEntries,
           entriesCount: campaign._count.entries,
-          status: campaign.status,
+          status: isCompleted ? "COMPLETED" : campaign.status,
+          isCompleted: !!isCompleted,
           prizes: campaign.prizes,
+          prizeTitle: campaign.prizes?.[0]?.title || campaign.title,
+          winner: winnerInfo,
         },
         user: user
           ? {
