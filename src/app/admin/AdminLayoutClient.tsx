@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   LayoutDashboard, Trophy, Ticket, Users, Wallet, Gift, Award, Store, 
   ShieldCheck, UserPlus, Bell, FileBarChart, History, Settings,
-  Menu, Search, Sun, ExternalLink
+  Menu, Search, Sun, ExternalLink, Sparkles
 } from "lucide-react";
 
 export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {

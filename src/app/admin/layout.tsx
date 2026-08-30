@@ -6,8 +6,8 @@ import AdminLayoutClient from "./AdminLayoutClient";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role?.toUpperCase() !== "ADMIN") {
-    redirect("/"); 
+  if (!session || (session.user as any)?.role?.toUpperCase() !== "ADMIN") {
+    redirect("/auth/login?callbackUrl=/admin"); 
   }
 
   return <AdminLayoutClient>{children}</AdminLayoutClient>;
