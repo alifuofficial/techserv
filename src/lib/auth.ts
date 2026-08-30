@@ -148,11 +148,35 @@ export const authOptions: NextAuthOptions = {
               referredById: referredById
             }
           });
+
+          // Create ledger account for new user
+          await db.ledgerAccount.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: { userId: user.id, balance: 0, currency: 'ETB' }
+          }).catch(() => {});
+
+          // Link identity
+          await db.userIdentity.upsert({
+            where: {
+              provider_providerId: {
+                provider: 'telegram',
+                providerId: telegramId
+              }
+            },
+            update: {},
+            create: {
+              userId: user.id,
+              provider: 'telegram',
+              providerId: telegramId
+            }
+          }).catch(() => {});
         }
 
         return {
           id: user.id,
           email: user.email,
+          name: user.name,
           role: user.role,
         };
       }
@@ -189,10 +213,17 @@ export const authOptions: NextAuthOptions = {
               password: '', // No password for telegram users
             }
           });
+
+          await db.ledgerAccount.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: { userId: user.id, balance: 0, currency: 'ETB' }
+          }).catch(() => {});
         }
         return {
           id: user.id,
           email: user.email,
+          name: user.name,
           role: user.role,
         };
       }
@@ -202,11 +233,40 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 Days
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production" ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === "production" ? `__Secure-next-auth.callback-url` : `next-auth.callback-url`,
+      options: {
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === "production" ? `__Host-next-auth.csrf-token` : `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.name = user.name;
       }
       return token;
     },
@@ -214,6 +274,9 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        if (token.name) {
+          session.user.name = token.name;
+        }
       }
       return session;
     }

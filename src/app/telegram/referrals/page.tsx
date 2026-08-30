@@ -7,13 +7,22 @@ import ReferralClient from "./referral-client";
 
 export default async function ReferralsPage() {
   const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id;
+  const email = session?.user?.email;
+
+  let user = null;
+  if (userId) {
+    user = await db.user.findUnique({ where: { id: userId } });
+  }
+  if (!user && email) {
+    user = await db.user.findUnique({ where: { email } });
+  }
   
-  // Create a placeholder referral code for now based on user id
-  const referralCode = `MILKY-${session?.user?.id?.substring(0,6).toUpperCase()}`;
+  const referralCode = user ? `MILKY-${user.id.substring(0,6).toUpperCase()}` : 'MILKY-JOIN';
   const referralLink = `https://t.me/milkytechonlinebot?start=${referralCode}`;
   
-  const referredUsers = session?.user?.id ? await db.user.findMany({
-    where: { referredById: session.user.id as string },
+  const referredUsers = user ? await db.user.findMany({
+    where: { referredById: user.id },
     select: { id: true, name: true, createdAt: true, email: true },
     orderBy: { createdAt: 'desc' }
   }) : [];
