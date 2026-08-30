@@ -19,6 +19,7 @@ import {
   Loader2,
   Users,
   Award,
+  Lock,
 } from "lucide-react";
 
 interface EntryItem {
@@ -44,6 +45,7 @@ interface CampaignItem {
   prizes: any[];
   validEntriesCount: number;
   pendingPaymentsCount: number;
+  targetReached: boolean;
   isCompleted: boolean;
   isReady: boolean;
   entries: EntryItem[];
@@ -56,8 +58,10 @@ class SoundFX {
 
   private init() {
     if (!this.ctx && typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) this.ctx = new AudioCtx();
+      } catch (e) {}
     }
   }
 
@@ -140,10 +144,12 @@ export default function DrawsClient() {
 
   const handleStartDraw = async () => {
     if (!selectedCampaign || isDrawing) return;
-    if (selectedCampaign.validEntriesCount === 0) {
-      setDrawError("Cannot draw: No valid tickets purchased for this campaign.");
+
+    if (selectedCampaign.validEntriesCount < selectedCampaign.maxEntries) {
+      setDrawError(`Cannot draw: Campaign has not reached the required Maximum Total Entries (${selectedCampaign.validEntriesCount}/${selectedCampaign.maxEntries} sold).`);
       return;
     }
+
     if (selectedCampaign.pendingPaymentsCount > 0) {
       setDrawError(`Cannot draw: There are ${selectedCampaign.pendingPaymentsCount} pending payments waiting for approval.`);
       return;
@@ -276,6 +282,8 @@ export default function DrawsClient() {
           <div className="space-y-3 max-h-[700px] overflow-y-auto pr-1">
             {campaigns.map((c) => {
               const isSelected = selectedCampaign?.id === c.id;
+              const hasReachedMax = c.validEntriesCount >= c.maxEntries;
+
               return (
                 <div
                   key={c.id}
@@ -310,14 +318,14 @@ export default function DrawsClient() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
                     <div className="flex items-center gap-1.5 font-medium">
                       <Ticket className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{c.validEntriesCount} Valid Tickets</span>
+                      <span>{c.validEntriesCount} / {c.maxEntries.toLocaleString()} Tickets</span>
                     </div>
 
                     {c.pendingPaymentsCount > 0 && (
-                      <div className="flex items-center gap-1.5 text-amber-600 font-bold ml-auto">
+                      <div className="flex items-center gap-1.5 text-amber-600 font-bold">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         <span>{c.pendingPaymentsCount} Pending</span>
                       </div>
@@ -363,16 +371,41 @@ export default function DrawsClient() {
 
                 {/* Checklist Bar */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                      <Ticket className="w-4 h-4" />
+                  {/* Card 1: Entries Target */}
+                  <div className={`bg-slate-900/80 border p-3 rounded-xl flex items-center gap-3 ${
+                    selectedCampaign.validEntriesCount >= selectedCampaign.maxEntries
+                      ? "border-emerald-500/40"
+                      : "border-amber-500/40"
+                  }`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                      selectedCampaign.validEntriesCount >= selectedCampaign.maxEntries
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "bg-amber-500/20 text-amber-400"
+                    }`}>
+                      {selectedCampaign.validEntriesCount >= selectedCampaign.maxEntries ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <Clock className="w-4 h-4" />
+                      )}
                     </div>
                     <div>
-                      <p className="text-[11px] text-slate-400 font-semibold">Valid Entries</p>
-                      <p className="text-sm font-black text-white">{selectedCampaign.validEntriesCount} Tickets</p>
+                      <p className="text-[11px] text-slate-400 font-semibold">Total Entries Sold</p>
+                      <p className={`text-sm font-black ${
+                        selectedCampaign.validEntriesCount >= selectedCampaign.maxEntries
+                          ? "text-white"
+                          : "text-amber-400"
+                      }`}>
+                        {selectedCampaign.validEntriesCount} / {selectedCampaign.maxEntries.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {selectedCampaign.validEntriesCount >= selectedCampaign.maxEntries
+                          ? "Target Reached (100%)"
+                          : `Needs ${Math.max(0, selectedCampaign.maxEntries - selectedCampaign.validEntriesCount)} more`}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Card 2: Pending Payments */}
                   <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
                       selectedCampaign.pendingPaymentsCount === 0
@@ -392,9 +425,13 @@ export default function DrawsClient() {
                       }`}>
                         {selectedCampaign.pendingPaymentsCount === 0 ? "0 (Ready)" : `${selectedCampaign.pendingPaymentsCount} Pending`}
                       </p>
+                      <p className="text-[10px] text-slate-500">
+                        {selectedCampaign.pendingPaymentsCount === 0 ? "All verified" : "Action required"}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Card 3: Provably Fair Integrity */}
                   <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
                       <ShieldCheck className="w-4 h-4" />
@@ -402,6 +439,7 @@ export default function DrawsClient() {
                     <div>
                       <p className="text-[11px] text-slate-400 font-semibold">Integrity</p>
                       <p className="text-sm font-black text-blue-400">SHA-256 Verified</p>
+                      <p className="text-[10px] text-slate-500">Crypto RNG</p>
                     </div>
                   </div>
                 </div>
@@ -480,7 +518,11 @@ export default function DrawsClient() {
                   }`}>
                     <div className="text-center space-y-3">
                       <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                        {isDrawing ? "🎰 DRAWING RANDOM TICKET..." : "READY FOR DRAW"}
+                        {isDrawing
+                          ? "🎰 DRAWING RANDOM TICKET..."
+                          : selectedCampaign.isReady
+                          ? "READY FOR DRAW"
+                          : "GOAL IN PROGRESS"}
                       </span>
 
                       <div className="h-16 flex items-center justify-center overflow-hidden">
@@ -492,7 +534,7 @@ export default function DrawsClient() {
                       </div>
 
                       <p className="text-sm font-semibold text-slate-400 h-5">
-                        {displayTicket?.userName || "Click button below to initiate"}
+                        {displayTicket?.userName || (selectedCampaign.isReady ? "Click button below to initiate" : "Waiting for all tickets to be sold")}
                       </p>
                     </div>
                   </div>
@@ -501,15 +543,24 @@ export default function DrawsClient() {
 
               {/* Bottom Trigger Controls */}
               <div className="relative z-10 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                {drawError && (
+                {drawError ? (
                   <div className="text-xs text-red-400 font-semibold flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>{drawError}</span>
                   </div>
-                )}
+                ) : !selectedCampaign.isReady && !selectedCampaign.isCompleted && !winnerResult ? (
+                  <div className="text-xs text-amber-400/90 font-medium flex items-center gap-2">
+                    <Lock className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>
+                      {selectedCampaign.validEntriesCount < selectedCampaign.maxEntries
+                        ? `Locked: Needs ${selectedCampaign.maxEntries - selectedCampaign.validEntriesCount} more tickets sold to reach goal (${selectedCampaign.validEntriesCount}/${selectedCampaign.maxEntries.toLocaleString()}).`
+                        : `Locked: Please review and approve/reject ${selectedCampaign.pendingPaymentsCount} pending payments first.`}
+                    </span>
+                  </div>
+                ) : null}
 
                 {!winnerResult && (
-                  <div className="w-full flex justify-end">
+                  <div className="w-full sm:w-auto flex justify-end">
                     {selectedCampaign.isCompleted ? (
                       <div className="flex items-center gap-2 text-slate-400 text-sm font-bold">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -520,17 +571,30 @@ export default function DrawsClient() {
                         type="button"
                         onClick={handleStartDraw}
                         disabled={isDrawing || !selectedCampaign.isReady}
-                        className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-40 disabled:pointer-events-none active:scale-95 text-slate-950 font-black rounded-2xl text-base shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 transition-all"
+                        className={`w-full sm:w-auto px-8 py-4 font-black rounded-2xl text-base shadow-xl flex items-center justify-center gap-3 transition-all ${
+                          selectedCampaign.isReady
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-slate-950 shadow-emerald-500/20 cursor-pointer"
+                            : "bg-slate-800 text-slate-500 cursor-not-allowed opacity-60 border border-slate-700 shadow-none"
+                        }`}
                       >
                         {isDrawing ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
                             <span>Selecting Lucky Winner...</span>
                           </>
-                        ) : (
+                        ) : selectedCampaign.isReady ? (
                           <>
                             <Play className="w-5 h-5 fill-slate-950" />
                             <span>START RANDOM DRAW</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-5 h-5" />
+                            <span>
+                              {selectedCampaign.validEntriesCount < selectedCampaign.maxEntries
+                                ? `GOAL NOT REACHED (${selectedCampaign.validEntriesCount} / ${selectedCampaign.maxEntries.toLocaleString()})`
+                                : `RESOLVE ${selectedCampaign.pendingPaymentsCount} PENDING PAYMENTS`}
+                            </span>
                           </>
                         )}
                       </button>

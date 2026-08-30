@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import * as crypto from "crypto";
 import { Prisma } from "@prisma/client";
+import { sendEventNotification } from "@/lib/telegram-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,18 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         error: `Cannot execute draw: There are ${pendingPayments} unreviewed pending payments for this campaign. Please review them in Payments first.`,
+      }, { status: 400 });
+    }
+
+    // Check if campaign reached required maximum entries
+    const validEntriesCount = await db.entry.count({
+      where: { campaignId, status: "VALID" },
+    });
+
+    if (validEntriesCount < campaign.maxEntries) {
+      return NextResponse.json({
+        success: false,
+        error: `Cannot execute draw: Campaign has not reached the required Maximum Total Entries (${validEntriesCount}/${campaign.maxEntries} tickets sold).`,
       }, { status: 400 });
     }
 
@@ -136,32 +149,19 @@ export async function POST(req: Request) {
     const winningTicketNumber = `TKT-${prefix}-${result.winningEntry.entryNumber}`;
     const prize = campaign.prizes?.[0]?.title || campaign.title;
 
-    // Send Telegram Notification if Bot Token is configured
+    // Send Telegram Notification via dynamic template engine
     let telegramNotified = false;
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const telegramIdentity = result.winningEntry.user.identities?.find((i) => i.provider === "telegram");
-
-    if (botToken && telegramIdentity?.providerId) {
-      try {
-        const message = `🎉 <b>CONGRATULATIONS! YOU WON!</b> 🎉\n\n` +
-          `🏆 <b>Prize:</b> ${prize}\n` +
-          `🎟️ <b>Winning Ticket:</b> <code>${winningTicketNumber}</code>\n` +
-          `🎪 <b>Campaign:</b> ${campaign.title}\n\n` +
-          `Open your MilkyTech Mini App to claim your prize!`;
-
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: telegramIdentity.providerId,
-            text: message,
-            parse_mode: "HTML",
-          }),
-        });
-        telegramNotified = true;
-      } catch (tgErr) {
-        console.error("[Telegram bot notification error]", tgErr);
-      }
+    try {
+      telegramNotified = await sendEventNotification("WINNER_SELECTED", result.winningEntry.userId, {
+        user_name: result.winningEntry.user.name || `User ${result.winningEntry.userId.slice(-4)}`,
+        prize_title: prize,
+        winning_ticket: winningTicketNumber,
+        campaign_title: campaign.title,
+        prize_value: campaign.prizes?.[0]?.value || campaign.entryPrice * campaign.maxEntries,
+        currency: campaign.currency || "ETB",
+      });
+    } catch (tgErr) {
+      console.error("[Telegram bot notification error]", tgErr);
     }
 
     return NextResponse.json({

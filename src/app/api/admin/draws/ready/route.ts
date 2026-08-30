@@ -69,7 +69,9 @@ export async function GET() {
         }));
 
         const isCompleted = c.status === "COMPLETED" || !!c.draw?.winningEntryId;
-        const isReady = mappedEntries.length > 0 && pendingPayments === 0 && !isCompleted;
+        const targetReached = mappedEntries.length >= c.maxEntries;
+        // Ready ONLY if total required tickets reached, 0 pending payments, and not yet completed
+        const isReady = targetReached && mappedEntries.length > 0 && pendingPayments === 0 && !isCompleted;
 
         return {
           id: c.id,
@@ -84,6 +86,7 @@ export async function GET() {
           prizes: c.prizes,
           validEntriesCount: mappedEntries.length,
           pendingPaymentsCount: pendingPayments,
+          targetReached,
           isCompleted,
           isReady,
           entries: mappedEntries,

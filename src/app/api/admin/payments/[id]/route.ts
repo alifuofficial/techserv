@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { sendEventNotification } from '@/lib/telegram-notifications';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status } = body;
+    const { status, reason } = body;
 
     if (!['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
@@ -13,7 +14,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const existingPayment = await db.payment.findUnique({
       where: { id },
-      include: { entries: true },
+      include: {
+        entries: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
 
     if (!existingPayment) {
@@ -24,8 +30,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ success: true, message: 'Already approved' });
     }
 
+    const userName = existingPayment.user?.name || "Customer";
+
     // If approving
     if (status === 'APPROVED') {
+      let createdTicketNumbers: string[] = [];
+      let campaignTitle = "MilkyTech Campaign";
+      let isTicketCheckout = false;
+      let newBalance = 0;
+
       await db.$transaction(async (tx) => {
         // 1. Update Payment status
         await tx.payment.update({
@@ -53,7 +66,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           if (qtyMatch) {
             ticketQuantity = parseInt(qtyMatch[1], 10) || 1;
           }
-          // Try to find active campaign
           const activeCampaign = await tx.campaign.findFirst({
             where: { status: { notIn: ['DRAFT', 'CANCELLED'] } },
             orderBy: { createdAt: 'desc' },
@@ -65,11 +77,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         // If it's a campaign checkout and no entries have been created yet, generate the tickets
         if (campaignId && ticketQuantity > 0 && existingPayment.entries.length === 0) {
+          isTicketCheckout = true;
           const targetCampaign = await tx.campaign.findUnique({
             where: { id: campaignId },
           });
 
           if (targetCampaign) {
+            campaignTitle = targetCampaign.title;
+            const prefix = targetCampaign.id.substring(0, 4).toUpperCase();
             const lastEntry = await tx.entry.findFirst({
               where: { campaignId: targetCampaign.id },
               orderBy: { entryNumber: 'desc' },
@@ -79,14 +94,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             let nextNumber = (lastEntry?.entryNumber || 0) + 1;
 
             for (let i = 0; i < ticketQuantity; i++) {
+              const currentNum = nextNumber++;
               await tx.entry.create({
                 data: {
                   campaignId: targetCampaign.id,
                   userId: existingPayment.userId,
                   paymentId: existingPayment.id,
-                  entryNumber: nextNumber++,
+                  entryNumber: currentNum,
                 },
               });
+              createdTicketNumbers.push(`TKT-${prefix}-${currentNum}`);
             }
           }
         } else if (!campaignId) {
@@ -117,21 +134,57 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           });
 
           // Update Ledger Balance
-          await tx.ledgerAccount.update({
+          const updatedLedger = await tx.ledgerAccount.update({
             where: { id: ledger.id },
             data: { balance: { increment: existingPayment.amount } },
           });
+
+          newBalance = updatedLedger.balance;
         }
       });
+
+      // Dispatch automated Telegram notification asynchronously
+      if (isTicketCheckout && createdTicketNumbers.length > 0) {
+        sendEventNotification("TICKET_PURCHASE", existingPayment.userId, {
+          user_name: userName,
+          campaign_title: campaignTitle,
+          ticket_numbers: createdTicketNumbers.join(", "),
+          quantity: createdTicketNumbers.length,
+          total_price: existingPayment.amount,
+          currency: existingPayment.currency,
+        }).catch((err) => console.error("[Notify Ticket Purchase Error]", err));
+      } else if (!isTicketCheckout) {
+        sendEventNotification("DEPOSIT_APPROVED", existingPayment.userId, {
+          user_name: userName,
+          amount: existingPayment.amount,
+          currency: existingPayment.currency,
+          new_balance: newBalance,
+          provider: existingPayment.provider,
+          tx_id: existingPayment.transactionId || "Direct",
+        }).catch((err) => console.error("[Notify Deposit Approved Error]", err));
+      }
 
       return NextResponse.json({ success: true, message: 'Payment approved successfully.' });
     }
 
-    // Otherwise, just update status (e.g. REJECTED)
+    // Otherwise, update status to REJECTED
     const payment = await db.payment.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        adminNote: reason ? `${existingPayment.adminNote || ''} | Rejected reason: ${reason}` : existingPayment.adminNote,
+      },
     });
+
+    if (status === 'REJECTED') {
+      sendEventNotification("DEPOSIT_REJECTED", existingPayment.userId, {
+        user_name: userName,
+        amount: existingPayment.amount,
+        currency: existingPayment.currency,
+        reason: reason || "Transaction could not be verified.",
+        provider: existingPayment.provider,
+      }).catch((err) => console.error("[Notify Deposit Rejected Error]", err));
+    }
 
     return NextResponse.json({ success: true, payment });
   } catch (error: any) {

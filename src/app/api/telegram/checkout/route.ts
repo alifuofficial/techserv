@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getTelegramUserFromRequest } from "@/lib/telegram-auth";
+import { sendEventNotification } from "@/lib/telegram-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,17 @@ export async function POST(req: Request) {
 
         return { payment, tickets: createdTickets, newBalance: updatedLedger.balance };
       });
+
+      // Dispatch automated Telegram notification asynchronously
+      sendEventNotification("TICKET_PURCHASE", user.id, {
+        user_name: user.name || "Customer",
+        campaign_title: campaign.title,
+        ticket_numbers: purchaseResult.tickets.join(", "),
+        quantity: qty,
+        total_price: totalAmount,
+        currency: campaign.currency,
+        balance_remaining: purchaseResult.newBalance,
+      }).catch((err) => console.error("[Notify Checkout Ticket Purchase Error]", err));
 
       return NextResponse.json(
         {
