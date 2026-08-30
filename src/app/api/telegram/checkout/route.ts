@@ -157,7 +157,7 @@ export async function POST(req: Request) {
         transactionId: cleanTxId,
         screenshotUrl: screenshot,
         status: "PENDING",
-        adminNote: `Manual checkout for ${qty} ticket(s) of ${campaign.title} | Sender: ${senderName || 'N/A'}`,
+        adminNote: `CAMPAIGN_CHECKOUT:${campaign.id}:${qty}|Sender:${senderName || 'N/A'}|Title:${campaign.title}`,
       },
     });
 
