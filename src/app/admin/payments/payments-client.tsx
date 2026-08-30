@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Receipt, MoreVertical, Download, Eye, CheckCircle2, XCircle, Clock, CheckCircle, XOctagon, ShieldCheck, X } from "lucide-react";
+import { Search, Receipt, MoreVertical, Download, Eye, CheckCircle2, XCircle, Clock, CheckCircle, XOctagon, ShieldCheck, X, Wallet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,9 @@ import { format } from "date-fns";
 export default function PaymentsClient({ initialPayments }: { initialPayments: any[] }) {
   const [payments, setPayments] = useState(initialPayments);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [providerFilter, setProviderFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const updateStatus = async (id: string, newStatus: string) => {
     // Optimistic update
@@ -29,12 +32,32 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
       });
     } catch (e) {
       console.error(e);
-      // Revert on error (skipped for brevity)
     }
   };
 
+  const filteredPayments = payments.filter((payment) => {
+    const matchesSearch =
+      !searchQuery ||
+      payment.transactionId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.adminNote?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesProvider =
+      providerFilter === "ALL" ||
+      (providerFilter === "WALLET" && payment.provider === "WALLET") ||
+      (providerFilter === "TELEBIRR" && (payment.provider === "TELEBIRR" || payment.provider === "MANUAL_TELEBIRR")) ||
+      (providerFilter === "CBE" && (payment.provider === "CBE" || payment.provider === "MANUAL_CBE")) ||
+      (providerFilter === "MANUAL" && payment.provider !== "WALLET");
+
+    const matchesStatus =
+      statusFilter === "ALL" || payment.status === statusFilter;
+
+    return matchesSearch && matchesProvider && matchesStatus;
+  });
+
   const pendingCount = payments.filter(p => p.status === 'PENDING').length;
-  const approvedToday = payments.filter(p => p.status === 'APPROVED').length; // Mock metric
+  const approvedCount = payments.filter(p => p.status === 'APPROVED').length;
   const rejectedCount = payments.filter(p => p.status === 'REJECTED').length;
   
   const totalProcessed = payments
@@ -47,13 +70,8 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Payment Approvals</h1>
-          <p className="text-sm text-slate-500">Review and approve offline transactions (Telebirr, CBE) and manage ledger balances.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
-            <Download className="w-4 h-4" /> Export Report
-          </button>
+          <h1 className="text-2xl font-bold text-slate-900">Payment Management & Approvals</h1>
+          <p className="text-sm text-slate-500">Review offline transfers (Telebirr, CBE) and monitor instant wallet ticket purchases.</p>
         </div>
       </div>
 
@@ -61,21 +79,21 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start mb-2">
-            <p className="text-sm font-semibold text-slate-500">Pending Reviews</p>
+            <p className="text-sm font-semibold text-slate-500">Pending Approvals</p>
             <div className="p-2 bg-amber-50 text-amber-500 rounded-lg"><Clock className="w-4 h-4" /></div>
           </div>
           <h3 className="text-2xl font-bold text-slate-900">{pendingCount}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start mb-2">
-            <p className="text-sm font-semibold text-slate-500">Total Approved</p>
+            <p className="text-sm font-semibold text-slate-500">Approved Payments</p>
             <div className="p-2 bg-emerald-50 text-emerald-500 rounded-lg"><CheckCircle className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">{approvedToday}</h3>
+          <h3 className="text-2xl font-bold text-slate-900">{approvedCount}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start mb-2">
-            <p className="text-sm font-semibold text-slate-500">Total Processed</p>
+            <p className="text-sm font-semibold text-slate-500">Total Volume</p>
             <div className="p-2 bg-blue-50 text-blue-500 rounded-lg"><Receipt className="w-4 h-4" /></div>
           </div>
           <h3 className="text-2xl font-bold text-slate-900">{totalProcessed.toLocaleString()} ETB</h3>
@@ -95,21 +113,33 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search by Transaction ID or Email..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by TxID, Note, Name, or Email..." 
             className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
           />
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <select className="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-500 transition-all">
-            <option>All Providers</option>
-            <option>Telebirr</option>
-            <option>CBE Birr</option>
+          <select 
+            value={providerFilter}
+            onChange={(e) => setProviderFilter(e.target.value)}
+            className="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-500 transition-all"
+          >
+            <option value="ALL">All Providers</option>
+            <option value="MANUAL">Manual Only (Telebirr & CBE)</option>
+            <option value="WALLET">Wallet Purchases (Auto)</option>
+            <option value="TELEBIRR">Telebirr</option>
+            <option value="CBE">CBE Birr</option>
           </select>
-          <select className="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-500 transition-all">
-            <option>All Status</option>
-            <option>Pending</option>
-            <option>Approved</option>
-            <option>Rejected</option>
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-500 transition-all"
+          >
+            <option value="ALL">All Status</option>
+            <option value="PENDING">Pending Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
           </select>
         </div>
       </div>
@@ -130,14 +160,19 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {payments.map((payment) => (
+              {filteredPayments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-mono font-medium text-slate-900 mb-1">
-                      <Receipt className="w-4 h-4 text-slate-400" /> {payment.transactionId}
+                      {payment.provider === "WALLET" ? (
+                        <Wallet className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <Receipt className="w-4 h-4 text-slate-400" />
+                      )}
+                      <span>{payment.transactionId}</span>
                     </div>
-                    <div className="text-xs text-slate-500 max-w-[200px] truncate" title={payment.adminNote}>
-                      {payment.adminNote || 'No notes'}
+                    <div className="text-xs text-slate-500 max-w-[240px] truncate" title={payment.adminNote}>
+                      {payment.adminNote || (payment.provider === "WALLET" ? "Direct Wallet Purchase" : "No notes")}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -145,9 +180,15 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
                     <div className="text-xs text-slate-500">{payment.user?.email || 'No email'}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">
-                      {payment.provider}
-                    </span>
+                    {payment.provider === "WALLET" ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 uppercase tracking-wider">
+                        WALLET (AUTO)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">
+                        {payment.provider}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900">{payment.amount.toLocaleString()} {payment.currency}</td>
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">
@@ -178,12 +219,6 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
                         {payment.status === 'PENDING' && (
                           <>
                             <DropdownMenuItem 
-                              className="cursor-pointer flex items-center gap-2 text-blue-600 focus:bg-blue-50 focus:text-blue-700 text-sm py-2 px-3 font-semibold"
-                            >
-                              <ShieldCheck className="w-4 h-4" /> Auto-Verify (Verify.ET)
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-slate-100" />
-                            <DropdownMenuItem 
                               onClick={() => updateStatus(payment.id, 'APPROVED')}
                               className="cursor-pointer flex items-center gap-2 text-emerald-600 focus:bg-emerald-50 focus:text-emerald-700 text-sm py-2 px-3"
                             >
@@ -203,10 +238,10 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: a
                 </tr>
               ))}
               
-              {payments.length === 0 && (
+              {filteredPayments.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-slate-500">
-                    No payments found.
+                    No payments found matching the selected filters.
                   </td>
                 </tr>
               )}
