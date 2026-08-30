@@ -2,47 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { User, LogOut, Save, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import Link from "next/link";
-import { signIn, useSession, signOut } from "next-auth/react";
-import { updateProfile } from "./actions";
-import { getTelegramProfileData } from "../actions";
+import { signOut } from "next-auth/react";
+import { fetchTelegramApi } from "@/lib/telegram-client";
 
-export default function ProfileClient({ dbUser: initialUser, telegramId: initialTelegramId }: { dbUser: any, telegramId: string }) {
-  const { data: session, status } = useSession();
+export default function ProfileClient({ dbUser: initialUser, telegramId: initialTelegramId }: { dbUser: any; telegramId: string }) {
   const [user, setUser] = useState<any>(initialUser);
   const [telegramId, setTelegramId] = useState<string>(initialTelegramId || "");
   const [name, setName] = useState<string>(initialUser?.name || "");
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [isLoadingProfile, setIsLoadingProfile] = useState(!initialUser);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  const loadProfile = async () => {
+    try {
+      const res = await fetchTelegramApi("/api/telegram/profile");
+      if (res.ok && res.data.success && res.data.user) {
+        setUser(res.data.user);
+        setName(res.data.user.name || "");
+        setTelegramId(res.data.user.telegramId || "");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg && tg.initData) {
-        tg.ready();
-        tg.expand();
-        signIn("telegram", { initData: tg.initData, redirect: false });
-      }
-    }
-
-    if (status === "authenticated" && !initialUser) {
-      setIsLoadingProfile(true);
-      getTelegramProfileData()
-        .then((res) => {
-          if (res.success && res.user) {
-            setUser(res.user);
-            setName(res.user.name || "");
-            setTelegramId(res.user.telegramId || "");
-          }
-        })
-        .catch(console.error)
-        .finally(() => {
-          setIsLoadingProfile(false);
-        });
-    }
-  }, [status, initialUser]);
+    loadProfile();
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -55,16 +44,20 @@ export default function ProfileClient({ dbUser: initialUser, telegramId: initial
     setSuccess(false);
 
     try {
-      const res = await updateProfile({ name });
-      if (res.success) {
+      const res = await fetchTelegramApi("/api/telegram/profile", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      if (res.ok && res.data.success) {
         setSuccess(true);
-        if (res.name) {
-          setName(res.name);
-          setUser((prev: any) => ({ ...prev, name: res.name }));
+        if (res.data.name) {
+          setName(res.data.name);
+          setUser((prev: any) => ({ ...prev, name: res.data.name }));
         }
         setTimeout(() => setSuccess(false), 3000);
       } else {
-        setError(res.error || "Failed to update profile");
+        setError(res.data.error || "Failed to update profile");
       }
     } catch (err: any) {
       console.error(err);

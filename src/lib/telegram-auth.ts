@@ -1,0 +1,223 @@
+import * as crypto from "crypto";
+import { db } from "./db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "./auth";
+
+/**
+ * Validates the Telegram initData string using the bot token HMAC SHA256 algorithm.
+ */
+export function validateTelegramWebAppData(telegramInitData: string): { isValid: boolean; user?: any; startParam?: string } {
+  try {
+    if (!telegramInitData) {
+      return { isValid: false };
+    }
+
+    const initData = new URLSearchParams(telegramInitData);
+    const hash = initData.get("hash");
+
+    if (!hash) {
+      return { isValid: false };
+    }
+
+    initData.delete("hash");
+
+    const keys = Array.from(initData.keys()).sort();
+    const dataCheckString = keys.map((key) => `${key}=${initData.get(key)}`).join("\n");
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || "";
+    const secretKey = crypto.createHmac("sha256", "WebAppData").update(botToken).digest();
+    const calculatedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+
+    if (calculatedHash === hash) {
+      const userStr = initData.get("user");
+      const startParam = initData.get("start_param") || undefined;
+      return {
+        isValid: true,
+        user: userStr ? JSON.parse(userStr) : null,
+        startParam,
+      };
+    }
+
+    return { isValid: false };
+  } catch (error) {
+    console.error("[validateTelegramWebAppData error]", error);
+    return { isValid: false };
+  }
+}
+
+/**
+ * Finds or creates a user from verified Telegram WebApp data.
+ * Also handles referral linkage and ledger account initialization.
+ */
+export async function getOrCreateTelegramUser(initData: string) {
+  const { isValid, user: telegramUser, startParam } = validateTelegramWebAppData(initData);
+  if (!isValid || !telegramUser) {
+    return null;
+  }
+
+  const telegramId = telegramUser.id.toString();
+  const email = `telegram_${telegramId}@milkytech.online`;
+
+  // 1. Look for existing user by email or by identity
+  let user = await db.user.findFirst({
+    where: {
+      OR: [
+        { email },
+        {
+          identities: {
+            some: {
+              provider: "telegram",
+              providerId: telegramId,
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      ledgerAccount: true,
+    },
+  });
+
+  // 2. If user doesn't exist, create user and handle referral
+  if (!user) {
+    let referredById: string | null = null;
+    if (startParam) {
+      const refCode = startParam.replace("MILKY-", "").replace("ref_", "").trim();
+      if (refCode) {
+        const referrer = await db.user.findFirst({
+          where: {
+            OR: [
+              { referralCode: startParam },
+              { referralCode: `MILKY-${refCode}` },
+              { id: { startsWith: refCode } },
+              {
+                identities: {
+                  some: {
+                    provider: "telegram",
+                    providerId: refCode,
+                  },
+                },
+              },
+            ],
+          },
+        });
+        if (referrer) {
+          referredById = referrer.id;
+        }
+      }
+    }
+
+    const fullName = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" ") || `User ${telegramId}`;
+
+    user = await db.user.create({
+      data: {
+        name: fullName,
+        email,
+        role: "USER",
+        password: "",
+        referredById,
+        referralCode: `MILKY-${telegramId.slice(-6).toUpperCase()}`,
+        identities: {
+          create: {
+            provider: "telegram",
+            providerId: telegramId,
+          },
+        },
+      },
+      include: {
+        ledgerAccount: true,
+      },
+    });
+
+    // Create ledger account
+    const ledger = await db.ledgerAccount.create({
+      data: {
+        userId: user.id,
+        balance: 0,
+        currency: "ETB",
+      },
+    });
+
+    user.ledgerAccount = ledger;
+  } else {
+    // Ensure ledger account exists
+    if (!user.ledgerAccount) {
+      const ledger = await db.ledgerAccount.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          balance: 0,
+          currency: "ETB",
+        },
+      });
+      user.ledgerAccount = ledger;
+    }
+
+    // Ensure referralCode exists
+    if (!user.referralCode) {
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          referralCode: `MILKY-${telegramId.slice(-6).toUpperCase()}`,
+        },
+      });
+      user.referralCode = `MILKY-${telegramId.slice(-6).toUpperCase()}`;
+    }
+  }
+
+  return user;
+}
+
+/**
+ * Extracts and authenticates a user from an incoming HTTP Request:
+ * 1. Checks `x-telegram-init-data` header
+ * 2. Checks query string `initData`
+ * 3. Falls back to NextAuth getServerSession
+ */
+export async function getTelegramUserFromRequest(req: Request) {
+  try {
+    // 1. Check custom Telegram header
+    const initDataHeader = req.headers.get("x-telegram-init-data");
+    if (initDataHeader) {
+      const user = await getOrCreateTelegramUser(initDataHeader);
+      if (user) return user;
+    }
+
+    // 2. Check URL query params
+    const url = new URL(req.url);
+    const initDataQuery = url.searchParams.get("initData");
+    if (initDataQuery) {
+      const user = await getOrCreateTelegramUser(initDataQuery);
+      if (user) return user;
+    }
+
+    // 3. Fallback to NextAuth session
+    const session = await getServerSession(authOptions);
+    if (session?.user) {
+      const userId = (session.user as any)?.id;
+      const email = session.user.email;
+
+      if (userId) {
+        const user = await db.user.findUnique({
+          where: { id: userId },
+          include: { ledgerAccount: true },
+        });
+        if (user) return user;
+      }
+
+      if (email) {
+        const user = await db.user.findUnique({
+          where: { email },
+          include: { ledgerAccount: true },
+        });
+        if (user) return user;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("[getTelegramUserFromRequest error]", error);
+    return null;
+  }
+}

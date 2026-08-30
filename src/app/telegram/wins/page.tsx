@@ -1,51 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
-import { ChevronLeft, Trophy, Loader2, Sparkles, ArrowRight } from "lucide-react";
-import { getTelegramWins } from "../actions";
+import { ChevronLeft, Trophy, Loader2, Sparkles } from "lucide-react";
+import { fetchTelegramApi } from "@/lib/telegram-client";
 
 export default function WinsPage() {
-  const { data: session, status } = useSession();
   const [wins, setWins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg && tg.initData) {
-        tg.ready();
-        tg.expand();
-        signIn("telegram", { initData: tg.initData, redirect: false }).catch(() => {
-          setLoading(false);
-        });
-      } else {
+    fetchTelegramApi("/api/telegram/wins")
+      .then((res) => {
+        if (res.ok && res.data.success) {
+          setWins(res.data.wins || []);
+        } else {
+          setError(res.data.error || "Failed to load wins");
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load wins");
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    }
+      });
+  }, []);
 
-    if (status === "authenticated") {
-      getTelegramWins()
-        .then((res) => {
-          if (res.success) {
-            setWins(res.wins || []);
-          } else {
-            setError(res.error || "Failed to load wins");
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          setError("Failed to load wins");
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [status]);
-
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0F19] text-white flex flex-col items-center justify-center p-6 space-y-4">
         <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 animate-pulse">
@@ -85,7 +68,7 @@ export default function WinsPage() {
               Every ticket is an opportunity. Enter active draws to increase your chances of winning!
             </p>
             <Link
-              href="/campaigns"
+              href="/telegram/campaigns"
               className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 text-sm active:scale-95 transition-transform shadow-lg shadow-emerald-500/20"
             >
               <Sparkles className="w-4 h-4" /> Browse Campaigns

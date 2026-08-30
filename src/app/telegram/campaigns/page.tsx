@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Trophy, Sparkles, Loader2, Clock, Ticket } from "lucide-react";
-import { getTelegramDashboardData } from "../actions";
+import { ChevronLeft, Trophy, Sparkles, Loader2 } from "lucide-react";
+import { fetchTelegramApi } from "@/lib/telegram-client";
 
 export default function TelegramCampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getTelegramDashboardData()
-      .then((data) => {
-        if (data?.campaigns) {
-          setCampaigns(data.campaigns);
+    fetchTelegramApi("/api/telegram/campaigns")
+      .then((res) => {
+        if (res.ok && res.data.success) {
+          setCampaigns(res.data.campaigns || []);
         }
       })
       .catch(console.error)
@@ -58,7 +58,7 @@ export default function TelegramCampaignsPage() {
           campaigns.map((campaign) => (
             <Link
               key={campaign.id}
-              href={`/campaigns/${campaign.slug}`}
+              href={`/telegram/campaigns/${campaign.slug}`}
               className="bg-[#121826] border border-slate-800/60 rounded-3xl p-5 block active:bg-slate-800/80 transition-all hover:border-slate-700 shadow-md relative overflow-hidden group"
             >
               <div className="w-full h-44 bg-slate-800 rounded-2xl overflow-hidden border border-white/5 relative mb-4">

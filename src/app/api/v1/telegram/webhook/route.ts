@@ -28,7 +28,11 @@ export async function POST(req: Request) {
         }
       }
 
-      // Send the reply (Assuming you have a fetch call to Telegram Bot API)
+      const webAppUrl = payload
+        ? `https://milkytech.online/telegram?startapp=${encodeURIComponent(payload)}`
+        : 'https://milkytech.online/telegram';
+
+      // Send the reply
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (botToken) {
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -41,8 +45,8 @@ export async function POST(req: Request) {
               inline_keyboard: [
                 [
                   {
-                    text: 'Open Mini App',
-                    web_app: { url: 'https://www.milkytech.online/' }, // Must be HTTPS
+                    text: '🎁 Open MilkyTech Mini App',
+                    web_app: { url: webAppUrl },
                   },
                 ],
               ],

@@ -2,93 +2,61 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { Loader2, Ticket, Wallet, Trophy, Activity, ChevronRight, AlertTriangle, User, Users } from "lucide-react";
+import { Loader2, Ticket, Wallet, Trophy, AlertTriangle, User, Users } from "lucide-react";
 import Link from "next/link";
-import { getTelegramDashboardData } from "./actions";
+import { fetchTelegramApi } from "@/lib/telegram-client";
 
 export default function TelegramMiniApp() {
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<{ balance: number, campaigns: any[], ticketsCount: number, winsCount: number } | null>(null);
+  const [dashboardData, setDashboardData] = useState<{ balance: number; campaigns: any[]; ticketsCount: number; winsCount: number; user?: any } | null>(null);
 
-  useEffect(() => {
-    // Load active campaigns immediately
-    getTelegramDashboardData().then(data => {
-      if (data) setDashboardData(data);
-    }).catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    // Only run auth if we are strictly unauthenticated
-    if (status === "unauthenticated") {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg && tg.initData) {
-        tg.ready();
-        tg.expand();
-        // Set header color to match our dark theme
-        tg.setHeaderColor("#0B0F19");
-        tg.setBackgroundColor("#0B0F19");
-
-        signIn("telegram", { 
-          initData: tg.initData, 
-          redirect: false 
-        }).then((res) => {
-          if (res?.error) {
-            setError(res.error);
-          }
-        });
-      } else {
-        // Not opened inside Telegram
-        setError("Please open this app inside Telegram.");
+  const loadDashboard = async () => {
+    try {
+      const res = await fetchTelegramApi("/api/telegram/dashboard");
+      if (res.ok && res.data.success) {
+        setDashboardData(res.data);
       }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch on mount
+    loadDashboard();
+
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor("#0B0F19");
+      tg.setBackgroundColor("#0B0F19");
     }
 
-    if (status === "authenticated") {
-      getTelegramDashboardData().then(data => {
-        if (data) setDashboardData(data);
+    if (status === "unauthenticated" && tg && tg.initData) {
+      signIn("telegram", {
+        initData: tg.initData,
+        redirect: false,
+      }).then(() => {
+        loadDashboard();
       }).catch(console.error);
     }
   }, [status]);
 
-  if (status === "loading" || (status === "unauthenticated" && !error)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <div className="w-16 h-16 relative flex items-center justify-center text-emerald-400 animate-pulse">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-            <line x1="4" y1="22" x2="4" y2="15"></line>
-          </svg>
-        </div>
-        <div className="flex items-center gap-2 text-slate-400 font-medium">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Authenticating...</span>
-        </div>
-      </div>
-    );
-  }
+  const userName =
+    dashboardData?.user?.name ||
+    session?.user?.name ||
+    session?.user?.email?.split("@")[0].replace("telegram_", "User ") ||
+    "User";
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
-        <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
-          <AlertTriangle className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
-        <p className="text-slate-400 text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  // Telegram User Dashboard
   return (
     <div className="pb-24">
       {/* Top Bar */}
       <div className="px-5 pt-14 pb-4 flex justify-between items-center sticky top-0 bg-[#0B0F19]/80 backdrop-blur-lg z-10">
         <div>
           <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Welcome back</p>
-          <h1 className="text-xl font-bold text-white mt-0.5">
-            {session?.user?.name || session?.user?.email?.split('@')[0].replace('telegram_', 'User ') || "User"}
-          </h1>
+          <h1 className="text-xl font-bold text-white mt-0.5">{userName}</h1>
         </div>
         <Link href="/telegram/profile" className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden active:scale-95 transition-transform">
           <User className="w-5 h-5 text-slate-400" />
@@ -166,7 +134,7 @@ export default function TelegramMiniApp() {
           
           <div className="space-y-3">
             {dashboardData?.campaigns?.map((campaign: any) => (
-              <Link href={`/campaigns/${campaign.slug}`} key={campaign.id} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4 active:bg-slate-800 transition-colors hover:border-slate-700">
+              <Link href={`/telegram/campaigns/${campaign.slug}`} key={campaign.id} className="bg-[#121826] border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4 active:bg-slate-800 transition-colors hover:border-slate-700">
                 <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
                   {campaign.image ? (
                     <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
