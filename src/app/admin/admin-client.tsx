@@ -1,29 +1,195 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Users, Trophy, Ticket, Wallet, Calendar, ArrowUpRight, 
   MoreVertical, CheckCircle2, ShieldAlert, CircleDashed, CheckCircle, Database, Phone, HardDrive, Award, Sparkles
 } from "lucide-react";
-import { 
-  ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Area, AreaChart,
-  PieChart, Pie, Cell, LineChart, Line
-} from "recharts";
 import Link from "next/link";
 
-const miniChartData1 = [{v:10},{v:15},{v:12},{v:22},{v:18},{v:30},{v:25},{v:35}];
-const miniChartData2 = [{v:4},{v:6},{v:5},{v:8},{v:10},{v:9},{v:12},{v:15}];
-const miniChartData3 = [{v:5},{v:12},{v:8},{v:20},{v:15},{v:35},{v:25},{v:40}];
-const miniChartData4 = [{v:20},{v:30},{v:25},{v:45},{v:35},{v:50},{v:40},{v:60}];
+// Crash-proof SVG Mini Sparkline
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length === 0) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const width = 100;
+  const height = 32;
+
+  const points = data
+    .map((val, idx) => {
+      const x = (idx / (data.length - 1)) * width;
+      const y = height - ((val - min) / range) * (height - 6) - 3;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-24 h-8 overflow-visible">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  );
+}
+
+// Crash-proof SVG Revenue Area Chart with hover tooltips
+function RevenueAreaChart({ data }: { data: { name: string; value: number }[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-48 flex items-center justify-center text-slate-400 text-xs">
+        No revenue data recorded yet.
+      </div>
+    );
+  }
+
+  const values = data.map((d) => d.value);
+  const maxVal = Math.max(1000, ...values);
+  const width = 600;
+  const height = 200;
+  const paddingX = 40;
+  const paddingY = 20;
+
+  const points = data.map((d, i) => {
+    const x = paddingX + (i / Math.max(1, data.length - 1)) * (width - paddingX * 2);
+    const y = height - paddingY - (d.value / maxVal) * (height - paddingY * 2);
+    return { x, y, ...d };
+  });
+
+  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+  const areaPoints = `${points[0].x},${height - paddingY} ${polylinePoints} ${points[points.length - 1].x},${height - paddingY}`;
+
+  return (
+    <div className="relative w-full h-[250px] flex flex-col justify-between select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+        <defs>
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+          const y = height - paddingY - ratio * (height - paddingY * 2);
+          return (
+            <line
+              key={idx}
+              x1={paddingX}
+              y1={y}
+              x2={width - paddingX}
+              y2={y}
+              stroke="#E2E8F0"
+              strokeDasharray="4 4"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Area fill */}
+        <polygon points={areaPoints} fill="url(#areaGradient)" />
+
+        {/* Line stroke */}
+        <polyline
+          fill="none"
+          stroke="#10B981"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={polylinePoints}
+        />
+
+        {/* Interactive Dots */}
+        {points.map((p, i) => (
+          <g key={i} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={hoveredIdx === i ? 6 : 4}
+              fill="#10B981"
+              stroke="#FFFFFF"
+              strokeWidth="2"
+              className="transition-all"
+            />
+          </g>
+        ))}
+      </svg>
+
+      {/* Hover tooltip */}
+      {hoveredIdx !== null && points[hoveredIdx] && (
+        <div
+          className="absolute bg-slate-900 text-white text-xs py-1.5 px-3 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
+          style={{
+            left: `${(points[hoveredIdx].x / width) * 100}%`,
+            top: `${(points[hoveredIdx].y / height) * 100}%`,
+          }}
+        >
+          <div className="font-bold text-emerald-400">{points[hoveredIdx].value.toLocaleString()} ETB</div>
+          <div className="text-[10px] text-slate-400">{points[hoveredIdx].name}</div>
+        </div>
+      )}
+
+      {/* X Axis Labels */}
+      <div className="flex justify-between px-6 text-[10px] font-semibold text-slate-400 mt-1">
+        {data.map((d, i) => (
+          <span key={i}>{d.name}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Crash-proof SVG Donut Chart
+function StatusDonutChart({ data, total }: { data: { name: string; value: number; color: string }[]; total: number }) {
+  const size = 120;
+  const strokeWidth = 14;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  let accumulatedPercent = 0;
+
+  return (
+    <div className="relative w-32 h-32 flex items-center justify-center">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {data.map((slice, i) => {
+          const percent = total > 0 ? slice.value / total : 0;
+          const strokeDasharray = `${percent * circumference} ${circumference}`;
+          const strokeDashoffset = -accumulatedPercent * circumference;
+          accumulatedPercent += percent;
+
+          return (
+            <circle
+              key={i}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="transparent"
+              stroke={slice.color}
+              strokeWidth={strokeWidth}
+              strokeDasharray={strokeDasharray}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          );
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-bold text-slate-900 leading-none">{total}</span>
+        <span className="text-[10px] text-slate-500 font-medium mt-0.5">Total</span>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboardClient({ data }: { data: any }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const totalCampaignPie = data?.pieData?.reduce((acc: number, item: any) => acc + (item.value || 0), 0) || 1;
+  const totalCampaignPie = data?.pieData?.reduce((acc: number, item: any) => acc + (item.value || 0), 0) || 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -64,15 +230,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Live</span>
               <span className="text-[10px] text-slate-400">registered accounts</span>
             </div>
-            <div className="w-24 h-8">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={miniChartData1}>
-                    <Line type="monotone" dataKey="v" stroke="#10B981" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <Sparkline data={[10, 15, 12, 22, 18, 30, 25, 35]} color="#10B981" />
           </div>
         </div>
 
@@ -92,15 +250,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <span className="text-purple-600 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Live Draws</span>
               <span className="text-[10px] text-slate-400">ready for participation</span>
             </div>
-            <div className="w-24 h-8">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={miniChartData2}>
-                    <Line type="monotone" dataKey="v" stroke="#A855F7" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <Sparkline data={[4, 6, 5, 8, 10, 9, 12, 15]} color="#A855F7" />
           </div>
         </div>
 
@@ -120,15 +270,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <span className="text-blue-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> {data?.totalCampaigns || 0}</span>
               <span className="text-[10px] text-slate-400">total campaigns</span>
             </div>
-            <div className="w-24 h-8">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={miniChartData3}>
-                    <Line type="monotone" dataKey="v" stroke="#3B82F6" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <Sparkline data={[5, 12, 8, 20, 15, 35, 25, 40]} color="#3B82F6" />
           </div>
         </div>
 
@@ -150,15 +292,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Approved</span>
               <span className="text-[10px] text-slate-400">verified payments</span>
             </div>
-            <div className="w-24 h-8">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={miniChartData4}>
-                    <Line type="monotone" dataKey="v" stroke="#F59E0B" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            <Sparkline data={[20, 30, 25, 45, 35, 50, 40, 60]} color="#F59E0B" />
           </div>
         </div>
       </div>
@@ -180,29 +314,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
             </div>
           </div>
           <div className="flex-1 min-h-[250px] w-full mt-2 flex items-center justify-center">
-            {isMounted && data?.revenueData && data.revenueData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={data.revenueData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} tickFormatter={(val) => val >= 1000000 ? `${val/1000000}M` : `${val/1000}k`} />
-                  <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ color: '#10B981', fontWeight: 'bold' }}
-                    formatter={(val: any) => [`${(Number(val) || 0).toLocaleString()} ETB`, 'Revenue']}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" activeDot={{ r: 6, strokeWidth: 0, fill: '#10B981' }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-48 flex items-center justify-center text-slate-400 text-xs">Loading chart...</div>
-            )}
+            <RevenueAreaChart data={data?.revenueData || []} />
           </div>
         </div>
 
@@ -215,24 +327,8 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
             </div>
             <div className="flex items-center h-full pb-2 pt-2">
-              <div className="w-1/2 h-36 relative flex items-center justify-center">
-                {isMounted && data?.pieData && data.pieData.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={data.pieData} innerRadius={40} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
-                          {data.pieData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-xl font-bold text-slate-900 leading-none">{data?.totalCampaigns || 0}</span>
-                      <span className="text-[10px] text-slate-500 font-medium">Total</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-slate-400 text-xs">Loading...</div>
-                )}
+              <div className="w-1/2 flex items-center justify-center">
+                <StatusDonutChart data={data?.pieData || []} total={totalCampaignPie} />
               </div>
               <div className="w-1/2 pl-4 space-y-2">
                 {data?.pieData?.map((item: any, i: number) => (
@@ -242,7 +338,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                       <span className="text-xs font-semibold text-slate-700">{item.name}</span>
                     </div>
                     <div className="text-[11px] text-slate-500 ml-4">
-                      {item.value} ({Math.round(((item.value || 0) / totalCampaignPie) * 100)}%)
+                      {item.value} ({Math.round(((item.value || 0) / Math.max(1, totalCampaignPie)) * 100)}%)
                     </div>
                   </div>
                 ))}
