@@ -2,16 +2,52 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { ChevronLeft, ShieldCheck, Upload, CheckCircle2, AlertCircle, X, Loader2, Copy, Check } from "lucide-react";
+import { ChevronLeft, ShieldCheck, Upload, CheckCircle2, AlertCircle, X, Loader2, Copy, Check, Landmark, Wallet } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchTelegramApi } from "@/lib/telegram-client";
+
+interface PaymentMethodOption {
+  id: string;
+  name: string;
+  shortCode: string;
+  category: "MOBILE_MONEY" | "BANK_TRANSFER";
+  accountName: string;
+  accountNumber: string;
+  instructions: string;
+  enabled: boolean;
+  color: string;
+}
 
 function DepositForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [amount, setAmount] = useState(searchParams.get("amount") || "");
-  const [provider, setProvider] = useState<"TELEBIRR" | "CBE">("TELEBIRR");
+  const [methods, setMethods] = useState<PaymentMethodOption[]>([
+    {
+      id: "telebirr",
+      name: "Telebirr Direct",
+      shortCode: "TB",
+      category: "MOBILE_MONEY",
+      accountName: "MilkyTech Online",
+      accountNumber: "0911000000",
+      instructions: "Transfer to the Telebirr number above and upload your screenshot receipt.",
+      enabled: true,
+      color: "blue",
+    },
+    {
+      id: "cbe",
+      name: "Commercial Bank of Ethiopia (CBE)",
+      shortCode: "CBE",
+      category: "BANK_TRANSFER",
+      accountName: "MilkyTech Online PLC",
+      accountNumber: "1000123456789",
+      instructions: "Transfer to the CBE account number above and upload your screenshot receipt.",
+      enabled: true,
+      color: "purple",
+    },
+  ]);
+  const [selectedMethodId, setSelectedMethodId] = useState<string>("telebirr");
   const [txId, setTxId] = useState("");
   const [senderName, setSenderName] = useState("");
   const [screenshot, setScreenshot] = useState("");
@@ -20,34 +56,47 @@ function DepositForm() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Dynamic Payment Settings
-  const [paymentSettings, setPaymentSettings] = useState<{
-    telebirr: { enabled: boolean; accountName: string; accountNumber: string; instructions: string };
-    cbe: { enabled: boolean; accountName: string; accountNumber: string; instructions: string };
-  }>({
-    telebirr: {
-      enabled: true,
-      accountName: "MilkyTech Online",
-      accountNumber: "0911000000",
-      instructions: "Transfer to the Telebirr number above and upload your screenshot receipt.",
-    },
-    cbe: {
-      enabled: true,
-      accountName: "MilkyTech Online PLC",
-      accountNumber: "1000123456789",
-      instructions: "Transfer to the CBE account number above and upload your screenshot receipt.",
-    },
-  });
-
   useEffect(() => {
     fetch("/api/settings/public")
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.settings) {
-          setPaymentSettings({
-            telebirr: data.settings.telebirr || paymentSettings.telebirr,
-            cbe: data.settings.cbe || paymentSettings.cbe,
-          });
+          if (data.settings.paymentMethods && data.settings.paymentMethods.length > 0) {
+            setMethods(data.settings.paymentMethods);
+            setSelectedMethodId(data.settings.paymentMethods[0].id);
+          } else {
+            const defaultList: PaymentMethodOption[] = [];
+            if (data.settings.telebirr?.enabled) {
+              defaultList.push({
+                id: "telebirr",
+                name: "Telebirr Direct",
+                shortCode: "TB",
+                category: "MOBILE_MONEY",
+                accountName: data.settings.telebirr.accountName,
+                accountNumber: data.settings.telebirr.accountNumber,
+                instructions: data.settings.telebirr.instructions,
+                enabled: true,
+                color: "blue",
+              });
+            }
+            if (data.settings.cbe?.enabled) {
+              defaultList.push({
+                id: "cbe",
+                name: "Commercial Bank of Ethiopia",
+                shortCode: "CBE",
+                category: "BANK_TRANSFER",
+                accountName: data.settings.cbe.accountName,
+                accountNumber: data.settings.cbe.accountNumber,
+                instructions: data.settings.cbe.instructions,
+                enabled: true,
+                color: "purple",
+              });
+            }
+            if (defaultList.length > 0) {
+              setMethods(defaultList);
+              setSelectedMethodId(defaultList[0].id);
+            }
+          }
         }
       })
       .catch(console.error);
@@ -77,6 +126,8 @@ function DepositForm() {
     }
   };
 
+  const selectedMethod = methods.find((m) => m.id === selectedMethodId) || methods[0];
+
   const handleDeposit = async () => {
     if (!amount || Number(amount) < 50) {
       setError("Minimum deposit is 50 ETB.");
@@ -99,7 +150,7 @@ function DepositForm() {
         method: "POST",
         body: JSON.stringify({
           amount: Number(amount),
-          provider,
+          provider: selectedMethod ? selectedMethod.name : "TELEBIRR",
           txId: txId.trim(),
           senderName: senderName.trim() || undefined,
           screenshot,
@@ -122,24 +173,43 @@ function DepositForm() {
     }
   };
 
+  const getBadgeColor = (color: string) => {
+    switch (color) {
+      case "blue":
+        return "bg-blue-500 text-white";
+      case "purple":
+        return "bg-purple-600 text-white";
+      case "emerald":
+        return "bg-emerald-500 text-white";
+      case "amber":
+        return "bg-amber-500 text-slate-950";
+      case "rose":
+        return "bg-rose-500 text-white";
+      case "indigo":
+        return "bg-indigo-600 text-white";
+      case "orange":
+        return "bg-orange-500 text-white";
+      default:
+        return "bg-slate-700 text-white";
+    }
+  };
+
   if (success) {
     return (
       <div className="pb-24 px-5 min-h-screen bg-[#0B0F19] flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 text-emerald-400 border border-emerald-500/30">
+        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 text-emerald-400 border border-emerald-500/30 animate-bounce">
           <CheckCircle2 className="w-10 h-10" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Deposit Submitted!</h1>
-        <p className="text-slate-400 text-sm text-center mb-8 max-w-xs">
-          Your payment receipt has been received and is being verified. Your wallet will be credited shortly.
+        <p className="text-slate-400 text-sm text-center mb-8 max-w-xs leading-relaxed">
+          Your payment receipt for <b>{amount} ETB</b> via <b>{selectedMethod?.name}</b> has been received and is being verified. Your wallet will be credited shortly.
         </p>
-        <Link href="/telegram" className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-8 rounded-xl text-sm shadow-lg shadow-emerald-500/20">
+        <Link href="/telegram" className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-8 rounded-xl text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
           Return to Dashboard
         </Link>
       </div>
     );
   }
-
-  const activePayment = provider === "TELEBIRR" ? paymentSettings.telebirr : paymentSettings.cbe;
 
   return (
     <div className="pb-24 px-5 min-h-screen bg-[#0B0F19] text-white">
@@ -152,67 +222,57 @@ function DepositForm() {
 
       {/* Payment Provider Selector */}
       <div className="bg-[#121826] border border-slate-800/60 rounded-3xl p-5 mt-2 space-y-3">
-        <h2 className="text-slate-300 font-semibold text-xs uppercase tracking-wider">Select Payment Method</h2>
+        <h2 className="text-slate-300 font-semibold text-xs uppercase tracking-wider">Select Bank / Payment Method</h2>
         
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setProvider("TELEBIRR")}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
-              provider === "TELEBIRR"
-                ? "border-emerald-500 bg-emerald-500/15 text-white ring-2 ring-emerald-500/20"
-                : "border-slate-700/60 bg-slate-800/40 text-slate-400"
-            }`}
-          >
-            <div className="w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center mb-2 font-black text-[10px]">
-              TB
-            </div>
-            <p className="text-sm font-bold text-white">Telebirr</p>
-            <p className="text-[11px] font-mono text-emerald-400 mt-0.5 truncate">
-              {paymentSettings.telebirr.accountNumber}
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setProvider("CBE")}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
-              provider === "CBE"
-                ? "border-emerald-500 bg-emerald-500/15 text-white ring-2 ring-emerald-500/20"
-                : "border-slate-700/60 bg-slate-800/40 text-slate-400"
-            }`}
-          >
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center mb-2 font-black text-white text-[10px]">
-              CBE
-            </div>
-            <p className="text-sm font-bold text-white">CBE Birr</p>
-            <p className="text-[11px] font-mono text-purple-300 mt-0.5 truncate">
-              {paymentSettings.cbe.accountNumber}
-            </p>
-          </button>
+        <div className="grid grid-cols-2 gap-2.5">
+          {methods.map((method) => {
+            const isSelected = selectedMethodId === method.id;
+            return (
+              <button
+                key={method.id}
+                type="button"
+                onClick={() => setSelectedMethodId(method.id)}
+                className={`p-3 rounded-2xl border text-left transition-all ${
+                  isSelected
+                    ? "border-emerald-500 bg-emerald-500/15 text-white ring-2 ring-emerald-500/20"
+                    : "border-slate-700/60 bg-slate-800/40 text-slate-400 hover:bg-slate-800/80"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 font-black text-[10px] uppercase shadow-sm ${getBadgeColor(method.color)}`}>
+                  {method.shortCode || "PAY"}
+                </div>
+                <p className="text-xs font-bold text-white truncate">{method.name}</p>
+                <p className="text-[10px] font-mono text-emerald-400 mt-0.5 truncate">
+                  {method.accountNumber}
+                </p>
+              </button>
+            );
+          })}
         </div>
 
         {/* Dynamic Account Info Card */}
-        <div className="p-4 bg-[#0B0F19] border border-slate-800 rounded-2xl space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-semibold">Account Name:</span>
-            <span className="text-white font-bold">{activePayment.accountName}</span>
+        {selectedMethod && (
+          <div className="p-4 bg-[#0B0F19] border border-slate-800 rounded-2xl space-y-2 mt-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-semibold">Account Name:</span>
+              <span className="text-white font-bold">{selectedMethod.accountName}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-semibold">Account Number:</span>
+              <button
+                type="button"
+                onClick={() => handleCopyAccount(selectedMethod.accountNumber)}
+                className="flex items-center gap-1 font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 active:scale-95 transition-all"
+              >
+                <span>{selectedMethod.accountNumber}</span>
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/80 leading-relaxed">
+              {selectedMethod.instructions}
+            </p>
           </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-semibold">Account Number:</span>
-            <button
-              type="button"
-              onClick={() => handleCopyAccount(activePayment.accountNumber)}
-              className="flex items-center gap-1 font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20"
-            >
-              <span>{activePayment.accountNumber}</span>
-              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-            </button>
-          </div>
-          <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-            {activePayment.instructions}
-          </p>
-        </div>
+        )}
       </div>
 
       <div className="mt-5 space-y-4">
@@ -247,7 +307,7 @@ function DepositForm() {
             type="text" 
             value={txId}
             onChange={(e) => setTxId(e.target.value)}
-            placeholder="e.g. TB123456789 or CBE-REF-001"
+            placeholder="e.g. TB123456789 or CBE-REF-001 or AWASH-998"
             className="w-full bg-[#121826] border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors font-mono"
           />
         </div>

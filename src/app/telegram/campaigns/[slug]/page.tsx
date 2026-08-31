@@ -38,7 +38,7 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [provider, setProvider] = useState<"WALLET" | "MANUAL_TELEBIRR" | "MANUAL_CBE">("WALLET");
+  const [provider, setProvider] = useState<string>("WALLET");
   const [txId, setTxId] = useState("");
   const [screenshot, setScreenshot] = useState("");
   const [senderName, setSenderName] = useState("");
@@ -48,6 +48,15 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
   const [copiedTicket, setCopiedTicket] = useState(false);
 
   const [paymentSettings, setPaymentSettings] = useState<{
+    methods?: Array<{
+      id: string;
+      name: string;
+      shortCode: string;
+      accountName: string;
+      accountNumber: string;
+      instructions: string;
+      color: string;
+    }>;
     telebirr: { accountNumber: string; accountName: string; instructions: string };
     cbe: { accountNumber: string; accountName: string; instructions: string };
   }>({
@@ -103,6 +112,15 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
   const userBalance = Number(user?.balance) || 0;
   const canAffordWithWallet = userBalance >= totalPrice;
   const deficitAmount = Math.max(0, totalPrice - userBalance);
+
+  const currentMethod =
+    provider !== "WALLET"
+      ? (paymentSettings.methods || []).find((m) => m.id === provider || m.name === provider) || {
+          accountNumber: provider.includes("CBE") ? paymentSettings.cbe.accountNumber : paymentSettings.telebirr.accountNumber,
+          accountName: provider.includes("CBE") ? paymentSettings.cbe.accountName : paymentSettings.telebirr.accountName,
+          instructions: provider.includes("CBE") ? paymentSettings.cbe.instructions : paymentSettings.telebirr.instructions,
+        }
+      : null;
 
   const handleBuy = async () => {
     if (!campaign || campaign.isCompleted) return;
@@ -574,59 +592,63 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
                 )}
               </button>
 
-              {/* Option 2: Telebirr */}
-              <button
-                type="button"
-                onClick={() => setProvider("MANUAL_TELEBIRR")}
-                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                  provider === "MANUAL_TELEBIRR"
-                    ? "bg-blue-500/15 border-blue-500/60 text-white ring-2 ring-blue-500/20"
-                    : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-black text-xs">
-                    TB
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Telebirr Direct</p>
-                    <p className="text-xs text-slate-400 font-mono">{paymentSettings.telebirr.accountNumber}</p>
-                  </div>
-                </div>
-                <span className="text-[11px] text-slate-400 font-medium">Receipt Upload</span>
-              </button>
-
-              {/* Option 3: CBE Birr */}
-              <button
-                type="button"
-                onClick={() => setProvider("MANUAL_CBE")}
-                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                  provider === "MANUAL_CBE"
-                    ? "bg-purple-500/15 border-purple-500/60 text-white ring-2 ring-purple-500/20"
-                    : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-xs">
-                    CBE
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">CBE Birr Transfer</p>
-                    <p className="text-xs text-slate-400 font-mono">{paymentSettings.cbe.accountNumber}</p>
-                  </div>
-                </div>
-                <span className="text-[11px] text-slate-400 font-medium">Receipt Upload</span>
-              </button>
+              {/* Dynamic Bank / Payment Options */}
+              {(paymentSettings.methods && paymentSettings.methods.length > 0 ? paymentSettings.methods : [
+                {
+                  id: "telebirr",
+                  name: "Telebirr Direct",
+                  shortCode: "TB",
+                  accountNumber: paymentSettings.telebirr.accountNumber,
+                  accountName: paymentSettings.telebirr.accountName,
+                  instructions: paymentSettings.telebirr.instructions,
+                  color: "blue",
+                },
+                {
+                  id: "cbe",
+                  name: "CBE Birr Transfer",
+                  shortCode: "CBE",
+                  accountNumber: paymentSettings.cbe.accountNumber,
+                  accountName: paymentSettings.cbe.accountName,
+                  instructions: paymentSettings.cbe.instructions,
+                  color: "purple",
+                },
+              ]).map((m) => {
+                const isSelected = provider === m.id || provider === m.name;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setProvider(m.id)}
+                    className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                      isSelected
+                        ? "bg-blue-500/15 border-blue-500/60 text-white ring-2 ring-blue-500/20"
+                        : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 text-white flex items-center justify-center font-black text-xs uppercase">
+                        {m.shortCode || "PAY"}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">{m.name}</p>
+                        <p className="text-xs text-slate-400 font-mono">{m.accountNumber}</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">Receipt Upload</span>
+                  </button>
+                );
+              })}
 
               {/* Manual Payment Details & Upload */}
-              {provider !== "WALLET" && (
+              {provider !== "WALLET" && currentMethod && (
                 <div className="pt-3 space-y-3 border-t border-slate-800 mt-3">
-                  <div className="p-3 bg-[#070A11] rounded-2xl border border-white/5 text-xs text-slate-300">
-                    Transfer <b>{totalPrice.toFixed(2)} ETB</b> to{" "}
-                    <b className="text-emerald-400">
-                      {provider === "MANUAL_TELEBIRR" ? paymentSettings.telebirr.accountNumber : paymentSettings.cbe.accountNumber}
-                    </b>{" "}
-                    ({provider === "MANUAL_TELEBIRR" ? paymentSettings.telebirr.accountName : paymentSettings.cbe.accountName}), then submit your TxID below.
+                  <div className="p-3.5 bg-[#070A11] rounded-2xl border border-white/5 text-xs text-slate-300 space-y-1">
+                    <div>
+                      Transfer <b>{totalPrice.toFixed(2)} ETB</b> to{" "}
+                      <b className="text-emerald-400 font-mono">{currentMethod.accountNumber}</b>{" "}
+                      ({currentMethod.accountName}).
+                    </div>
+                    <p className="text-[11px] text-slate-400">{currentMethod.instructions}</p>
                   </div>
 
                   <div>

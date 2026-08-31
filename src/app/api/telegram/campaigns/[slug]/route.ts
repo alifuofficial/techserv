@@ -23,12 +23,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }),
       getTelegramUserFromRequest(req),
       getMultipleSystemSettings([
+        { key: "telebirr_enabled", defaultValue: "true" },
         { key: "telebirr_account_number", defaultValue: "0911000000" },
         { key: "telebirr_account_name", defaultValue: "MilkyTech Online" },
         { key: "telebirr_instructions", defaultValue: "Transfer to the Telebirr number above and upload receipt." },
+        { key: "cbe_enabled", defaultValue: "true" },
         { key: "cbe_account_number", defaultValue: "1000123456789" },
         { key: "cbe_account_name", defaultValue: "MilkyTech Online PLC" },
         { key: "cbe_instructions", defaultValue: "Transfer to the CBE account number above and upload receipt." },
+        { key: "custom_payment_methods", defaultValue: "" },
       ]),
     ]);
 
@@ -73,6 +76,44 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
+    let methods: any[] = [];
+    if (settings.custom_payment_methods) {
+      try {
+        methods = JSON.parse(settings.custom_payment_methods);
+      } catch (e) {
+        methods = [];
+      }
+    }
+
+    if (!methods || methods.length === 0) {
+      methods = [
+        {
+          id: "telebirr",
+          name: "Telebirr Direct",
+          shortCode: "TB",
+          category: "MOBILE_MONEY",
+          accountName: settings.telebirr_account_name,
+          accountNumber: settings.telebirr_account_number,
+          instructions: settings.telebirr_instructions,
+          enabled: settings.telebirr_enabled === "true",
+          color: "blue",
+        },
+        {
+          id: "cbe",
+          name: "Commercial Bank of Ethiopia (CBE)",
+          shortCode: "CBE",
+          category: "BANK_TRANSFER",
+          accountName: settings.cbe_account_name,
+          accountNumber: settings.cbe_account_number,
+          instructions: settings.cbe_instructions,
+          enabled: settings.cbe_enabled === "true",
+          color: "purple",
+        },
+      ];
+    }
+
+    const activeMethods = methods.filter((m) => m.enabled);
+
     return NextResponse.json(
       {
         success: true,
@@ -95,6 +136,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           winner: winnerInfo,
         },
         paymentSettings: {
+          methods: activeMethods,
           telebirr: {
             accountNumber: settings.telebirr_account_number,
             accountName: settings.telebirr_account_name,

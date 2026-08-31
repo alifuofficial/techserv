@@ -3,6 +3,18 @@ import { getSystemSetting } from "@/modules/settings/settings-service";
 
 export const dynamic = "force-dynamic";
 
+export interface PublicPaymentMethod {
+  id: string;
+  name: string;
+  shortCode: string;
+  category: "MOBILE_MONEY" | "BANK_TRANSFER";
+  accountName: string;
+  accountNumber: string;
+  instructions: string;
+  enabled: boolean;
+  color: string;
+}
+
 export async function GET() {
   try {
     const [
@@ -14,6 +26,7 @@ export async function GET() {
       cbeAccountName,
       cbeAccountNumber,
       cbeInstructions,
+      customPaymentMethodsRaw,
       referralEnabled,
       referralBonusAmount,
       referralCurrency,
@@ -29,6 +42,7 @@ export async function GET() {
       getSystemSetting("cbe_account_name", "MilkyTech Online PLC"),
       getSystemSetting("cbe_account_number", "1000123456789"),
       getSystemSetting("cbe_instructions", "Transfer to the CBE account number above and upload your transaction receipt."),
+      getSystemSetting("custom_payment_methods", ""),
       getSystemSetting("referral_enabled", "true"),
       getSystemSetting("referral_bonus_amount", "10"),
       getSystemSetting("referral_currency", "ETB"),
@@ -37,10 +51,50 @@ export async function GET() {
       getSystemSetting("support_email", "support@milkytech.online"),
     ]);
 
+    let methods: PublicPaymentMethod[] = [];
+    if (customPaymentMethodsRaw) {
+      try {
+        methods = JSON.parse(customPaymentMethodsRaw);
+      } catch (e) {
+        methods = [];
+      }
+    }
+
+    if (!methods || methods.length === 0) {
+      methods = [
+        {
+          id: "telebirr",
+          name: "Telebirr Direct",
+          shortCode: "TB",
+          category: "MOBILE_MONEY",
+          accountName: telebirrAccountName,
+          accountNumber: telebirrAccountNumber,
+          instructions: telebirrInstructions,
+          enabled: telebirrEnabled === "true",
+          color: "blue",
+        },
+        {
+          id: "cbe",
+          name: "Commercial Bank of Ethiopia (CBE)",
+          shortCode: "CBE",
+          category: "BANK_TRANSFER",
+          accountName: cbeAccountName,
+          accountNumber: cbeAccountNumber,
+          instructions: cbeInstructions,
+          enabled: cbeEnabled === "true",
+          color: "purple",
+        },
+      ];
+    }
+
+    // Filter only enabled methods for public users
+    const activeMethods = methods.filter((m) => m.enabled);
+
     return NextResponse.json(
       {
         success: true,
         settings: {
+          paymentMethods: activeMethods,
           telebirr: {
             enabled: telebirrEnabled === "true",
             accountName: telebirrAccountName,
