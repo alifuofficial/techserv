@@ -107,6 +107,8 @@ export default async function AdminSettingsPage() {
     referralBonusAmount: await getSystemSetting('referral_bonus_amount', '10'),
     referralCurrency: await getSystemSetting('referral_currency', 'ETB'),
     referralCustomText: await getSystemSetting('referral_custom_text', 'Earn bonus for every friend who joins MilkyTech using your link!'),
+    referralUnlockCondition: await getSystemSetting('referral_unlock_condition', 'ON_FIRST_DEPOSIT'),
+    referralMinDepositAmount: await getSystemSetting('referral_min_deposit_amount', '50'),
   };
 
   return <AdminSettingsClient initialSettings={settings} />;

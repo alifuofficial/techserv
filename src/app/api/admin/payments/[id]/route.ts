@@ -143,7 +143,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       });
 
-      // Dispatch automated Telegram notification asynchronously
       if (isTicketCheckout && createdTicketNumbers.length > 0) {
         sendEventNotification("TICKET_PURCHASE", existingPayment.userId, {
           user_name: userName,
@@ -162,6 +161,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           provider: existingPayment.provider,
           tx_id: existingPayment.transactionId || "Direct",
         }).catch((err) => console.error("[Notify Deposit Approved Error]", err));
+      }
+
+      // Check and unlock referral bonus if applicable
+      try {
+        const { checkAndUnlockReferralBonus } = await import("@/lib/referral-service");
+        if (isTicketCheckout) {
+          await checkAndUnlockReferralBonus(existingPayment.userId, "PURCHASE", existingPayment.amount);
+        } else {
+          await checkAndUnlockReferralBonus(existingPayment.userId, "DEPOSIT", existingPayment.amount);
+        }
+      } catch (refErr) {
+        console.error("[Unlock Referral Bonus On Approval Error]", refErr);
       }
 
       return NextResponse.json({ success: true, message: 'Payment approved successfully.' });

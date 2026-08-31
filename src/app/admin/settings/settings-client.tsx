@@ -82,6 +82,8 @@ export interface SettingsData {
   referralBonusAmount: string;
   referralCurrency: string;
   referralCustomText: string;
+  referralUnlockCondition: string;
+  referralMinDepositAmount: string;
 }
 
 const BANK_PRESETS = [
@@ -272,6 +274,8 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         referral_bonus_amount: settings.referralBonusAmount,
         referral_currency: settings.referralCurrency,
         referral_custom_text: settings.referralCustomText,
+        referral_unlock_condition: settings.referralUnlockCondition || "ON_FIRST_DEPOSIT",
+        referral_min_deposit_amount: settings.referralMinDepositAmount || "50",
       });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 3000);
@@ -991,6 +995,65 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   <p className="text-[11px] text-slate-400">
                     Live dynamic preview in Telegram Mini App: &ldquo;Earn <b>{settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'}</b> bonus for every friend who joins MilkyTech using your link!&rdquo;
                   </p>
+                </div>
+
+                {/* Conditional Referral Release (Anti-Sybil / Fraud Prevention) */}
+                <div className="p-4 bg-purple-50/60 border border-purple-200/80 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
+                      🔒
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">Anti-Sybil Bonus Release Condition</h4>
+                      <p className="text-[11px] text-slate-500">
+                        Choose when the {settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'} bonus is unlocked to prevent fake bot accounts.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Bonus Unlock Trigger
+                    </label>
+                    <select
+                      value={settings.referralUnlockCondition || "ON_FIRST_DEPOSIT"}
+                      onChange={(e) => updateSetting("referralUnlockCondition", e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    >
+                      <option value="ON_FIRST_DEPOSIT">
+                        🛡️ On First Deposit (Recommended - Unlocks when invited friend makes their first approved deposit)
+                      </option>
+                      <option value="ON_FIRST_PURCHASE">
+                        🎟️ On First Ticket Purchase (Unlocks when invited friend buys their first campaign ticket)
+                      </option>
+                      <option value="MIN_DEPOSIT_AMOUNT">
+                        💰 On Minimum Deposit of X ETB (Unlocks when friend deposits at least a specific amount)
+                      </option>
+                      <option value="IMMEDIATE">
+                        ⚡ Immediate on Registration (Instant bonus upon sign-up - No condition)
+                      </option>
+                    </select>
+                  </div>
+
+                  {settings.referralUnlockCondition === "MIN_DEPOSIT_AMOUNT" && (
+                    <div className="space-y-1.5 pt-2 animate-in fade-in">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Minimum Required Deposit (ETB)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={settings.referralMinDepositAmount || "50"}
+                        onChange={(e) => updateSetting("referralMinDepositAmount", e.target.value)}
+                        placeholder="50"
+                        className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-purple-500"
+                      />
+                      <p className="text-[11px] text-purple-700">
+                        The referrer will only receive the {settings.referralBonusAmount} {settings.referralCurrency} bonus once their friend deposits at least {settings.referralMinDepositAmount || 50} ETB.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
               </div>

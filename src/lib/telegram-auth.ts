@@ -164,46 +164,13 @@ export async function getOrCreateTelegramUser(initData: string, startParamOverri
 
     user.ledgerAccount = ledger;
 
-    // Process referral reward if user was referred
+    // Process referral reward check if user was referred
     if (referredById && referrer) {
       try {
-        const [bonusSetting, enabledSetting] = await Promise.all([
-          db.systemSetting.findUnique({ where: { key: "referral_bonus_amount" } }),
-          db.systemSetting.findUnique({ where: { key: "referral_enabled" } }),
-        ]);
-
-        const isEnabled = enabledSetting?.value !== "false";
-        const bonusAmount = parseFloat(bonusSetting?.value || "10") || 10;
-
-        if (isEnabled && bonusAmount > 0) {
-          const referrerLedger = await db.ledgerAccount.upsert({
-            where: { userId: referredById },
-            create: { userId: referredById, balance: bonusAmount, currency: "ETB" },
-            update: { balance: { increment: bonusAmount } },
-          });
-
-          await db.ledgerTransaction.create({
-            data: {
-              accountId: referrerLedger.id,
-              amount: bonusAmount,
-              referenceType: "REFERRAL_REWARD",
-              referenceId: user.id,
-              description: `Referral reward for inviting ${fullName}`,
-            },
-          });
-
-          // Send automated Telegram notification to referrer
-          const { sendEventNotification } = await import("./telegram-notifications");
-          sendEventNotification("REFERRAL_REWARD", referredById, {
-            user_name: referrer.name || "Member",
-            referred_name: fullName,
-            reward_amount: bonusAmount,
-            currency: "ETB",
-            new_balance: referrerLedger.balance,
-          }).catch(console.error);
-        }
+        const { checkAndUnlockReferralBonus } = await import("./referral-service");
+        await checkAndUnlockReferralBonus(user.id, "IMMEDIATE");
       } catch (refErr) {
-        console.error("[Referral Reward Credit Error]", refErr);
+        console.error("[Referral Check Error]", refErr);
       }
     }
 
