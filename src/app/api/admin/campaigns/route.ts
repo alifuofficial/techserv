@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyNewCampaignStarted } from "@/lib/telegram-notifications";
 
 export async function POST(req: Request) {
   try {
@@ -36,6 +37,11 @@ export async function POST(req: Request) {
         imageUrl,
       }
     });
+
+    // If campaign is created with ACTIVE status, broadcast to Telegram users
+    if (campaign.status === "ACTIVE") {
+      notifyNewCampaignStarted(campaign.id).catch(console.error);
+    }
 
     return NextResponse.json({ success: true, campaign });
   } catch (error: any) {

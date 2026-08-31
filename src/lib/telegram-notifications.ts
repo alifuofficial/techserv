@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 
 export type NotificationEventType =
+  | "WELCOME_REGISTER"
+  | "CAMPAIGN_STARTED"
   | "TICKET_PURCHASE"
   | "DEPOSIT_APPROVED"
   | "DEPOSIT_REJECTED"
@@ -16,6 +18,38 @@ export interface TemplateDefinition {
 }
 
 export const DEFAULT_TEMPLATES: Record<NotificationEventType, TemplateDefinition> = {
+  WELCOME_REGISTER: {
+    eventType: "WELCOME_REGISTER",
+    title: "New User Welcome Message",
+    description: "Sent automatically to new users immediately upon registering via Telegram or opening the Mini App.",
+    defaultTemplate: `👋 <b>Welcome to MilkyTech, {user_name}!</b> 🎉
+
+Get ready to win incredible prizes in our 100% Provably Fair live draws! 🏆
+
+🎁 <b>Quick Start Guide:</b>
+• 🎟️ Browse active grand draws & grab lucky tickets
+• 💰 Deposit easily via Telebirr & CBE Birr
+• 👥 Invite friends using your referral link: <code>{referral_link}</code> and earn <b>+{bonus_amount} {currency}</b> per friend!
+
+🚀 Tap below to launch your Mini App and enter your first draw!`,
+    availablePlaceholders: ["{user_name}", "{referral_code}", "{referral_link}", "{bonus_amount}", "{currency}"],
+  },
+  CAMPAIGN_STARTED: {
+    eventType: "CAMPAIGN_STARTED",
+    title: "New Campaign Launch Alert",
+    description: "Sent automatically to all registered Telegram members whenever a new live prize draw is started.",
+    defaultTemplate: `🔥 <b>NEW GRAND PRIZE DRAW IS LIVE!</b> 🎁
+
+A brand new exciting lucky draw is now open on MilkyTech!
+
+🎪 <b>Campaign:</b> <b>{campaign_title}</b>
+🏆 <b>Prize:</b> <b>{prize_title}</b>
+💰 <b>Ticket Price:</b> <b>{ticket_price} {currency}</b>
+⏳ <b>Draw Date:</b> {draw_date}
+
+🎟️ Tap below to grab your lucky tickets and multiply your winning odds! 🚀`,
+    availablePlaceholders: ["{campaign_title}", "{prize_title}", "{ticket_price}", "{currency}", "{draw_date}", "{campaign_url}"],
+  },
   TICKET_PURCHASE: {
     eventType: "TICKET_PURCHASE",
     title: "Ticket Purchase Confirmation",
@@ -200,6 +234,48 @@ export async function sendEventNotification(
     return await sendDirectTelegramMessage(chatId, templateText);
   } catch (error) {
     console.error(`[sendEventNotification ${eventType} error]`, error);
+    return false;
+  }
+}
+
+/**
+ * Automatically notifies all Telegram audience when a new campaign is started
+ */
+export async function notifyNewCampaignStarted(campaignId: string): Promise<boolean> {
+  try {
+    const enabledSetting = await db.systemSetting.findUnique({
+      where: { key: "notify_enabled_campaign_started" },
+    });
+    const isEnabled = enabledSetting ? enabledSetting.value === "true" : true;
+    if (!isEnabled) return false;
+
+    const campaign = await db.campaign.findUnique({
+      where: { id: campaignId },
+      include: { prizes: { take: 1 } },
+    });
+
+    if (!campaign || campaign.status !== "ACTIVE") return false;
+
+    const templateSetting = await db.systemSetting.findUnique({
+      where: { key: "notify_template_campaign_started" },
+    });
+
+    let text = templateSetting?.value || DEFAULT_TEMPLATES.CAMPAIGN_STARTED.defaultTemplate;
+    const prizeTitle = campaign.prizes?.[0]?.title || campaign.title;
+    const drawDate = campaign.endsAt ? new Date(campaign.endsAt).toLocaleDateString() : "TBA";
+
+    text = text
+      .split("{campaign_title}").join(campaign.title)
+      .split("{prize_title}").join(prizeTitle)
+      .split("{ticket_price}").join(String(campaign.entryPrice))
+      .split("{currency}").join(campaign.currency || "ETB")
+      .split("{draw_date}").join(drawDate)
+      .split("{campaign_url}").join(`https://milkytech.online/telegram/campaigns/${campaign.slug}`);
+
+    const broadcastRes = await sendBroadcastTelegramMessage("ALL_USERS", text);
+    return broadcastRes.sentCount > 0;
+  } catch (e) {
+    console.error("[notifyNewCampaignStarted error]", e);
     return false;
   }
 }

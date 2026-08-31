@@ -22,6 +22,7 @@ import {
   Code,
   ShieldCheck,
   Radio,
+  Flame,
 } from "lucide-react";
 
 interface TemplateItem {
@@ -210,13 +211,23 @@ export default function NotificationsClient({
       .replace(/{winning_ticket}/g, "TKT-IPHO-42")
       .replace(/{reason}/g, "Transaction screenshot was unreadable. Please re-upload.")
       .replace(/{referred_name}/g, "Abebe B.")
-      .replace(/{reward_amount}/g, "50");
+      .replace(/{reward_amount}/g, "50")
+      .replace(/{referral_code}/g, "MILKY-9821AF")
+      .replace(/{referral_link}/g, "https://t.me/milkytechonlinebot?start=MILKY-9821AF")
+      .replace(/{bonus_amount}/g, "10")
+      .replace(/{ticket_price}/g, "50")
+      .replace(/{draw_date}/g, "Dec 31, 2026")
+      .replace(/{campaign_url}/g, "https://milkytech.online/telegram/campaigns/iphone-17-pro");
 
     return replaced;
   };
 
   const getEventIcon = (type: string) => {
     switch (type) {
+      case "WELCOME_REGISTER":
+        return <Sparkles className="w-4 h-4 text-cyan-500" />;
+      case "CAMPAIGN_STARTED":
+        return <Flame className="w-4 h-4 text-orange-500" />;
       case "TICKET_PURCHASE":
         return <Ticket className="w-4 h-4 text-emerald-500" />;
       case "DEPOSIT_APPROVED":

@@ -57,17 +57,6 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
 
   useEffect(() => {
     fetchCampaign();
-    fetch("/api/settings/public")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.settings) {
-          setPaymentSettings({
-            telebirr: data.settings.telebirr || paymentSettings.telebirr,
-            cbe: data.settings.cbe || paymentSettings.cbe,
-          });
-        }
-      })
-      .catch(console.error);
   }, [slug]);
 
   const fetchCampaign = async () => {
@@ -77,6 +66,9 @@ export default function TelegramCampaignDetailPage({ params }: { params: Promise
       if (res.ok && res.data.success) {
         setCampaign(res.data.campaign);
         setUser(res.data.user);
+        if (res.data.paymentSettings) {
+          setPaymentSettings(res.data.paymentSettings);
+        }
       } else {
         setError(res.data.error || "Campaign not found");
       }

@@ -184,6 +184,26 @@ export async function getOrCreateTelegramUser(initData: string) {
         console.error("[Referral Reward Credit Error]", refErr);
       }
     }
+
+    // Send Welcome Message to the newly registered user
+    try {
+      const { sendEventNotification } = await import("./telegram-notifications");
+      const { getSystemSetting } = await import("@/modules/settings/settings-service");
+      const botUsername = (await getSystemSetting("telegram_bot_username", "milkytechonlinebot")) || "milkytechonlinebot";
+      const referralBonusSetting = await getSystemSetting("referral_bonus_amount", "10");
+      const referralCurrencySetting = await getSystemSetting("referral_currency", "ETB");
+      const referralLink = `https://t.me/${botUsername}?start=${user.referralCode || `MILKY-${telegramId.slice(-6).toUpperCase()}`}`;
+
+      sendEventNotification("WELCOME_REGISTER", user.id, {
+        user_name: fullName,
+        referral_code: user.referralCode || `MILKY-${telegramId.slice(-6).toUpperCase()}`,
+        referral_link: referralLink,
+        bonus_amount: referralBonusSetting,
+        currency: referralCurrencySetting,
+      }).catch(console.error);
+    } catch (welcomeErr) {
+      console.error("[Welcome Notification Error]", welcomeErr);
+    }
     // Ensure ledger account exists
     if (!user.ledgerAccount) {
       const ledger = await db.ledgerAccount.upsert({

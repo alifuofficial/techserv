@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Execute platform data wipe in safe sequential order
+    // Execute comprehensive platform data wipe in safe foreign-key order
     await db.$transaction(async (tx) => {
       // 1. Delete all draw records
       await tx.draw.deleteMany({});
@@ -30,18 +30,24 @@ export async function POST(req: Request) {
       // 2. Delete all ticket entries
       await tx.entry.deleteMany({});
 
-      // 3. Delete all payment records
+      // 3. Delete all prizes
+      await tx.prize.deleteMany({});
+
+      // 4. Delete all campaigns
+      await tx.campaign.deleteMany({});
+
+      // 5. Delete all payment records
       await tx.payment.deleteMany({});
 
-      // 4. Delete all ledger transactions
+      // 6. Delete all ledger transactions
       await tx.ledgerTransaction.deleteMany({});
 
-      // 5. Reset all ledger account balances to 0
+      // 7. Reset all remaining ledger account balances to 0
       await tx.ledgerAccount.updateMany({
         data: { balance: 0 },
       });
 
-      // 6. Delete all non-admin users and their linked identities
+      // 8. Delete all non-admin users and their linked identities
       const nonAdminUsers = await tx.user.findMany({
         where: { role: { not: "ADMIN" } },
         select: { id: true },
@@ -62,17 +68,11 @@ export async function POST(req: Request) {
           where: { id: { in: userIdsToDelete } },
         });
       }
-
-      // 7. Reset all campaigns back to ACTIVE status
-      await tx.campaign.updateMany({
-        where: { status: { in: ["COMPLETED", "DRAWING", "CLOSED"] } },
-        data: { status: "ACTIVE" },
-      });
     });
 
     return NextResponse.json({
       success: true,
-      message: "Platform data has been successfully wiped and reset. All entries, draws, payments, and test users have been cleared.",
+      message: "Platform data has been completely wiped. All campaigns, prizes, entries, draws, payments, ledger histories, and test users have been cleared.",
     });
   } catch (error: any) {
     console.error("[POST /api/admin/system/reset error]", error);

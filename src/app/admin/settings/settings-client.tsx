@@ -939,7 +939,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   <div>
                     <h4 className="text-sm font-bold text-red-900">Wipe & Reset Platform Data</h4>
                     <p className="text-xs text-red-700 mt-1 max-w-md leading-relaxed">
-                      Deletes all tickets, draws, payments, ledger transaction histories, and test users. Preserves admin accounts, campaigns, prizes, and settings.
+                      Deletes all campaigns, prizes, tickets, draws, payments, ledger transactions, and test users. Preserves admin login accounts and system settings.
                     </p>
                   </div>
 
@@ -973,7 +973,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <div className="text-center space-y-2">
               <h3 className="text-xl font-black text-slate-900">Are you absolutely sure?</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                This action is <b>permanent and cannot be undone</b>. It will wipe all tickets, draws, payments, and user balances.
+                This action is <b>permanent and cannot be undone</b>. It will wipe all campaigns, prizes, tickets, draws, payments, and test users.
               </p>
             </div>
 

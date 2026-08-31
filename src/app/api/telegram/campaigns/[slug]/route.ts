@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getTelegramUserFromRequest } from "@/lib/telegram-auth";
+import { getMultipleSystemSettings } from "@/modules/settings/settings-service";
 
 export const dynamic = "force-dynamic";
 
@@ -8,21 +9,33 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   try {
     const { slug } = await params;
 
-    const campaign = await db.campaign.findUnique({
-      where: { slug },
-      include: {
-        _count: {
-          select: { entries: true },
+    // Parallel fetch: Campaign + User + Payment Settings in ONE batch
+    const [campaign, user, settings] = await Promise.all([
+      db.campaign.findUnique({
+        where: { slug },
+        include: {
+          _count: {
+            select: { entries: true },
+          },
+          prizes: true,
+          draw: true,
         },
-        prizes: true,
-        draw: true,
-      },
-    });
+      }),
+      getTelegramUserFromRequest(req),
+      getMultipleSystemSettings([
+        { key: "telebirr_account_number", defaultValue: "0911000000" },
+        { key: "telebirr_account_name", defaultValue: "MilkyTech Online" },
+        { key: "telebirr_instructions", defaultValue: "Transfer to the Telebirr number above and upload receipt." },
+        { key: "cbe_account_number", defaultValue: "1000123456789" },
+        { key: "cbe_account_name", defaultValue: "MilkyTech Online PLC" },
+        { key: "cbe_instructions", defaultValue: "Transfer to the CBE account number above and upload receipt." },
+      ]),
+    ]);
 
     if (!campaign) {
       return NextResponse.json(
         { success: false, error: "Campaign not found" },
-        { status: 404, headers: { "Cache-Control": "no-store" } }
+        { status: 404 }
       );
     }
 
@@ -42,7 +55,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     if (isCompleted && campaign.draw?.winningEntryId) {
       const entry = await db.entry.findUnique({
         where: { id: campaign.draw.winningEntryId },
-        include: { user: { select: { name: true, email: true } } },
+        select: {
+          entryNumber: true,
+          user: { select: { name: true, email: true } },
+        },
       });
       if (entry) {
         const prefix = campaign.id.substring(0, 4).toUpperCase();
@@ -55,16 +71,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           randomSeed: campaign.draw.randomSeed,
         };
       }
-    }
-
-    const user = await getTelegramUserFromRequest(req);
-
-    let freshBalance = 0;
-    if (user) {
-      const freshLedger = await db.ledgerAccount.findUnique({
-        where: { userId: user.id },
-      });
-      freshBalance = freshLedger?.balance || 0;
     }
 
     return NextResponse.json(
@@ -88,18 +94,29 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           prizeTitle: campaign.prizes?.[0]?.title || campaign.title,
           winner: winnerInfo,
         },
+        paymentSettings: {
+          telebirr: {
+            accountNumber: settings.telebirr_account_number,
+            accountName: settings.telebirr_account_name,
+            instructions: settings.telebirr_instructions,
+          },
+          cbe: {
+            accountNumber: settings.cbe_account_number,
+            accountName: settings.cbe_account_name,
+            instructions: settings.cbe_instructions,
+          },
+        },
         user: user
           ? {
               id: user.id,
               name: user.name || "",
-              balance: freshBalance,
+              balance: user.ledgerAccount?.balance || 0,
             }
           : null,
       },
       {
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-          Pragma: "no-cache",
+          "Cache-Control": "public, s-maxage=5, stale-while-revalidate=15",
         },
       }
     );
@@ -107,7 +124,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     console.error("[GET /api/telegram/campaigns/[slug] error]", error);
     return NextResponse.json(
       { success: false, error: "Internal Server Error" },
-      { status: 500, headers: { "Cache-Control": "no-store" } }
+      { status: 500 }
     );
   }
 }

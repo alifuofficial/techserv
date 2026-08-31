@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyNewCampaignStarted } from "@/lib/telegram-notifications";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,6 +37,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const data = await req.json();
     const { title, slug, description, entryPrice, maxEntries, startsAt, endsAt, status, imageUrl } = data;
 
+    const existing = await db.campaign.findUnique({ where: { id } });
+
     const campaign = await db.campaign.update({
       where: { id: id },
       data: {
@@ -50,6 +53,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         imageUrl,
       }
     });
+
+    // If campaign transitions to ACTIVE, send campaign launch notification
+    if (existing?.status !== "ACTIVE" && campaign.status === "ACTIVE") {
+      notifyNewCampaignStarted(campaign.id).catch(console.error);
+    }
 
     return NextResponse.json({ success: true, campaign });
   } catch (error: any) {
