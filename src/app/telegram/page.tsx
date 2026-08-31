@@ -21,7 +21,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
-import { fetchTelegramApi } from "@/lib/telegram-client";
+import { fetchTelegramApi, getTelegramStartParam } from "@/lib/telegram-client";
 
 interface CampaignItem {
   id: string;
@@ -100,8 +100,10 @@ export default function TelegramMiniApp() {
     }
 
     if (status === "unauthenticated" && tg && tg.initData) {
+      const startParam = getTelegramStartParam();
       signIn("telegram", {
         initData: tg.initData,
+        startParam: startParam || undefined,
         redirect: false,
       })
         .then(() => {

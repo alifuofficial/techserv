@@ -96,82 +96,15 @@ export const authOptions: NextAuthOptions = {
       id: "telegram",
       name: "Telegram",
       credentials: {
-        initData: { label: "Init Data", type: "text" }
+        initData: { label: "Init Data", type: "text" },
+        startParam: { label: "Start Param", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.initData) throw new Error("Missing initData");
 
-        const { isValid, user: telegramUser } = validateTelegramWebAppData(credentials.initData);
-        if (!isValid || !telegramUser) throw new Error("Invalid Telegram data");
-
-        const telegramId = telegramUser.id.toString();
-        const username = telegramUser.username || `tg_${telegramId}`;
-
-        // Find existing user by telegram ID (we'll store it in a new field or simply link via email for now)
-        // Since we don't have UserIdentity model in the actual schema (Wait, do we?)
-        // Let's check if there is a UserIdentity model in Prisma.
-        // If not, we will use email `telegram_${telegramId}@milkytech.online`.
-        
-        let user = await db.user.findFirst({
-          where: { email: `telegram_${telegramId}@milkytech.online` }
-        });
-
-        if (!user) {
-          let referredById = null;
-          try {
-            const params = new URLSearchParams(credentials.initData);
-            const startParam = params.get('start_param');
-            if (startParam && startParam.startsWith('MILKY-')) {
-              const referrerIdFragment = startParam.replace('MILKY-', '');
-              const referrer = await db.user.findFirst({
-                where: {
-                  id: {
-                    startsWith: referrerIdFragment,
-                    mode: 'insensitive'
-                  }
-                }
-              });
-              if (referrer) {
-                referredById = referrer.id;
-              }
-            }
-          } catch (e) {
-            console.error("Referral error", e);
-          }
-
-          user = await db.user.create({
-            data: {
-              name: telegramUser.first_name + (telegramUser.last_name ? ` ${telegramUser.last_name}` : ''),
-              email: `telegram_${telegramId}@milkytech.online`,
-              role: 'USER',
-              password: '', // No password for telegram users
-              referredById: referredById
-            }
-          });
-
-          // Create ledger account for new user
-          await db.ledgerAccount.upsert({
-            where: { userId: user.id },
-            update: {},
-            create: { userId: user.id, balance: 0, currency: 'ETB' }
-          }).catch(() => {});
-
-          // Link identity
-          await db.userIdentity.upsert({
-            where: {
-              provider_providerId: {
-                provider: 'telegram',
-                providerId: telegramId
-              }
-            },
-            update: {},
-            create: {
-              userId: user.id,
-              provider: 'telegram',
-              providerId: telegramId
-            }
-          }).catch(() => {});
-        }
+        const { getOrCreateTelegramUser } = await import("./telegram-auth");
+        const user = await getOrCreateTelegramUser(credentials.initData, credentials.startParam || undefined);
+        if (!user) throw new Error("Invalid Telegram data");
 
         return {
           id: user.id,
