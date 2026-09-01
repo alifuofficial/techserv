@@ -1,4 +1,4 @@
-import AdminSettingsClient from './settings-client';
+import AdminSettingsClient, { WithdrawalMethodItem } from './settings-client';
 import { getSystemSetting } from '@/modules/settings/settings-service';
 
 export const dynamic = "force-dynamic";
@@ -65,6 +65,27 @@ export default async function AdminSettingsPage() {
     ];
   }
 
+  // Withdrawal Methods
+  const customWithdrawalMethodsRaw = await getSystemSetting('withdrawal_methods', '');
+  let withdrawalMethods: WithdrawalMethodItem[] = [];
+  if (customWithdrawalMethodsRaw) {
+    try {
+      withdrawalMethods = JSON.parse(customWithdrawalMethodsRaw);
+    } catch (e) {
+      withdrawalMethods = [];
+    }
+  }
+
+  if (!withdrawalMethods || withdrawalMethods.length === 0) {
+    withdrawalMethods = [
+      { id: "TELEBIRR", name: "Telebirr Mobile Money", shortCode: "TB", enabled: true, color: "blue" },
+      { id: "CBE", name: "Commercial Bank of Ethiopia (CBE)", shortCode: "CBE", enabled: true, color: "purple" },
+      { id: "BOA", name: "Bank of Abyssinia", shortCode: "BOA", enabled: true, color: "amber" },
+      { id: "AWASH", name: "Awash Bank", shortCode: "AWASH", enabled: true, color: "emerald" },
+      { id: "DASHEN", name: "Dashen Bank", shortCode: "DASHEN", enabled: true, color: "blue" },
+    ];
+  }
+
   const settings = {
     // General
     platformName: await getSystemSetting('platform_name', 'MilkyTech'),
@@ -75,7 +96,7 @@ export default async function AdminSettingsPage() {
     telegramEnabled: (await getSystemSetting('telegram_enabled', 'true')) === 'true',
     telegramAuthOnly: (await getSystemSetting('telegram_auth_only', 'false')) === 'true',
 
-    // Payment Methods
+    // Payment Methods (Deposits)
     telebirrEnabled,
     telebirrAccountName,
     telebirrAccountNumber,
@@ -87,6 +108,21 @@ export default async function AdminSettingsPage() {
     cbeInstructions,
 
     paymentMethods: customPaymentMethods,
+
+    // Withdrawal Rules & Limits
+    withdrawalMinAmount: await getSystemSetting('withdrawal_min_amount', '100'),
+    withdrawalMaxDailyAmount: await getSystemSetting('withdrawal_max_daily_amount', '25000'),
+    withdrawalFeePercent: await getSystemSetting('withdrawal_fee_percent', '0'),
+    withdrawalMethods,
+
+    // Welcome Registration Bonus
+    welcomeBonusEnabled: (await getSystemSetting('welcome_bonus_enabled', 'true')) === 'true',
+    welcomeBonusAmount: await getSystemSetting('welcome_bonus_amount', '5'),
+    welcomeBonusCurrency: await getSystemSetting('welcome_bonus_currency', 'ETB'),
+
+    // Lucky Spin & Cooldown
+    dailySpinCooldownHours: await getSystemSetting('daily_spin_cooldown_hours', '24'),
+    spinReminderDmEnabled: (await getSystemSetting('spin_reminder_dm_enabled', 'true')) === 'true',
 
     // API Keys
     verifyEtApiKey: await getSystemSetting('verify_et_api_key', ''),

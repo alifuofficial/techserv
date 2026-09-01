@@ -31,6 +31,11 @@ import {
   Landmark,
   X,
   Wallet,
+  ArrowDownToLine,
+  Gift,
+  Flame,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { savePlatformSettings } from "./actions";
 
@@ -42,6 +47,14 @@ export interface PaymentMethodItem {
   accountName: string;
   accountNumber: string;
   instructions: string;
+  enabled: boolean;
+  color: string;
+}
+
+export interface WithdrawalMethodItem {
+  id: string;
+  name: string;
+  shortCode: string;
   enabled: boolean;
   color: string;
 }
@@ -65,6 +78,21 @@ export interface SettingsData {
   cbeInstructions: string;
 
   paymentMethods: PaymentMethodItem[];
+
+  // Withdrawal Settings
+  withdrawalMinAmount: string;
+  withdrawalMaxDailyAmount: string;
+  withdrawalFeePercent: string;
+  withdrawalMethods: WithdrawalMethodItem[];
+
+  // Welcome Registration Bonus
+  welcomeBonusEnabled: boolean;
+  welcomeBonusAmount: string;
+  welcomeBonusCurrency: string;
+
+  // Lucky Spin & Cooldown
+  dailySpinCooldownHours: string;
+  spinReminderDmEnabled: boolean;
 
   verifyEtApiKey: string;
   telegramBotToken: string;
@@ -103,7 +131,9 @@ const BANK_PRESETS = [
 
 export default function AdminSettingsClient({ initialSettings }: { initialSettings: SettingsData }) {
   const [settings, setSettings] = useState<SettingsData>(initialSettings);
-  const [activeSection, setActiveSection] = useState<"general" | "access" | "payments" | "api" | "smtp" | "referrals" | "danger">("general");
+  const [activeSection, setActiveSection] = useState<
+    "general" | "access" | "payments" | "withdrawals" | "welcome" | "spin" | "api" | "smtp" | "referrals" | "danger"
+  >("general");
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   
@@ -116,6 +146,10 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
   const [testEmailRecipient, setTestEmailRecipient] = useState(settings.supportEmail || "");
   const [isTestingSmtp, setIsTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Lucky Spin Reminder Trigger state
+  const [isTriggeringSpinReminders, setIsTriggeringSpinReminders] = useState(false);
+  const [spinReminderResult, setSpinReminderResult] = useState<string | null>(null);
 
   // Reset Platform state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -158,6 +192,16 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
     setSettings((prev) => ({
       ...prev,
       paymentMethods: prev.paymentMethods.filter((m) => m.id !== id),
+    }));
+    if (saveStatus === "saved") setSaveStatus("idle");
+  };
+
+  const handleToggleWithdrawalMethod = (id: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      withdrawalMethods: (prev.withdrawalMethods || []).map((m) =>
+        m.id === id ? { ...m, enabled: !m.enabled } : m
+      ),
     }));
     if (saveStatus === "saved") setSaveStatus("idle");
   };
@@ -206,7 +250,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
     }
 
     if (editingMethodId) {
-      // Edit existing
       setSettings((prev) => ({
         ...prev,
         paymentMethods: prev.paymentMethods.map((m) =>
@@ -214,7 +257,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         ),
       }));
     } else {
-      // Add new
       const newMethod: PaymentMethodItem = {
         ...paymentForm,
         id: paymentForm.id || "method_" + Date.now(),
@@ -233,7 +275,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
     setIsSaving(true);
     setSaveStatus("idle");
     try {
-      // Find telebirr and cbe in paymentMethods for backward-compatibility
       const tb = settings.paymentMethods.find((m) => m.id === "telebirr" || m.shortCode === "TB");
       const cbe = settings.paymentMethods.find((m) => m.id === "cbe" || m.shortCode === "CBE");
 
@@ -245,7 +286,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         telegram_enabled: settings.telegramEnabled.toString(),
         telegram_auth_only: settings.telegramAuthOnly.toString(),
 
-        // Dynamic Payment Methods JSON
         custom_payment_methods: JSON.stringify(settings.paymentMethods),
 
         telebirr_enabled: (tb ? tb.enabled : settings.telebirrEnabled).toString(),
@@ -257,6 +297,21 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         cbe_account_name: cbe ? cbe.accountName : settings.cbeAccountName,
         cbe_account_number: cbe ? cbe.accountNumber : settings.cbeAccountNumber,
         cbe_instructions: cbe ? cbe.instructions : settings.cbeInstructions,
+
+        // Withdrawal settings
+        withdrawal_min_amount: settings.withdrawalMinAmount || "100",
+        withdrawal_max_daily_amount: settings.withdrawalMaxDailyAmount || "25000",
+        withdrawal_fee_percent: settings.withdrawalFeePercent || "0",
+        withdrawal_methods: JSON.stringify(settings.withdrawalMethods || []),
+
+        // Welcome registration bonus
+        welcome_bonus_enabled: settings.welcomeBonusEnabled.toString(),
+        welcome_bonus_amount: settings.welcomeBonusAmount || "5",
+        welcome_bonus_currency: settings.welcomeBonusCurrency || "ETB",
+
+        // Lucky Spin & Cooldown
+        daily_spin_cooldown_hours: settings.dailySpinCooldownHours || "24",
+        spin_reminder_dm_enabled: settings.spinReminderDmEnabled.toString(),
 
         verify_et_api_key: settings.verifyEtApiKey,
         telegram_bot_token: settings.telegramBotToken,
@@ -325,6 +380,24 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
     }
   };
 
+  const handleTriggerSpinReminders = async () => {
+    setIsTriggeringSpinReminders(true);
+    setSpinReminderResult(null);
+    try {
+      const res = await fetch("/api/admin/spin/remind", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setSpinReminderResult(`✅ ${data.message}`);
+      } else {
+        setSpinReminderResult(`❌ ${data.error || "Failed to trigger reminders"}`);
+      }
+    } catch (e) {
+      setSpinReminderResult("❌ Network error triggering reminders");
+    } finally {
+      setIsTriggeringSpinReminders(false);
+    }
+  };
+
   const handleExecuteReset = async () => {
     if (resetConfirmInput !== "RESET") {
       alert("You must type 'RESET' to confirm.");
@@ -387,7 +460,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <Server className="w-6 h-6 text-emerald-600" /> Platform Settings
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure platform branding, multi-bank payment gateways, access toggles, SMTP, and referrals.
+            Configure platform branding, withdrawal limits, welcome gifts, daily spin cooldown, and referrals.
           </p>
         </div>
 
@@ -430,7 +503,10 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
           {[
             { id: "general", label: "General & Branding", icon: Globe },
             { id: "access", label: "Platform Access", icon: Laptop },
-            { id: "payments", label: "Payment Gateways & Banks", icon: CreditCard },
+            { id: "payments", label: "Deposit Gateways", icon: CreditCard },
+            { id: "withdrawals", label: "Withdrawals & Daily Limits", icon: ArrowDownToLine },
+            { id: "welcome", label: "Welcome Bonus Incentive", icon: Gift },
+            { id: "spin", label: "Lucky Spin & Reminders", icon: Flame },
             { id: "api", label: "API & Integrations", icon: Key },
             { id: "smtp", label: "Email & SMTP", icon: Mail },
             { id: "referrals", label: "Referrals & Growth", icon: Users },
@@ -453,17 +529,17 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                     : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className={`w-4 h-4 ${isActive ? "text-white" : tab.danger ? "text-red-500" : "text-slate-500"}`} />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Form Body Area */}
+        {/* Form Content Area */}
         <div className="md:col-span-3 space-y-6">
-
-          {/* SECTION 1: GENERAL & BRANDING */}
+          
+          {/* SECTION 1: GENERAL */}
           {activeSection === "general" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
@@ -471,86 +547,55 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   <Globe className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">General Branding</h2>
-                  <p className="text-xs text-slate-500">Configure your platform identity and support email.</p>
+                  <h2 className="text-lg font-bold text-slate-900">General Branding & Information</h2>
+                  <p className="text-xs text-slate-500">Platform identity, support email, and primary business details.</p>
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-5">
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Platform Title</label>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Platform Title / Brand</label>
                   <input
                     type="text"
                     value={settings.platformName}
                     onChange={(e) => updateSetting("platformName", e.target.value)}
                     placeholder="MilkyTech"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
-                  <p className="text-[11px] text-slate-400">Displayed in headers, notifications, and customer emails.</p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Support Contact Email</label>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Public Support Email</label>
                   <input
                     type="email"
                     value={settings.supportEmail}
                     onChange={(e) => updateSetting("supportEmail", e.target.value)}
                     placeholder="support@milkytech.online"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
-                  <p className="text-[11px] text-slate-400">Recipient address for user support requests and system notices.</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SECTION 2: ACCESS & AVAILABILITY */}
+          {/* SECTION 2: PLATFORM ACCESS */}
           {activeSection === "access" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
                   <Laptop className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Platform Availability</h2>
-                  <p className="text-xs text-slate-500">Toggle public access between Web application and Telegram Mini App.</p>
+                  <h2 className="text-lg font-bold text-slate-900">Platform Access & Channels</h2>
+                  <p className="text-xs text-slate-500">Enable or disable Web Application and Telegram Mini App endpoints.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                
-                {/* Web Access Toggle */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">Web App Access</div>
-                      <div className="text-xs text-slate-500">Enable public website navigation and ticket purchase on Desktop/Mobile web.</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateSetting("webEnabled", !settings.webEnabled)}
-                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
-                      settings.webEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
-                    }`}
-                  >
-                    <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
-                  </button>
-                </div>
-
-                {/* Telegram Mini App Access Toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center font-bold">
-                      <Smartphone className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">Telegram Mini App Access</div>
-                      <div className="text-xs text-slate-500">Enable Telegram Bot Mini App endpoints and automated member sign-in.</div>
-                    </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Telegram Mini App Access</div>
+                    <div className="text-xs text-slate-500 mt-0.5">Enable access through Telegram Mini App bot</div>
                   </div>
                   <button
                     type="button"
@@ -563,153 +608,355 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   </button>
                 </div>
 
-                {/* Telegram Auth Only Toggle */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">Telegram-Only Authentication</div>
-                      <div className="text-xs text-slate-500">Redirect all regular web logins directly to Telegram bot authentication.</div>
-                    </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Web Portal Access</div>
+                    <div className="text-xs text-slate-500 mt-0.5">Allow web browser users to browse campaigns and checkout</div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => updateSetting("telegramAuthOnly", !settings.telegramAuthOnly)}
+                    onClick={() => updateSetting("webEnabled", !settings.webEnabled)}
                     className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
-                      settings.telegramAuthOnly ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
+                      settings.webEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
                     }`}
                   >
                     <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
                   </button>
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* SECTION 3: PAYMENT GATEWAYS & BANKS */}
+          {/* SECTION 3: DEPOSIT GATEWAYS */}
           {activeSection === "payments" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">Payment Gateways & Ethiopian Banks</h2>
-                    <p className="text-xs text-slate-500">Configure, add, or edit payment methods (Telebirr, CBE, Awash, Abyssinia, Dashen, etc.).</p>
+                    <h2 className="text-lg font-bold text-slate-900">Deposit Payment Gateways</h2>
+                    <p className="text-xs text-slate-500">Configure bank accounts and mobile money options for player deposits.</p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleOpenAddPaymentMethod}
-                  className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
                 >
-                  <Plus className="w-4 h-4" /> Add Bank / Payment Method
+                  <Plus className="w-4 h-4" /> Add Payment Method
                 </button>
               </div>
 
-              {/* Payment Methods Cards List */}
-              <div className="space-y-4">
-                {settings.paymentMethods?.map((method) => (
+              <div className="space-y-3">
+                {settings.paymentMethods.map((method) => (
                   <div
                     key={method.id}
-                    className={`p-5 border rounded-2xl space-y-3 transition-all ${
-                      method.enabled ? "bg-slate-50/60 border-slate-200" : "bg-slate-100/50 border-slate-200/60 opacity-60"
-                    }`}
+                    className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-xl font-black flex items-center justify-center text-xs shadow-sm uppercase ${getMethodBadgeColor(method.color)}`}>
-                          {method.shortCode || "PAY"}
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold shrink-0 ${getMethodBadgeColor(method.color)}`}>
+                        {method.shortCode}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-slate-900 truncate">{method.name}</h4>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${method.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                            {method.enabled ? "ACTIVE" : "DISABLED"}
+                          </span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-slate-900">{method.name}</h4>
-                            <span className="text-[10px] font-bold uppercase bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-full">
-                              {method.category === "MOBILE_MONEY" ? "Mobile Wallet" : "Bank Transfer"}
-                            </span>
-                          </div>
-                          <p className="text-xs font-mono font-bold text-slate-600 mt-0.5">
-                            {method.accountNumber} <span className="text-slate-400 font-sans font-normal">({method.accountName})</span>
-                          </p>
-                        </div>
+                        <p className="text-xs text-slate-600 font-mono mt-0.5">
+                          {method.accountName} • <b>{method.accountNumber}</b>
+                        </p>
                       </div>
+                    </div>
 
-                      {/* Controls */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                          {method.enabled ? "Active" : "Disabled"}
-                        </span>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePaymentMethod(method.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          method.enabled ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        }`}
+                      >
+                        {method.enabled ? "Disable" : "Enable"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditPaymentMethod(method)}
+                        className="p-1.5 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePaymentMethod(method.id)}
+                        className="p-1.5 text-red-600 hover:text-red-700 bg-white border border-slate-200 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 4: WITHDRAWALS & DAILY LIMITS */}
+          {activeSection === "withdrawals" && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                  <ArrowDownToLine className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Withdrawal Rules & Daily Limits</h2>
+                  <p className="text-xs text-slate-500">Configure minimum payouts, maximum 24h daily user caps, and allowed payout channels.</p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Minimum Withdrawal Amount (ETB)
+                    </label>
+                    <input
+                      type="number"
+                      min={10}
+                      value={settings.withdrawalMinAmount}
+                      onChange={(e) => updateSetting("withdrawalMinAmount", e.target.value)}
+                      placeholder="100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <p className="text-[11px] text-slate-400">Default: 100 ETB. Players cannot withdraw less than this amount.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5 text-blue-500" /> Max Daily Withdrawal per Player (ETB)
+                    </label>
+                    <input
+                      type="number"
+                      min={100}
+                      value={settings.withdrawalMaxDailyAmount}
+                      onChange={(e) => updateSetting("withdrawalMaxDailyAmount", e.target.value)}
+                      placeholder="25000"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <p className="text-[11px] text-slate-400">Risk control: Caps total withdrawals per user within any 24-hour window.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Withdrawal Processing Fee (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={settings.withdrawalFeePercent}
+                    onChange={(e) => updateSetting("withdrawalFeePercent", e.target.value)}
+                    placeholder="0"
+                    className="w-full max-w-xs px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <p className="text-[11px] text-slate-400">Set to 0% for zero fee withdrawals.</p>
+                </div>
+
+                {/* Available Payout Channels */}
+                <div className="pt-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Available Payout Channels
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(settings.withdrawalMethods || []).map((method) => (
+                      <div
+                        key={method.id}
+                        className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded ${getMethodBadgeColor(method.color)}`}>
+                            {method.shortCode}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900">{method.name}</span>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => handleTogglePaymentMethod(method.id)}
-                          className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                          onClick={() => handleToggleWithdrawalMethod(method.id)}
+                          className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors ${
                             method.enabled ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
                           }`}
                         >
                           <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditPaymentMethod(method)}
-                          className="p-2 hover:bg-slate-200/80 rounded-xl text-slate-600 hover:text-slate-900 transition-colors"
-                          title="Edit Details"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-
-                        {method.id !== "telebirr" && method.id !== "cbe" && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePaymentMethod(method.id)}
-                            className="p-2 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-colors"
-                            title="Delete Method"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/60 text-xs text-slate-500 flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-700">Instructions:</span>
-                      <span className="truncate">{method.instructions}</span>
-                    </div>
+                    ))}
                   </div>
-                ))}
-
-                {settings.paymentMethods?.length === 0 && (
-                  <div className="p-8 border border-dashed border-slate-200 rounded-2xl text-center text-slate-400 space-y-2">
-                    <Landmark className="w-8 h-8 mx-auto text-slate-300" />
-                    <p className="text-xs font-bold text-slate-600">No payment methods configured</p>
-                    <p className="text-xs text-slate-400">Click &ldquo;Add Bank / Payment Method&rdquo; to add your bank accounts.</p>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* SECTION 4: API KEYS & INTEGRATIONS */}
+          {/* SECTION 5: WELCOME BONUS INCENTIVE */}
+          {activeSection === "welcome" && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Welcome Registration Gift</h2>
+                  <p className="text-xs text-slate-500">Automatically credit newly registered players with free virtual play credits.</p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="flex items-center justify-between p-4 bg-amber-50/60 border border-amber-200/70 rounded-xl">
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Enable Sign-Up Gift Bonus</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      New players receive an instant starting credit upon first Telegram Mini App launch.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSetting("welcomeBonusEnabled", !settings.welcomeBonusEnabled)}
+                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                      settings.welcomeBonusEnabled ? "bg-amber-500 justify-end" : "bg-slate-300 justify-start"
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
+                  </button>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Welcome Bonus Amount
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={settings.welcomeBonusAmount}
+                      onChange={(e) => updateSetting("welcomeBonusAmount", e.target.value)}
+                      placeholder="5"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <p className="text-[11px] text-slate-400">e.g. 5 ETB (Play-only virtual credit).</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Currency</label>
+                    <input
+                      type="text"
+                      value={settings.welcomeBonusCurrency}
+                      onChange={(e) => updateSetting("welcomeBonusCurrency", e.target.value)}
+                      placeholder="ETB"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 leading-relaxed">
+                  💡 <b>Security Note:</b> Welcome bonuses are strictly classified as <code>SIGNUP_BONUS</code> (virtual play credits). Users cannot withdraw them directly to Telebirr or banks without playing them in prize draws first.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 6: LUCKY SPIN & BOT REMINDERS */}
+          {activeSection === "spin" && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Daily Lucky Spin & DM Reminder Bot</h2>
+                  <p className="text-xs text-slate-500">Configure wheel cooldown intervals and automate Telegram bot reminders.</p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-orange-500" /> Spin Cooldown Interval (Hours)
+                  </label>
+                  <select
+                    value={settings.dailySpinCooldownHours}
+                    onChange={(e) => updateSetting("dailySpinCooldownHours", e.target.value)}
+                    className="w-full max-w-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="24">Every 24 Hours (Daily Standard)</option>
+                    <option value="12">Every 12 Hours (Twice Daily)</option>
+                    <option value="6">Every 6 Hours (Fast Paced)</option>
+                    <option value="1">Every 1 Hour (High Turnover)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400">Time a user must wait before claiming another free spin.</p>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-orange-50/60 border border-orange-200/70 rounded-xl">
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Automate Telegram Bot DM Reminders</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Sends an alert to users when their spin cooldown has finished.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSetting("spinReminderDmEnabled", !settings.spinReminderDmEnabled)}
+                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                      settings.spinReminderDmEnabled ? "bg-orange-500 justify-end" : "bg-slate-300 justify-start"
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
+                  </button>
+                </div>
+
+                {/* Instant Reminder Dispatch Box */}
+                <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl text-white space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-orange-400" />
+                      <span className="font-bold text-xs">Dispatch Spin Reminders Now</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTriggerSpinReminders}
+                      disabled={isTriggeringSpinReminders}
+                      className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-orange-500/20"
+                    >
+                      {isTriggeringSpinReminders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                      <span>Trigger Bot Reminders</span>
+                    </button>
+                  </div>
+                  {spinReminderResult && (
+                    <div className="p-3 bg-white/10 rounded-xl text-xs font-mono text-orange-300">
+                      {spinReminderResult}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 7: API & INTEGRATIONS */}
           {activeSection === "api" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
                   <Key className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">API Keys & Integrations</h2>
-                  <p className="text-xs text-slate-500">Configure Telegram Bot credentials and third-party verification APIs.</p>
+                  <h2 className="text-lg font-bold text-slate-900">API Keys & External Services</h2>
+                  <p className="text-xs text-slate-500">Manage credentials for Telegram Bot API and Verify.et receipt OCR.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                
-                {/* Telegram Bot Token */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Telegram Bot Token</label>
                   <div className="relative">
@@ -717,8 +964,8 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                       type={showBotToken ? "text" : "password"}
                       value={settings.telegramBotToken}
                       onChange={(e) => updateSetting("telegramBotToken", e.target.value)}
-                      placeholder="8773395225:AAEMXnznyGqIR2pn..."
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-12"
+                      placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 pr-12"
                     />
                     <button
                       type="button"
@@ -728,74 +975,44 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                       {showBotToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-400">Used for Telegram WebApp HMAC verification and sending automated notifications.</p>
                 </div>
 
-                {/* Telegram Bot Username */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Telegram Bot Username</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">@</span>
-                    <input
-                      type="text"
-                      value={settings.telegramBotUsername}
-                      onChange={(e) => updateSetting("telegramBotUsername", e.target.value)}
-                      placeholder="milkytechonlinebot"
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400">Used to generate dynamic referral and bot deep-links.</p>
+                  <input
+                    type="text"
+                    value={settings.telegramBotUsername}
+                    onChange={(e) => updateSetting("telegramBotUsername", e.target.value)}
+                    placeholder="milkytechonlinebot"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  />
                 </div>
-
-                {/* Verify.et API Key */}
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Verify.et Automated Slip API Key (Optional)</label>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? "text" : "password"}
-                      value={settings.verifyEtApiKey}
-                      onChange={(e) => updateSetting("verifyEtApiKey", e.target.value)}
-                      placeholder="api_live_..."
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                    >
-                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Used for automatic OCR verification of Telebirr and CBE payment slips.</p>
-                </div>
-
               </div>
             </div>
           )}
 
-          {/* SECTION 5: EMAIL & SMTP */}
+          {/* SECTION 8: SMTP */}
           {activeSection === "smtp" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
                   <Mail className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Email SMTP Configuration</h2>
-                  <p className="text-xs text-slate-500">Configure outbound SMTP mail server for user alerts, password resets, and receipts.</p>
+                  <h2 className="text-lg font-bold text-slate-900">Email & SMTP Relay Configuration</h2>
+                  <p className="text-xs text-slate-500">Configure outgoing transactional emails for password resets and receipts.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Server Host</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Host</label>
                     <input
                       type="text"
                       value={settings.smtpHost}
                       onChange={(e) => updateSetting("smtpHost", e.target.value)}
-                      placeholder="smtp.gmail.com or mail.milkytech.online"
+                      placeholder="smtp.zoho.com / smtp.gmail.com"
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -814,7 +1031,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Username / Email</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP User</label>
                     <input
                       type="text"
                       value={settings.smtpUser}
@@ -842,30 +1059,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                         {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sender From Name</label>
-                    <input
-                      type="text"
-                      value={settings.smtpFromName}
-                      onChange={(e) => updateSetting("smtpFromName", e.target.value)}
-                      placeholder="MilkyTech Support"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sender From Email</label>
-                    <input
-                      type="email"
-                      value={settings.smtpFromEmail}
-                      onChange={(e) => updateSetting("smtpFromEmail", e.target.value)}
-                      placeholder="support@milkytech.online"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                    />
                   </div>
                 </div>
 
@@ -902,12 +1095,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                     </div>
                   )}
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* SECTION 6: REFERRALS & GROWTH */}
+          {/* SECTION 9: REFERRALS */}
           {activeSection === "referrals" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
@@ -916,13 +1108,11 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Referral Program Configuration</h2>
-                  <p className="text-xs text-slate-500">Configure how much bonus users earn for each friend they invite (syncs dynamically to Telegram Mini App).</p>
+                  <p className="text-xs text-slate-500">Configure how much bonus users earn for each friend they invite.</p>
                 </div>
               </div>
 
               <div className="space-y-5">
-                
-                {/* Enable Switch */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
                   <div>
                     <div className="text-sm font-bold text-slate-900">Enable Referral Rewards</div>
@@ -941,126 +1131,37 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   </button>
                 </div>
 
-                {/* Reward Configuration */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                       <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Reward Amount Per Referral
                     </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={settings.referralBonusAmount}
-                        onChange={(e) => updateSetting("referralBonusAmount", e.target.value)}
-                        placeholder="10"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
-                        {settings.referralCurrency}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Users receive this bonus in their wallet for each successful friend sign-up.
-                    </p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={settings.referralBonusAmount}
+                      onChange={(e) => updateSetting("referralBonusAmount", e.target.value)}
+                      placeholder="10"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Currency Code
-                    </label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Currency</label>
                     <input
                       type="text"
                       value={settings.referralCurrency}
                       onChange={(e) => updateSetting("referralCurrency", e.target.value)}
                       placeholder="ETB"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
-
-                {/* Custom Promo Text */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Telegram Referral Headline
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.referralCustomText}
-                    onChange={(e) => updateSetting("referralCustomText", e.target.value)}
-                    placeholder="Earn bonus for every friend who joins MilkyTech using your link!"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                  />
-                  <p className="text-[11px] text-slate-400">
-                    Live dynamic preview in Telegram Mini App: &ldquo;Earn <b>{settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'}</b> bonus for every friend who joins MilkyTech using your link!&rdquo;
-                  </p>
-                </div>
-
-                {/* Conditional Referral Release (Anti-Sybil / Fraud Prevention) */}
-                <div className="p-4 bg-purple-50/60 border border-purple-200/80 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
-                      🔒
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">Anti-Sybil Bonus Release Condition</h4>
-                      <p className="text-[11px] text-slate-500">
-                        Choose when the {settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'} bonus is unlocked to prevent fake bot accounts.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Bonus Unlock Trigger
-                    </label>
-                    <select
-                      value={settings.referralUnlockCondition || "ON_FIRST_DEPOSIT"}
-                      onChange={(e) => updateSetting("referralUnlockCondition", e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                    >
-                      <option value="ON_FIRST_DEPOSIT">
-                        🛡️ On First Deposit (Recommended - Unlocks when invited friend makes their first approved deposit)
-                      </option>
-                      <option value="ON_FIRST_PURCHASE">
-                        🎟️ On First Ticket Purchase (Unlocks when invited friend buys their first campaign ticket)
-                      </option>
-                      <option value="MIN_DEPOSIT_AMOUNT">
-                        💰 On Minimum Deposit of X ETB (Unlocks when friend deposits at least a specific amount)
-                      </option>
-                      <option value="IMMEDIATE">
-                        ⚡ Immediate on Registration (Instant bonus upon sign-up - No condition)
-                      </option>
-                    </select>
-                  </div>
-
-                  {settings.referralUnlockCondition === "MIN_DEPOSIT_AMOUNT" && (
-                    <div className="space-y-1.5 pt-2 animate-in fade-in">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Minimum Required Deposit (ETB)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={settings.referralMinDepositAmount || "50"}
-                        onChange={(e) => updateSetting("referralMinDepositAmount", e.target.value)}
-                        placeholder="50"
-                        className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-purple-500"
-                      />
-                      <p className="text-[11px] text-purple-700">
-                        The referrer will only receive the {settings.referralBonusAmount} {settings.referralCurrency} bonus once their friend deposits at least {settings.referralMinDepositAmount || 50} ETB.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
               </div>
             </div>
           )}
 
-          {/* SECTION 7: DANGER ZONE (PLATFORM WIPE / RESET) */}
+          {/* SECTION 10: DANGER ZONE */}
           {activeSection === "danger" && (
             <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-red-100">
@@ -1068,41 +1169,29 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-red-700">Danger Zone</h2>
-                  <p className="text-xs text-slate-500">Irreversible platform management actions.</p>
+                  <h2 className="text-lg font-bold text-red-600">Danger Zone</h2>
+                  <p className="text-xs text-slate-500">Irreversible actions that affect platform database state.</p>
                 </div>
               </div>
 
-              <div className="p-5 bg-red-50/50 border border-red-200 rounded-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-red-900">Wipe & Reset Platform Data</h4>
-                    <p className="text-xs text-red-700 mt-1 max-w-md leading-relaxed">
-                      Deletes all campaigns, prizes, tickets, draws, payments, ledger transactions, and test users. Preserves admin login accounts and system settings.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowResetModal(true);
-                      setResetResult(null);
-                      setResetConfirmInput("");
-                    }}
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shrink-0 shadow-md shadow-red-600/20 active:scale-95 transition-all"
-                  >
-                    Reset Platform Data
-                  </button>
+              <div className="p-5 bg-red-50/60 border border-red-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-red-950">Reset Platform to Clean State</h4>
+                  <p className="text-xs text-red-700/80 mt-1 max-w-md">
+                    Permanently wipes all campaigns, draw records, entry tickets, payments, ledger logs, and test users.
+                  </p>
                 </div>
-
-                {resetResult && (
-                  <div className={`p-4 rounded-xl text-xs font-semibold ${
-                    resetResult.success ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-red-100 text-red-800 border border-red-200"
-                  }`}>
-                    {resetResult.success ? "✅ " : "❌ "}
-                    {resetResult.message}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetConfirmInput("");
+                    setResetResult(null);
+                    setShowResetModal(true);
+                  }}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all shrink-0"
+                >
+                  Wipe &amp; Reset Platform
+                </button>
               </div>
             </div>
           )}
@@ -1110,41 +1199,31 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         </div>
       </div>
 
-      {/* ADD / EDIT PAYMENT METHOD MODAL */}
+      {/* PAYMENT METHOD MODAL */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-50">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl space-y-5">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                  <Landmark className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {editingMethodId ? "Edit Payment Method" : "Add New Bank / Payment Method"}
-                  </h3>
-                  <p className="text-[11px] text-slate-500">Configure bank details shown to users during deposits</p>
-                </div>
-              </div>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-200 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                {editingMethodId ? "Edit Payment Method" : "Add Payment Method"}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSavePaymentForm} className="space-y-4">
-              
-              {/* Preset Selector */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Quick Bank Preset</label>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Quick Preset</label>
                 <select
                   onChange={(e) => handlePresetSelect(e.target.value)}
-                  value={paymentForm.name}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 >
+                  <option value="">-- Choose Preset or Customize --</option>
                   {BANK_PRESETS.map((p) => (
                     <option key={p.name} value={p.name}>
                       {p.name} ({p.shortCode})
@@ -1179,37 +1258,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Category</label>
-                  <select
-                    value={paymentForm.category}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, category: e.target.value as any })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="MOBILE_MONEY">Mobile Wallet / Birr</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Badge Color</label>
-                  <select
-                    value={paymentForm.color}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, color: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="blue">Blue</option>
-                    <option value="purple">Purple</option>
-                    <option value="emerald">Emerald Green</option>
-                    <option value="amber">Amber Gold</option>
-                    <option value="rose">Rose Red</option>
-                    <option value="indigo">Indigo</option>
-                    <option value="orange">Orange</option>
-                  </select>
-                </div>
-              </div>
-
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Account Holder Name</label>
                 <input
@@ -1231,17 +1279,6 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
                   placeholder="e.g. 01320876543200"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Transfer Instructions</label>
-                <textarea
-                  rows={2}
-                  value={paymentForm.instructions}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, instructions: e.target.value })}
-                  placeholder="e.g. Transfer to account and upload receipt screenshot."
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 

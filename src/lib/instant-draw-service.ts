@@ -291,6 +291,7 @@ export class InstantDrawService {
           snapshotHash,
           randomSeed,
           imageUrl: campaign.imageUrl || campaign.prizes?.[0]?.imageUrl || null,
+          drawId: result.draw.id,
         }).catch(console.error);
       } catch (tgErr) {
         console.error("[Telegram Auto-Draw Notify Error]", tgErr);

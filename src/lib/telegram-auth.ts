@@ -153,14 +153,44 @@ export async function getOrCreateTelegramUser(initData: string, startParamOverri
       },
     });
 
-    // Create ledger account
+    // Check and credit Welcome Registration Bonus Incentive
+    let welcomeBonusAmount = 0;
+    try {
+      const { getSystemSetting } = await import("@/modules/settings/settings-service");
+      const welcomeEnabled = (await getSystemSetting("welcome_bonus_enabled", "true")) === "true";
+      const configuredAmount = parseFloat(await getSystemSetting("welcome_bonus_amount", "5")) || 0;
+
+      if (welcomeEnabled && configuredAmount > 0) {
+        welcomeBonusAmount = configuredAmount;
+      }
+    } catch (e) {
+      console.error("[Welcome Bonus Fetch Error]", e);
+    }
+
+    // Create ledger account with initial welcome bonus
     const ledger = await db.ledgerAccount.create({
       data: {
         userId: user.id,
-        balance: 0,
+        balance: welcomeBonusAmount,
         currency: "ETB",
       },
     });
+
+    if (welcomeBonusAmount > 0) {
+      try {
+        await db.ledgerTransaction.create({
+          data: {
+            accountId: ledger.id,
+            amount: welcomeBonusAmount,
+            referenceType: "SIGNUP_BONUS",
+            referenceId: `welcome_${user.id}`,
+            description: `🎁 Welcome Registration Bonus (+${welcomeBonusAmount} ETB Play Credits)`,
+          },
+        });
+      } catch (e) {
+        console.error("[Welcome Bonus Transaction Error]", e);
+      }
+    }
 
     user.ledgerAccount = ledger;
 
@@ -189,6 +219,7 @@ export async function getOrCreateTelegramUser(initData: string, startParamOverri
         referral_link: referralLink,
         bonus_amount: referralBonusSetting,
         currency: referralCurrencySetting,
+        welcome_gift: welcomeBonusAmount > 0 ? `+${welcomeBonusAmount} ETB` : "0 ETB",
       }).catch(console.error);
     } catch (welcomeErr) {
       console.error("[Welcome Notification Error]", welcomeErr);

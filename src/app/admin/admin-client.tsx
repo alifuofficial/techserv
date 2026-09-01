@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { 
   Users, Trophy, Ticket, Wallet, Calendar, ArrowUpRight, 
-  MoreVertical, CheckCircle2, ShieldAlert, CircleDashed, CheckCircle, Database, Phone, HardDrive, Award, Sparkles
+  MoreVertical, CheckCircle2, ShieldAlert, CircleDashed, CheckCircle, Database, Phone, HardDrive, Award, Sparkles,
+  DollarSign, TrendingUp, ArrowDownToLine, ShieldCheck, Layers, Flame, Zap, Gift, ChevronRight, PackageCheck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -118,26 +119,46 @@ function RevenueAreaChart({ data }: { data: { name: string; value: number }[] })
               strokeWidth="2"
               className="transition-all"
             />
+            {hoveredIdx === i && (
+              <g>
+                <rect
+                  x={p.x - 45}
+                  y={Math.max(5, p.y - 45)}
+                  width="90"
+                  height="34"
+                  rx="8"
+                  fill="#0F172A"
+                  className="shadow-lg"
+                />
+                <text
+                  x={p.x}
+                  y={Math.max(5, p.y - 45) + 14}
+                  textAnchor="middle"
+                  fill="#94A3B8"
+                  fontSize="9"
+                  fontFamily="sans-serif"
+                >
+                  {p.name}
+                </text>
+                <text
+                  x={p.x}
+                  y={Math.max(5, p.y - 45) + 27}
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize="11"
+                  fontWeight="bold"
+                  fontFamily="sans-serif"
+                >
+                  {p.value.toLocaleString()} ETB
+                </text>
+              </g>
+            )}
           </g>
         ))}
       </svg>
 
-      {/* Hover tooltip */}
-      {hoveredIdx !== null && points[hoveredIdx] && (
-        <div
-          className="absolute bg-slate-900 text-white text-xs py-1.5 px-3 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
-          style={{
-            left: `${(points[hoveredIdx].x / width) * 100}%`,
-            top: `${(points[hoveredIdx].y / height) * 100}%`,
-          }}
-        >
-          <div className="font-bold text-emerald-400">{(points[hoveredIdx].value || 0).toLocaleString()} ETB</div>
-          <div className="text-[10px] text-slate-400">{points[hoveredIdx].name}</div>
-        </div>
-      )}
-
-      {/* X Axis Labels */}
-      <div className="flex justify-between px-6 text-[10px] font-semibold text-slate-400 mt-1">
+      {/* X-axis labels */}
+      <div className="flex justify-between px-6 text-[10px] text-slate-400 font-medium">
         {data.map((d, i) => (
           <span key={i}>{d.name}</span>
         ))}
@@ -146,7 +167,7 @@ function RevenueAreaChart({ data }: { data: { name: string; value: number }[] })
   );
 }
 
-// Crash-proof SVG Donut Chart
+// Crash-proof SVG Status Donut Chart
 function StatusDonutChart({ data, total }: { data: { name: string; value: number; color: string }[]; total: number }) {
   const size = 120;
   const strokeWidth = 14;
@@ -200,15 +221,185 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Welcome back, Admin! <span className="text-2xl">👋</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Here's what's happening with your platform today.</p>
+          <p className="text-slate-500 text-sm mt-1">Here&apos;s your live business performance, realized profit, and liquidity overview.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/withdrawals"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold rounded-xl text-xs border border-purple-200 transition-all"
+          >
+            <ArrowDownToLine className="w-3.5 h-3.5" />
+            <span>Withdrawals: {data?.pendingWithdrawalCount || 0} Pending</span>
+          </Link>
+
           <Link
             href="/admin/draws"
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
           >
             <Sparkles className="w-4 h-4" /> Live Draw Room
           </Link>
+        </div>
+      </div>
+
+      {/* EXECUTIVE NET REALIZED PROFIT & VAULT RESERVES DASHBOARD */}
+      <div className="bg-gradient-to-br from-[#0B132B] via-[#0E1A38] to-[#070D1F] border border-emerald-500/30 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden space-y-6">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        {/* Section Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-white">Net Realized Profit &amp; Cash Flow Vault</h2>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
+                  Audited P&amp;L
+                </span>
+              </div>
+              <p className="text-xs text-slate-300/80">Real-time accounting after deducting completed prize costs, paid cash withdrawals, and promo credits.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Net Profit Margin:</span>
+            <span className="text-sm font-black text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 rounded-xl">
+              +{data?.netProfitMarginPercent || 0}%
+            </span>
+          </div>
+        </div>
+
+        {/* 4 Executive Financial Metrics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+          {/* Metric 1: Realized Net Cash Profit */}
+          <div className="bg-white/5 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-4.5 space-y-2 transition-all">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <span>Net Realized Profit</span>
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">
+              {(data?.netRealizedProfit || 0) >= 0 ? "+" : ""}{(data?.netRealizedProfit || 0).toLocaleString()} <span className="text-xs text-emerald-300 font-sans">ETB</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Gross Ticket Sales ({(data?.totalTicketSales || 0).toLocaleString()} ETB) minus Completed Prizes &amp; Payouts
+            </p>
+          </div>
+
+          {/* Metric 2: Vault Cash Reserves */}
+          <div className="bg-white/5 border border-white/10 hover:border-blue-500/40 rounded-2xl p-4.5 space-y-2 transition-all">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <span>Vault Cash Reserves</span>
+              <Wallet className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-blue-400">
+              {(data?.platformCashReserve || 0).toLocaleString()} <span className="text-xs text-blue-300 font-sans">ETB</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Real User Deposits ({(data?.totalRevenue || 0).toLocaleString()} ETB) minus Realized Withdrawals Paid Out
+            </p>
+          </div>
+
+          {/* Metric 3: Paid Out Withdrawals */}
+          <div className="bg-white/5 border border-white/10 hover:border-purple-500/40 rounded-2xl p-4.5 space-y-2 transition-all">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <span>Paid Out Withdrawals</span>
+              <ArrowDownToLine className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-purple-300">
+              {(data?.totalWithdrawalsPaidOut || 0).toLocaleString()} <span className="text-xs text-purple-200 font-sans">ETB</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              {data?.pendingWithdrawalCount || 0} pending requests ({(data?.totalWithdrawalsPending || 0).toLocaleString()} ETB in review)
+            </p>
+          </div>
+
+          {/* Metric 4: Completed Prize Fulfillment Costs */}
+          <div className="bg-white/5 border border-white/10 hover:border-amber-500/40 rounded-2xl p-4.5 space-y-2 transition-all">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <span>Prize Item Costs</span>
+              <PackageCheck className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-amber-400">
+              {(data?.completedPrizeCostsTotal || 0).toLocaleString()} <span className="text-xs text-amber-300 font-sans">ETB</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Total physical hardware &amp; product costs for verified winners
+            </p>
+          </div>
+        </div>
+
+        {/* Breakdown by Game Category */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 relative z-10 text-xs">
+          {/* Instant Mini Draws */}
+          <div className="bg-purple-950/40 border border-purple-500/30 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center justify-between font-bold text-purple-300">
+              <span className="flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-purple-400" /> Instant 5-Min Mini Draws
+              </span>
+              <span className="text-[10px] bg-purple-500/20 px-2 py-0.5 rounded-full">
+                {data?.instantStats?.completedCount || 0} Rounds Done
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-300 pt-1">
+              <span>Gross Sales:</span>
+              <b className="font-mono text-white">{(data?.instantStats?.grossSales || 0).toLocaleString()} ETB</b>
+            </div>
+            <div className="flex justify-between text-slate-300">
+              <span>Completed Prizes:</span>
+              <b className="font-mono text-amber-400">-{(data?.instantStats?.prizeCosts || 0).toLocaleString()} ETB</b>
+            </div>
+            <div className="flex justify-between text-slate-200 border-t border-purple-500/20 pt-1 font-bold">
+              <span>Realized Profit:</span>
+              <span className="font-mono text-emerald-400">+{(data?.instantStats?.netProfit || 0).toLocaleString()} ETB</span>
+            </div>
+          </div>
+
+          {/* Grand Campaigns */}
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center justify-between font-bold text-emerald-300">
+              <span className="flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-emerald-400" /> Official Grand Campaigns
+              </span>
+              <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                {data?.grandStats?.completedCount || 0} Draws Done
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-300 pt-1">
+              <span>Gross Sales:</span>
+              <b className="font-mono text-white">{(data?.grandStats?.grossSales || 0).toLocaleString()} ETB</b>
+            </div>
+            <div className="flex justify-between text-slate-300">
+              <span>Completed Prizes:</span>
+              <b className="font-mono text-amber-400">-{(data?.grandStats?.prizeCosts || 0).toLocaleString()} ETB</b>
+            </div>
+            <div className="flex justify-between text-slate-200 border-t border-emerald-500/20 pt-1 font-bold">
+              <span>Realized Profit:</span>
+              <span className="font-mono text-emerald-400">+{(data?.grandStats?.netProfit || 0).toLocaleString()} ETB</span>
+            </div>
+          </div>
+
+          {/* Promotional Bonus Credits */}
+          <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center justify-between font-bold text-amber-300">
+              <span className="flex items-center gap-1.5">
+                <Gift className="w-4 h-4 text-amber-400" /> Marketing &amp; Virtual Bonus
+              </span>
+              <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full">Non-Withdrawable</span>
+            </div>
+            <div className="flex justify-between text-slate-300 pt-1">
+              <span>Daily Spin Bonuses:</span>
+              <b className="font-mono text-white">{(data?.totalSpinCredits || 0).toLocaleString()} ETB</b>
+            </div>
+            <div className="flex justify-between text-slate-300">
+              <span>Referral Credits:</span>
+              <b className="font-mono text-white">{(data?.totalReferralCredits || 0).toLocaleString()} ETB</b>
+            </div>
+            <p className="text-[10px] text-amber-300/80 pt-1 border-t border-amber-500/20">
+              Virtual credits act as acquisition incentives to drive real ticket purchases.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -281,7 +472,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <Wallet className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Total Revenue</div>
+              <div className="text-sm font-medium text-slate-500 mb-1">Total Deposits</div>
               <div className="text-2xl font-bold text-slate-900">
                 {(data?.totalRevenue || 0).toLocaleString()}<span className="text-sm text-slate-500 ml-1">ETB</span>
               </div>
@@ -291,9 +482,9 @@ export default function AdminDashboardClient({ data }: { data: any }) {
             <div className="flex flex-col">
               <span className="text-emerald-600 text-xs font-bold flex items-center">
                 <ArrowUpRight className="w-3 h-3 mr-0.5" />
-                Net Profit: {(data?.totalProjectedNetProfit || 0).toLocaleString()} ETB
+                Net Profit: {(data?.netRealizedProfit || 0).toLocaleString()} ETB
               </span>
-              <span className="text-[10px] text-slate-400">after product costs</span>
+              <span className="text-[10px] text-slate-400">after product &amp; payouts</span>
             </div>
             <Sparkline data={[20, 30, 25, 45, 35, 50, 40, 60]} color="#10B981" />
           </div>
@@ -307,18 +498,18 @@ export default function AdminDashboardClient({ data }: { data: any }) {
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-base font-bold text-slate-900 mb-2">Revenue & Profit Overview</h2>
+              <h2 className="text-base font-bold text-slate-900 mb-2">Revenue &amp; Deposit Flow</h2>
               <div className="flex items-end gap-4">
                 <div>
                   <span className="text-2xl font-bold text-slate-900">{(data?.totalRevenue || 0).toLocaleString()} ETB</span>
-                  <span className="text-xs text-slate-400 ml-1">Gross</span>
+                  <span className="text-xs text-slate-400 ml-1">Deposits</span>
                 </div>
                 <div className="w-px h-6 bg-slate-200 mb-1"></div>
                 <div className="mb-0.5">
                   <span className="text-base font-bold text-emerald-600">
-                    {(data?.totalProjectedNetProfit || 0) >= 0 ? "+" : ""}{(data?.totalProjectedNetProfit || 0).toLocaleString()} ETB
+                    {(data?.netRealizedProfit || 0) >= 0 ? "+" : ""}{(data?.netRealizedProfit || 0).toLocaleString()} ETB
                   </span>
-                  <span className="text-[11px] text-slate-400 ml-1">Projected Net Margin</span>
+                  <span className="text-[11px] text-slate-400 ml-1">Realized Net Profit</span>
                 </div>
               </div>
             </div>
@@ -340,204 +531,101 @@ export default function AdminDashboardClient({ data }: { data: any }) {
               <div className="w-1/2 flex items-center justify-center">
                 <StatusDonutChart data={data?.pieData || []} total={totalCampaignPie} />
               </div>
-              <div className="w-1/2 pl-4 space-y-2">
-                {data?.pieData?.map((item: any, i: number) => (
-                  <div key={i} className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-xs font-semibold text-slate-700">{item.name}</span>
+              <div className="w-1/2 flex flex-col justify-center gap-2 pl-2">
+                {(data?.pieData || []).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                      <span className="text-slate-600 truncate max-w-[80px]">{item.name}</span>
                     </div>
-                    <div className="text-[11px] text-slate-500 ml-4">
-                      {item.value} ({Math.round(((item.value || 0) / Math.max(1, totalCampaignPie)) * 100)}%)
-                    </div>
+                    <span className="font-bold text-slate-900">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Real Recent Activity */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
-            <div className="flex justify-between items-center mb-4 shrink-0">
-              <h2 className="text-base font-bold text-slate-900">Recent Live Activity</h2>
-            </div>
-            <div className="space-y-3.5 overflow-y-auto custom-scrollbar pr-1 max-h-[220px]">
-              {data?.activities?.map((act: any, idx: number) => (
-                <div key={idx} className="flex gap-3 items-start">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    act.type === 'USER' ? 'bg-blue-50 text-blue-500' :
-                    act.type === 'PAYMENT' ? 'bg-emerald-50 text-emerald-500' : 'bg-purple-50 text-purple-500'
-                  }`}>
-                    {act.type === 'USER' && <Users className="w-4 h-4" />}
-                    {act.type === 'PAYMENT' && <Wallet className="w-4 h-4" />}
-                    {act.type === 'WINNER' && <Award className="w-4 h-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{act.title}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{act.subtitle} {act.formattedTime ? `• ${act.formattedTime}` : ""}</div>
-                  </div>
-                </div>
-              ))}
-
-              {(!data?.activities || data.activities.length === 0) && (
-                <p className="text-xs text-slate-400 py-4 text-center">No recent activity recorded yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Real Top Performing Campaigns Table with Product Cost and Net Profit */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-base font-bold text-slate-900">Active Campaigns & Net Profitability</h2>
-            <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Campaign</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Cost</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tickets Sold</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Realized Gross</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Net Profit</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {data?.campaigns?.map((camp: any, i: number) => (
-                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4">
-                      <div className="flex items-center gap-3">
-                        {camp.img ? (
-                          <img src={camp.img} alt={camp.name || "Campaign"} className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold border border-emerald-100 shrink-0">
-                            <Trophy className="w-5 h-5" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900 truncate max-w-[150px]">{camp.name || "Untitled"}</div>
-                          <div className="text-[10px] text-slate-400">{camp.time || ""}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      <div className="font-mono font-bold text-rose-600 text-xs">
-                        {(camp.productCost || 0).toLocaleString()} ETB
-                      </div>
-                      <div className="text-[9px] text-slate-400">Market Cost</div>
-                    </td>
-                    <td className="py-4">
-                      <div className="font-bold text-slate-700 text-xs">
-                        {(camp.sold || 0).toLocaleString()} <span className="text-slate-400 font-normal">/ {(camp.total || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="text-[9px] text-emerald-600 font-semibold">{camp.conv || "0%"}</div>
-                    </td>
-                    <td className="py-4 font-bold text-slate-700 font-mono text-xs">
-                      {(camp.rev || 0).toLocaleString()} ETB
-                    </td>
-                    <td className="py-4">
-                      <div className={`font-bold font-mono text-xs ${(camp.targetProfit || 0) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                        {(camp.targetProfit || 0) >= 0 ? "+" : ""}{(camp.targetProfit || 0).toLocaleString()} ETB
-                      </div>
-                      <div className="text-[9px] text-slate-400">
-                        Live: {(camp.realizedProfit || 0) >= 0 ? "+" : ""}{(camp.realizedProfit || 0).toLocaleString()} ETB
-                      </div>
-                    </td>
-                    <td className="py-4 text-center">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
-                        camp.status === 'ACTIVE' ? 'text-emerald-600 bg-emerald-100' :
-                        camp.status === 'COMPLETED' ? 'text-blue-600 bg-blue-100' : 'text-slate-600 bg-slate-100'
-                      }`}>
-                        {camp.status || "DRAFT"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-
-                {(!data?.campaigns || data.campaigns.length === 0) && (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-xs text-slate-400">No campaigns found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Real Payment Methods Breakdown */}
-        <div className="space-y-6">
+          {/* Payment Method Distribution */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-base font-bold text-slate-900">Payment Breakdown</h2>
-              <Link href="/admin/payments" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
-            </div>
-            
-            <div className="space-y-5">
-              {data?.paymentMethods?.map((pm: any, idx: number) => (
-                <div key={idx}>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-slate-700 flex items-center gap-2">
-                      {pm.icon === "telebirr" && <Phone className="w-3.5 h-3.5 text-emerald-500" />}
-                      {pm.icon === "cbe" && <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />}
-                      {pm.icon === "wallet" && <Wallet className="w-3.5 h-3.5 text-emerald-600" />}
-                      {pm.name}
-                    </span>
-                    <div className="text-slate-400">
-                      <span className="text-slate-700 font-bold">{(pm.amount || 0).toLocaleString()} ETB</span> ({pm.percentage || 0}%)
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${Math.max(2, pm.percentage || 0)}%`, backgroundColor: pm.color || "#10B981" }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* System Health */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-bold text-slate-900">System Status</h2>
-            </div>
-            
+            <h2 className="text-base font-bold text-slate-900 mb-4">Payment Methods</h2>
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> PostgreSQL Database
+              {(data?.paymentMethods || []).map((method: any, i: number) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs" style={{ backgroundColor: method.color }}>
+                      {method.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">{method.name}</div>
+                      <div className="text-[10px] text-slate-400">{(method.amount || 0).toLocaleString()} ETB</div>
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-slate-600">{method.percentage || 0}%</div>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Telegram Mini App & Bot
-                </div>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" /> Provably Fair RNG
-                </div>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Operational</span>
-              </div>
+              ))}
             </div>
           </div>
-
         </div>
+
       </div>
 
-      {/* Footer */}
-      <div className="flex flex-col sm:flex-row justify-between items-center pt-4 text-[11px] text-slate-400 border-t border-slate-200/60">
-        <p>© {new Date().getFullYear()} MilkyTech. All rights reserved.</p>
-        <p className="flex items-center gap-1 mt-2 sm:mt-0 font-medium">
-          MilkyTech Platform Portal
-        </p>
+      {/* Bottom Row: Top Campaigns with Product Cost & Net Margin Table */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Campaign Profitability &amp; Financial Margins</h2>
+            <p className="text-xs text-slate-500">Ticket sales gross, product purchase costs, and realized net margins per campaign.</p>
+          </div>
+          <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600 flex items-center gap-1">
+            <span>All Campaigns</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                <th className="pb-3">Campaign</th>
+                <th className="pb-3">Type</th>
+                <th className="pb-3">Tickets Sold</th>
+                <th className="pb-3">Gross Revenue</th>
+                <th className="pb-3">Product Cost</th>
+                <th className="pb-3 text-right">Realized Net Profit</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {(data?.campaigns || []).map((c: any) => (
+                <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-3 font-bold text-slate-900 flex items-center gap-2 max-w-[200px] truncate">
+                    <span>{c.name}</span>
+                  </td>
+                  <td className="py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      c.isInstant ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {c.isInstant ? "⚡ Instant 5-Min" : "🏆 Grand"}
+                    </span>
+                  </td>
+                  <td className="py-3 font-mono">
+                    {c.sold} / {c.total} ({c.conv})
+                  </td>
+                  <td className="py-3 font-mono text-slate-900">
+                    {(c.rev || 0).toLocaleString()} ETB
+                  </td>
+                  <td className="py-3 font-mono text-slate-500">
+                    {(c.productCost || 0).toLocaleString()} ETB
+                  </td>
+                  <td className="py-3 text-right font-mono font-bold">
+                    <span className={(c.realizedProfit || 0) >= 0 ? "text-emerald-600" : "text-slate-500"}>
+                      {(c.realizedProfit || 0) >= 0 ? "+" : ""}{(c.realizedProfit || 0).toLocaleString()} ETB
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>

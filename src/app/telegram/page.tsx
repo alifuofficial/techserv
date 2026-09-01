@@ -360,6 +360,41 @@ export default function TelegramMiniApp() {
             </Link>
           </div>
 
+          {/* Hall of Fame & Provably Fair Verifier Quick Access */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <Link
+              href="/telegram/leaderboard"
+              className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 hover:border-amber-500/60 flex items-center justify-between active:scale-95 transition-all group"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Crown className="w-4 h-4 fill-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black text-white truncate">Leaderboard</h4>
+                  <span className="text-[10px] text-amber-300/80 block truncate">Top Winners</span>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-colors shrink-0" />
+            </Link>
+
+            <Link
+              href="/telegram/verify"
+              className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-slate-900 to-slate-900 border border-emerald-500/30 hover:border-emerald-500/60 flex items-center justify-between active:scale-95 transition-all group"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black text-white truncate">Verifier</h4>
+                  <span className="text-[10px] text-emerald-300/80 block truncate">Provably Fair</span>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-colors shrink-0" />
+            </Link>
+          </div>
+
           {/* Section: HOT PRIZE DRAWS with Category Switcher */}
           <div className="pt-2">
             

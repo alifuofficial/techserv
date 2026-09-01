@@ -12,24 +12,52 @@ export default async function AdminDashboardPage() {
     activeCampaigns,
     completedCampaigns,
     draftCampaigns,
-    totalRevenueAgg,
+    depositsAgg,
+    withdrawalsApprovedAgg,
+    withdrawalsPendingAgg,
     totalTicketsCount,
-    campaigns,
+    allCampaignsWithSales,
+    allEntries,
     approvedPayments,
     recentPayments,
     recentUsers,
     recentDraws,
+    spinRewardsAgg,
+    referralRewardsAgg,
   ] = await Promise.all([
     db.user.count().catch(() => 0),
     db.campaign.count().catch(() => 0),
     db.campaign.count({ where: { status: "ACTIVE" } }).catch(() => 0),
     db.campaign.count({ where: { status: "COMPLETED" } }).catch(() => 0),
     db.campaign.count({ where: { status: "DRAFT" } }).catch(() => 0),
+    // Approved Deposits
     db.payment.aggregate({
       _sum: { amount: true },
-      where: { status: "APPROVED" },
+      where: {
+        status: "APPROVED",
+        provider: { not: { startsWith: "WITHDRAW_" } },
+      },
     }).catch(() => ({ _sum: { amount: 0 } })),
+    // Approved Withdrawals (Real cash paid out)
+    db.payment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: "APPROVED",
+        provider: { startsWith: "WITHDRAW_" },
+      },
+    }).catch(() => ({ _sum: { amount: 0 } })),
+    // Pending Withdrawals
+    db.payment.aggregate({
+      _sum: { amount: true },
+      _count: { id: true },
+      where: {
+        status: "PENDING",
+        provider: { startsWith: "WITHDRAW_" },
+      },
+    }).catch(() => ({ _sum: { amount: 0 }, _count: { id: 0 } })),
+    // Entries count
     db.entry.count().catch(() => 0),
+    // All campaigns with entry counts & prizes
     db.campaign.findMany({
       include: {
         prizes: true,
@@ -38,8 +66,17 @@ export default async function AdminDashboardPage() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 6,
     }).catch(() => []),
+    // All valid entries
+    db.entry.findMany({
+      where: { status: { in: ["VALID", "WINNER"] } },
+      select: {
+        id: true,
+        campaignId: true,
+        createdAt: true,
+      },
+    }).catch(() => []),
+    // Approved payments for chart
     db.payment.findMany({
       where: { status: "APPROVED" },
       select: {
@@ -49,6 +86,7 @@ export default async function AdminDashboardPage() {
       },
       orderBy: { createdAt: "asc" },
     }).catch(() => []),
+    // Recent payments
     db.payment.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -56,11 +94,13 @@ export default async function AdminDashboardPage() {
         user: { select: { name: true, email: true } },
       },
     }).catch(() => []),
+    // Recent users
     db.user.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, email: true, createdAt: true },
     }).catch(() => []),
+    // Recent draws
     db.draw.findMany({
       where: { status: "COMPLETED", winningEntryId: { not: null } },
       take: 3,
@@ -69,9 +109,24 @@ export default async function AdminDashboardPage() {
         campaign: { select: { title: true } },
       },
     }).catch(() => []),
+    // Total Spin Bonus credits issued
+    db.ledgerTransaction.aggregate({
+      where: { referenceType: "DAILY_SPIN_REWARD" },
+      _sum: { amount: true },
+    }).catch(() => ({ _sum: { amount: 0 } })),
+    // Total Referral bonuses issued
+    db.ledgerTransaction.aggregate({
+      where: { referenceType: { in: ["REFERRAL_BONUS", "REFERRAL_UNLOCK"] } },
+      _sum: { amount: true },
+    }).catch(() => ({ _sum: { amount: 0 } })),
   ]);
 
-  const totalRevenue = totalRevenueAgg?._sum?.amount || 0;
+  const totalDeposits = depositsAgg?._sum?.amount || 0;
+  const totalWithdrawalsPaidOut = withdrawalsApprovedAgg?._sum?.amount || 0;
+  const totalWithdrawalsPending = withdrawalsPendingAgg?._sum?.amount || 0;
+  const pendingWithdrawalCount = withdrawalsPendingAgg?._count?.id || 0;
+  const totalSpinCredits = spinRewardsAgg?._sum?.amount || 0;
+  const totalReferralCredits = referralRewardsAgg?._sum?.amount || 0;
 
   // 1. Calculate Real Revenue Chart (Last 7 days)
   const revenueByDayMap = new Map<string, number>();
@@ -83,16 +138,18 @@ export default async function AdminDashboardPage() {
     } catch (e) {}
   }
 
-  (approvedPayments || []).forEach((p) => {
-    try {
-      if (p.createdAt) {
-        const key = format(new Date(p.createdAt), "MMM d");
-        if (revenueByDayMap.has(key)) {
-          revenueByDayMap.set(key, (revenueByDayMap.get(key) || 0) + (p.amount || 0));
+  (approvedPayments || [])
+    .filter((p) => !p.provider?.startsWith("WITHDRAW_"))
+    .forEach((p) => {
+      try {
+        if (p.createdAt) {
+          const key = format(new Date(p.createdAt), "MMM d");
+          if (revenueByDayMap.has(key)) {
+            revenueByDayMap.set(key, (revenueByDayMap.get(key) || 0) + (p.amount || 0));
+          }
         }
-      }
-    } catch (e) {}
-  });
+      } catch (e) {}
+    });
 
   const revenueData = Array.from(revenueByDayMap.entries()).map(([name, value]) => ({
     name,
@@ -110,14 +167,16 @@ export default async function AdminDashboardPage() {
     pieData.push({ name: "No Campaigns", value: 1, color: "#94A3B8" });
   }
 
-  // 3. Real Payment Methods Breakdown
+  // 3. Payment Methods Breakdown
   const providerSums: Record<string, number> = {};
-  (approvedPayments || []).forEach((p) => {
-    const prov = (p.provider || "OTHER").toUpperCase();
-    providerSums[prov] = (providerSums[prov] || 0) + (p.amount || 0);
-  });
+  (approvedPayments || [])
+    .filter((p) => !p.provider?.startsWith("WITHDRAW_"))
+    .forEach((p) => {
+      const prov = (p.provider || "OTHER").toUpperCase();
+      providerSums[prov] = (providerSums[prov] || 0) + (p.amount || 0);
+    });
 
-  const totalProvRevenue = Math.max(1, totalRevenue);
+  const totalProvRevenue = Math.max(1, totalDeposits);
   const paymentMethods = [
     {
       name: "Telebirr",
@@ -195,13 +254,21 @@ export default async function AdminDashboardPage() {
   });
   const finalActivities = activityList.slice(0, 6);
 
-  // 5. Top Campaigns with Product Cost & Net Profit Calculations
+  // 5. Itemized Campaign Breakdown & Realized Net Profit
   let totalProductCostsAll = 0;
   let totalTargetGrossAll = 0;
-  let totalRealizedGrossAll = 0;
+  let totalRealizedGrossTicketSales = 0;
+
+  let instantGrossSales = 0;
+  let instantPrizeCosts = 0;
+  let instantCompletedCount = 0;
+
+  let grandGrossSales = 0;
+  let grandPrizeCosts = 0;
+  let grandCompletedCount = 0;
 
   const mappedCampaigns = await Promise.all(
-    (campaigns || []).map(async (c) => {
+    (allCampaignsWithSales || []).map(async (c) => {
       let formattedEndsAt = "";
       try {
         formattedEndsAt = c.endsAt ? `Ends ${format(new Date(c.endsAt), "MMM d, yyyy")}` : "";
@@ -223,7 +290,23 @@ export default async function AdminDashboardPage() {
 
       totalProductCostsAll += productCost;
       totalTargetGrossAll += targetGross;
-      totalRealizedGrossAll += realizedGross;
+      totalRealizedGrossTicketSales += realizedGross;
+
+      const isInstant =
+        c.slug.startsWith("flash-") ||
+        c.slug.startsWith("instant-") ||
+        c.title.toLowerCase().includes("instant") ||
+        c.title.toLowerCase().includes("flash");
+
+      if (isInstant) {
+        instantGrossSales += realizedGross;
+        instantPrizeCosts += (c.status === "COMPLETED" ? productCost : 0);
+        if (c.status === "COMPLETED") instantCompletedCount++;
+      } else {
+        grandGrossSales += realizedGross;
+        grandPrizeCosts += (c.status === "COMPLETED" ? productCost : 0);
+        if (c.status === "COMPLETED") grandCompletedCount++;
+      }
 
       return {
         id: c.id,
@@ -240,27 +323,55 @@ export default async function AdminDashboardPage() {
         realizedProfit,
         conv: `${Math.min(100, Math.round((entriesSold / max) * 100))}%`,
         status: c.status || "DRAFT",
+        isInstant,
       };
     })
   );
 
-  const totalProjectedNetProfit = totalTargetGrossAll - totalProductCostsAll;
-  const totalRealizedNetProfit = totalRealizedGrossAll - totalProductCostsAll;
+  // Executive Realized Net Profit Calculations
+  const completedPrizeCostsTotal = instantPrizeCosts + grandPrizeCosts;
+  const netRealizedProfit = totalRealizedGrossTicketSales - completedPrizeCostsTotal - totalWithdrawalsPaidOut;
+  const platformCashReserve = Math.max(0, totalDeposits - totalWithdrawalsPaidOut);
+  const netProfitMarginPercent =
+    totalRealizedGrossTicketSales > 0
+      ? Math.round(((totalRealizedGrossTicketSales - completedPrizeCostsTotal) / totalRealizedGrossTicketSales) * 100)
+      : 0;
 
   const dashboardData = {
     totalUsers: totalUsers || 0,
     totalCampaigns: totalCampaigns || 0,
     activeCampaigns: activeCampaigns || 0,
-    totalRevenue: totalRevenue || 0,
+    totalRevenue: totalDeposits || 0,
+    totalTicketSales: totalRealizedGrossTicketSales || 0,
     totalTicketsCount: totalTicketsCount || 0,
     totalProductCosts: totalProductCostsAll || 0,
-    totalProjectedNetProfit: totalProjectedNetProfit || 0,
-    totalRealizedNetProfit: totalRealizedNetProfit || 0,
+    completedPrizeCostsTotal,
+    totalWithdrawalsPaidOut,
+    totalWithdrawalsPending,
+    pendingWithdrawalCount,
+    totalSpinCredits,
+    totalReferralCredits,
+    netRealizedProfit,
+    platformCashReserve,
+    netProfitMarginPercent,
+    instantStats: {
+      grossSales: instantGrossSales,
+      prizeCosts: instantPrizeCosts,
+      netProfit: instantGrossSales - instantPrizeCosts,
+      completedCount: instantCompletedCount,
+    },
+    grandStats: {
+      grossSales: grandGrossSales,
+      prizeCosts: grandPrizeCosts,
+      netProfit: grandGrossSales - grandPrizeCosts,
+      completedCount: grandCompletedCount,
+    },
+    totalProjectedNetProfit: totalTargetGrossAll - totalProductCostsAll,
     revenueData: revenueData || [],
     pieData: pieData || [],
     paymentMethods: paymentMethods || [],
     activities: finalActivities || [],
-    campaigns: mappedCampaigns || [],
+    campaigns: mappedCampaigns.slice(0, 8),
   };
 
   return <AdminDashboardClient data={dashboardData} />;

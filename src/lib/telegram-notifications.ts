@@ -42,6 +42,7 @@ export const DEFAULT_TEMPLATES: Record<string, TemplateDefinition> = {
 🛡️ <b>PROVABLY FAIR VERIFICATION:</b>
 🔐 <b>Snapshot Hash:</b> <code>{snapshot_hash}</code>
 🎲 <b>Random Seed:</b> <code>{random_seed}</code>
+🔍 <b>Verify Math:</b> {verify_url}
 
 ✨ <i>100% Cryptographically Certified & Audited on Blockchain-grade RNG.</i>
 ━━━━━━━━━━━━━━━━━━━━━
@@ -56,6 +57,7 @@ Tap below to enter active draws in the Mini App! 👇`,
       "{winning_ticket}",
       "{snapshot_hash}",
       "{random_seed}",
+      "{verify_url}",
       "{channel_url}",
     ],
   },
@@ -387,6 +389,7 @@ export async function broadcastWinnerToChannel(details: {
   snapshotHash?: string | null;
   randomSeed?: string | null;
   imageUrl?: string | null;
+  drawId?: string | null;
 }): Promise<boolean> {
   try {
     const isEnabled = (await getSystemSetting("telegram_channel_auto_broadcast_winners", "true")) === "true";
@@ -404,6 +407,10 @@ export async function broadcastWinnerToChannel(details: {
       DEFAULT_TEMPLATES.CHANNEL_WINNER_ANNOUNCEMENT.defaultTemplate
     );
 
+    const verifyUrl = details.drawId
+      ? `https://milkytech.online/verify?draw=${details.drawId}`
+      : "https://milkytech.online/verify";
+
     let text = templateSetting || DEFAULT_TEMPLATES.CHANNEL_WINNER_ANNOUNCEMENT.defaultTemplate;
     text = text
       .split("{winner_name}").join(details.winnerName || "Lucky Player")
@@ -414,12 +421,17 @@ export async function broadcastWinnerToChannel(details: {
       .split("{winning_ticket}").join(details.ticketNumber)
       .split("{snapshot_hash}").join(details.snapshotHash || "SHA256-PROVABLY-FAIR-CERTIFIED")
       .split("{random_seed}").join(details.randomSeed || "NIST-BEACON-SEED-VERIFIED")
+      .split("{verify_url}").join(verifyUrl)
       .split("{channel_url}").join(`https://t.me/${channelHandle.replace("@", "")}`);
 
     const buttons = [
       {
         text: "🎟️ Play Next Draw on Mini App",
         url: "https://t.me/milkytechonlinebot",
+      },
+      {
+        text: "🔍 Verify Draw Math",
+        url: verifyUrl,
       },
     ];
 

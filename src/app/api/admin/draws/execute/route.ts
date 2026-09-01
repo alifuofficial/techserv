@@ -172,6 +172,7 @@ export async function POST(req: Request) {
         snapshotHash: result.draw.snapshotHash,
         randomSeed: result.draw.randomSeed,
         imageUrl: campaign.imageUrl || campaign.prizes?.[0]?.imageUrl || null,
+        drawId: result.draw.id,
       }).catch(console.error);
     } catch (tgErr) {
       console.error("[Telegram bot notification error]", tgErr);

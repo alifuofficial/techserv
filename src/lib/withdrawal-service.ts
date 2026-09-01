@@ -88,8 +88,12 @@ export class WithdrawalService {
   static async requestWithdrawal(input: WithdrawalRequestInput) {
     const { userId, amount, provider, accountName, accountNumber } = input;
 
-    if (!amount || amount < 100) {
-      throw new Error("Minimum withdrawal amount is 100 ETB.");
+    const { getSystemSetting } = await import("@/modules/settings/settings-service");
+    const minWithdrawal = parseFloat(await getSystemSetting("withdrawal_min_amount", "100")) || 100;
+    const maxDailyWithdrawal = parseFloat(await getSystemSetting("withdrawal_max_daily_amount", "25000")) || 25000;
+
+    if (!amount || amount < minWithdrawal) {
+      throw new Error(`Minimum withdrawal amount is ${minWithdrawal} ETB.`);
     }
 
     if (!accountName?.trim() || !accountNumber?.trim()) {
@@ -98,6 +102,26 @@ export class WithdrawalService {
 
     // Execute interactive transaction to verify withdrawable balance and reserve funds
     return await db.$transaction(async (tx) => {
+      // 0. Verify 24-hour Daily Withdrawal Limit
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const past24hWithdrawals = await tx.payment.findMany({
+        where: {
+          userId,
+          provider: { startsWith: "WITHDRAW_" },
+          status: { in: ["PENDING", "APPROVED"] },
+          createdAt: { gte: oneDayAgo },
+        },
+        select: { amount: true },
+      });
+
+      const totalWithdrawn24h = past24hWithdrawals.reduce((sum, p) => sum + (p.amount || 0), 0);
+      if (totalWithdrawn24h + amount > maxDailyWithdrawal) {
+        const remainingLimitToday = Math.max(0, maxDailyWithdrawal - totalWithdrawn24h);
+        throw new Error(
+          `Daily withdrawal limit exceeded. Maximum allowed per 24 hours is ${maxDailyWithdrawal.toLocaleString()} ETB (Remaining limit today: ${remainingLimitToday.toLocaleString()} ETB).`
+        );
+      }
+
       const balanceInfo = await WithdrawalService.getUserBalanceBreakdown(userId, tx);
 
       if (balanceInfo.withdrawableBalance < amount) {

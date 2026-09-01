@@ -315,4 +315,109 @@ export class DailySpinService {
       history: formattedHistory,
     };
   }
+
+  /**
+   * Dispatch automatic Telegram DM reminder to players whose spin cooldown has elapsed
+   */
+  static async dispatchSpinReminders(): Promise<{ totalEligible: number; remindedCount: number; errors: number }> {
+    try {
+      const { enabled, cooldownHours } = await this.getSettings();
+      if (!enabled) {
+        return { totalEligible: 0, remindedCount: 0, errors: 0 };
+      }
+
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return { totalEligible: 0, remindedCount: 0, errors: 0 };
+      }
+
+      // Fetch all users with Telegram identities
+      const users = await db.user.findMany({
+        include: {
+          identities: { where: { provider: "telegram" } },
+        },
+      });
+
+      const now = new Date();
+      const cooldownMs = cooldownHours * 60 * 60 * 1000;
+      let totalEligible = 0;
+      let remindedCount = 0;
+      let errors = 0;
+
+      for (const user of users) {
+        const tgId =
+          user.telegramId ||
+          user.identities?.[0]?.providerId ||
+          (user.email?.startsWith("telegram_") ? user.email.match(/^telegram_(\d+)@/)?.[1] : null);
+
+        if (!tgId) continue;
+
+        // Check last spin time
+        const lastSpinSetting = await getSystemSetting(`last_spin_${user.id}`, "");
+        const lastSpinDate = lastSpinSetting ? new Date(lastSpinSetting) : null;
+
+        // If user never spun or last spin was > cooldownMs ago
+        const isEligible = !lastSpinDate || now.getTime() - lastSpinDate.getTime() >= cooldownMs;
+
+        if (isEligible) {
+          totalEligible++;
+
+          // Check if already reminded after this eligibility cycle
+          const lastRemindedSetting = await getSystemSetting(`last_spin_reminded_${user.id}`, "");
+          const lastRemindedDate = lastRemindedSetting ? new Date(lastRemindedSetting) : null;
+
+          // If never reminded, or last reminder was sent before the last spin
+          const needsReminder =
+            !lastRemindedDate ||
+            (lastSpinDate && lastRemindedDate.getTime() < lastSpinDate.getTime());
+
+          if (needsReminder) {
+            try {
+              const name = user.name?.split(" ")[0] || "Player";
+              const text = `🎡 <b>Your Free Lucky Spin is Ready!</b> 🎉\n\nHello <b>${name}</b>, your ${cooldownHours}h cooldown has finished!\n\nOpen your MilkyTech Mini App now to spin the Lucky Wheel and claim your free ETB bonus credits or raffle tickets today! 🎁🚀`;
+
+              const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: tgId,
+                  text,
+                  parse_mode: "HTML",
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: "🎡 Spin Lucky Wheel Now",
+                          web_app: { url: "https://milkytech.online/telegram/spin" },
+                        },
+                      ],
+                    ],
+                  },
+                }),
+              });
+
+              const data = await res.json();
+              if (data.ok) {
+                remindedCount++;
+                await setSystemSetting(`last_spin_reminded_${user.id}`, now.toISOString());
+              } else {
+                errors++;
+              }
+            } catch (err) {
+              errors++;
+            }
+
+            // Respect rate limit
+            await new Promise((r) => setTimeout(r, 40));
+          }
+        }
+      }
+
+      return { totalEligible, remindedCount, errors };
+    } catch (e) {
+      console.error("[dispatchSpinReminders error]", e);
+      return { totalEligible: 0, remindedCount: 0, errors: 1 };
+    }
+  }
 }
+
