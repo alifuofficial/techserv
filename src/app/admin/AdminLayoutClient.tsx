@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Trophy, Ticket, Users, Wallet, Gift, Award, Store, 
   ShieldCheck, UserPlus, Bell, FileBarChart, History, Settings,
   Menu, Search, Sun, ExternalLink, Sparkles, X, Loader2, ChevronRight,
-  ArrowRight, Shield
+  ArrowRight, Shield, Zap
 } from "lucide-react";
 
 interface SearchResultItem {
