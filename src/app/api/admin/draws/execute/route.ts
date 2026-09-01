@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import * as crypto from "crypto";
 import { Prisma } from "@prisma/client";
-import { sendEventNotification } from "@/lib/telegram-notifications";
+import { sendEventNotification, broadcastWinnerToChannel } from "@/lib/telegram-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
     const winningTicketNumber = `TKT-${prefix}-${result.winningEntry.entryNumber}`;
     const prize = campaign.prizes?.[0]?.title || campaign.title;
 
-    // Send Telegram Notification via dynamic template engine
+    // Send Telegram Notification to user and Public Channel (@milkytechonline)
     let telegramNotified = false;
     try {
       telegramNotified = await sendEventNotification("WINNER_SELECTED", result.winningEntry.userId, {
@@ -160,6 +160,19 @@ export async function POST(req: Request) {
         prize_value: campaign.prizes?.[0]?.value || campaign.entryPrice * campaign.maxEntries,
         currency: campaign.currency || "ETB",
       });
+
+      // Automated Winner Public Channel Announcement
+      broadcastWinnerToChannel({
+        campaignTitle: campaign.title,
+        prizeTitle: prize,
+        prizeValue: campaign.prizes?.[0]?.value || campaign.entryPrice * campaign.maxEntries,
+        currency: campaign.currency || "ETB",
+        winnerName: result.winningEntry.user.name || `User ${result.winningEntry.userId.slice(-4)}`,
+        ticketNumber: winningTicketNumber,
+        snapshotHash: result.draw.snapshotHash,
+        randomSeed: result.draw.randomSeed,
+        imageUrl: campaign.imageUrl || campaign.prizes?.[0]?.imageUrl || null,
+      }).catch(console.error);
     } catch (tgErr) {
       console.error("[Telegram bot notification error]", tgErr);
     }

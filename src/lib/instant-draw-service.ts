@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import * as crypto from "crypto";
 import { Prisma } from "@prisma/client";
-import { sendEventNotification } from "@/lib/telegram-notifications";
+import { sendEventNotification, broadcastWinnerToChannel } from "@/lib/telegram-notifications";
 import { getSystemSetting, setSystemSetting } from "@/modules/settings/settings-service";
 
 export interface InstantDrawPreset {
@@ -269,7 +269,7 @@ export class InstantDrawService {
       const winningTicket = `TKT-${prefix}-${result.winningEntry.entryNumber}`;
       const prizeTitle = campaign.prizes?.[0]?.title || campaign.title;
 
-      // Send Telegram notification
+      // Send Telegram notification to user and Public Channel (@milkytechonline)
       try {
         sendEventNotification("WINNER_SELECTED", result.winningEntry.userId, {
           user_name: result.winningEntry.user.name || `Player`,
@@ -278,6 +278,19 @@ export class InstantDrawService {
           campaign_title: campaign.title,
           prize_value: campaign.prizes?.[0]?.value || campaign.entryPrice * campaign.maxEntries,
           currency: campaign.currency || "ETB",
+        }).catch(console.error);
+
+        // Automated Winner Public Channel Announcement
+        broadcastWinnerToChannel({
+          campaignTitle: campaign.title,
+          prizeTitle: prizeTitle,
+          prizeValue: campaign.prizes?.[0]?.value || campaign.entryPrice * campaign.maxEntries,
+          currency: campaign.currency || "ETB",
+          winnerName: result.winningEntry.user.name || `Player`,
+          ticketNumber: winningTicket,
+          snapshotHash,
+          randomSeed,
+          imageUrl: campaign.imageUrl || campaign.prizes?.[0]?.imageUrl || null,
         }).catch(console.error);
       } catch (tgErr) {
         console.error("[Telegram Auto-Draw Notify Error]", tgErr);

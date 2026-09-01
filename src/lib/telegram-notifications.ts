@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getSystemSetting, setSystemSetting } from "@/modules/settings/settings-service";
 
 export type NotificationEventType =
   | "WELCOME_REGISTER"
@@ -7,7 +8,13 @@ export type NotificationEventType =
   | "DEPOSIT_APPROVED"
   | "DEPOSIT_REJECTED"
   | "WINNER_SELECTED"
-  | "REFERRAL_REWARD";
+  | "REFERRAL_REWARD"
+  | "CHANNEL_WINNER_ANNOUNCEMENT"
+  | "WITHDRAWAL_REQUESTED"
+  | "WITHDRAWAL_APPROVED"
+  | "WITHDRAWAL_REJECTED"
+  | "PRIZE_CLAIMED_CASH"
+  | "PRIZE_CLAIMED_PHYSICAL";
 
 export interface TemplateDefinition {
   eventType: NotificationEventType;
@@ -17,7 +24,41 @@ export interface TemplateDefinition {
   availablePlaceholders: string[];
 }
 
-export const DEFAULT_TEMPLATES: Record<NotificationEventType, TemplateDefinition> = {
+export const DEFAULT_TEMPLATES: Record<string, TemplateDefinition> = {
+  CHANNEL_WINNER_ANNOUNCEMENT: {
+    eventType: "CHANNEL_WINNER_ANNOUNCEMENT",
+    title: "📢 Public Channel Winner Proof Certificate",
+    description: "Broadcasted automatically to your official public Telegram channel (@milkytechonline) whenever any draw executes.",
+    defaultTemplate: `🏆 <b>OFFICIAL WINNER CERTIFICATE</b> 🏆
+━━━━━━━━━━━━━━━━━━━━━
+🎉 <b>Grand Prize Winner Selected!</b>
+
+👤 <b>Winner:</b> <b>{winner_name}</b>
+🎁 <b>Prize Won:</b> <b>{prize_title}</b>
+💰 <b>Prize Value:</b> <b>{prize_value} {currency}</b>
+🎪 <b>Campaign:</b> {campaign_title}
+🎟️ <b>Winning Ticket:</b> <code>{winning_ticket}</code>
+
+🛡️ <b>PROVABLY FAIR VERIFICATION:</b>
+🔐 <b>Snapshot Hash:</b> <code>{snapshot_hash}</code>
+🎲 <b>Random Seed:</b> <code>{random_seed}</code>
+
+✨ <i>100% Cryptographically Certified & Audited on Blockchain-grade RNG.</i>
+━━━━━━━━━━━━━━━━━━━━━
+🚀 <b>Want to be our next lucky winner?</b>
+Tap below to enter active draws in the Mini App! 👇`,
+    availablePlaceholders: [
+      "{winner_name}",
+      "{prize_title}",
+      "{prize_value}",
+      "{currency}",
+      "{campaign_title}",
+      "{winning_ticket}",
+      "{snapshot_hash}",
+      "{random_seed}",
+      "{channel_url}",
+    ],
+  },
   WELCOME_REGISTER: {
     eventType: "WELCOME_REGISTER",
     title: "New User Welcome Message",
@@ -125,10 +166,76 @@ Hello <b>{user_name}</b>, your friend <b>{referred_name}</b> just joined MilkyTe
 Share your link with more friends to earn even more rewards! 🚀`,
     availablePlaceholders: ["{user_name}", "{referred_name}", "{reward_amount}", "{currency}", "{new_balance}"],
   },
+  WITHDRAWAL_REQUESTED: {
+    eventType: "WITHDRAWAL_REQUESTED",
+    title: "Withdrawal Request Received",
+    description: "Sent when a player submits a payout request to Telebirr or Bank.",
+    defaultTemplate: `💸 <b>Withdrawal Request Received</b>
+
+Hello <b>{user_name}</b>, we received your withdrawal request:
+💵 <b>Amount:</b> {amount} {currency}
+🏦 <b>Payout Channel:</b> {provider}
+🏷️ <b>Account:</b> {account_number} ({account_name})
+
+Our finance team will process and transfer your funds within 24 hours.`,
+    availablePlaceholders: ["{user_name}", "{amount}", "{currency}", "{provider}", "{account_name}", "{account_number}", "{balance_remaining}"],
+  },
+  WITHDRAWAL_APPROVED: {
+    eventType: "WITHDRAWAL_APPROVED",
+    title: "Withdrawal Approved & Paid",
+    description: "Sent when admin marks a withdrawal as approved with bank reference.",
+    defaultTemplate: `✅ <b>Withdrawal Paid Out!</b> 🎉
+
+Hello <b>{user_name}</b>, your withdrawal of <b>{amount} {currency}</b> to <b>{provider}</b> has been completed!
+
+🏦 <b>Destination:</b> {account_number}
+🏷️ <b>Transaction Reference:</b> <code>{tx_id}</code>
+
+Thank you for playing with MilkyTech! 🚀`,
+    availablePlaceholders: ["{user_name}", "{amount}", "{currency}", "{provider}", "{account_number}", "{tx_id}"],
+  },
+  WITHDRAWAL_REJECTED: {
+    eventType: "WITHDRAWAL_REJECTED",
+    title: "Withdrawal Rejected & Refunded",
+    description: "Sent when admin rejects a withdrawal and automatically refunds wallet balance.",
+    defaultTemplate: `⚠️ <b>Withdrawal Update</b>
+
+Hello <b>{user_name}</b>, your withdrawal request of <b>{amount} {currency}</b> could not be processed.
+📝 <b>Reason:</b> {reason}
+
+💰 <b>Note:</b> The full amount of <b>+{amount} {currency}</b> has been automatically refunded to your Wallet Vault.`,
+    availablePlaceholders: ["{user_name}", "{amount}", "{currency}", "{provider}", "{reason}"],
+  },
+  PRIZE_CLAIMED_CASH: {
+    eventType: "PRIZE_CLAIMED_CASH",
+    title: "Cash Prize Equivalent Credited",
+    description: "Sent when winner converts their prize to cash wallet balance.",
+    defaultTemplate: `💵 <b>Cash Prize Credited to Vault!</b>
+
+Congratulations! You chose to convert your prize for <b>{campaign_title}</b> into <b>{amount} ETB Cash</b>.
+
+👛 <b>New Balance:</b> <b>{new_balance} ETB</b>
+You can withdraw directly to Telebirr / Bank anytime or play more lucky draws! 🚀`,
+    availablePlaceholders: ["{campaign_title}", "{prize_title}", "{amount}", "{new_balance}"],
+  },
+  PRIZE_CLAIMED_PHYSICAL: {
+    eventType: "PRIZE_CLAIMED_PHYSICAL",
+    title: "Physical Prize Delivery Order Received",
+    description: "Sent when winner requests doorstep shipping.",
+    defaultTemplate: `📦 <b>Physical Prize Delivery Order Placed!</b>
+
+We received your shipping details for <b>{campaign_title}</b>:
+👤 <b>Recipient:</b> {recipient_name}
+📞 <b>Phone:</b> {phone}
+📍 <b>Destination:</b> {city}, {address}
+
+Our fulfillment team will contact you for delivery! 🚚`,
+    availablePlaceholders: ["{campaign_title}", "{recipient_name}", "{phone}", "{city}", "{address}"],
+  },
 };
 
 /**
- * Get user's Telegram Chat ID from identities, email or phone
+ * Get user's Telegram Chat ID from identities or email
  */
 export async function getTelegramChatIdForUser(userId: string): Promise<string | null> {
   try {
@@ -141,13 +248,15 @@ export async function getTelegramChatIdForUser(userId: string): Promise<string |
 
     if (!user) return null;
 
-    // 1. Check UserIdentity table
+    if (user.telegramId) {
+      return user.telegramId;
+    }
+
     const tgIdentity = user.identities?.find((i) => i.provider === "telegram");
     if (tgIdentity?.providerId) {
       return tgIdentity.providerId;
     }
 
-    // 2. Check if email is formatted as telegram_<id>@milkytech.online
     if (user.email && user.email.startsWith("telegram_")) {
       const match = user.email.match(/^telegram_(\d+)@/);
       if (match && match[1]) {
@@ -180,6 +289,7 @@ export async function sendDirectTelegramMessage(chatId: string, text: string): P
         chat_id: chatId,
         text,
         parse_mode: "HTML",
+        disable_web_page_preview: false,
       }),
     });
 
@@ -192,102 +302,201 @@ export async function sendDirectTelegramMessage(chatId: string, text: string): P
 }
 
 /**
- * Dispatch an event-based notification to a user
+ * Send Telegram message with photo or inline keyboard
  */
-export async function sendEventNotification(
-  eventType: NotificationEventType,
-  userId: string,
-  variables: Record<string, string | number>
+export async function sendTelegramPhotoOrMessage(
+  chatId: string,
+  text: string,
+  imageUrl?: string | null,
+  inlineButtons?: Array<{ text: string; url?: string; web_app?: { url: string } }>
 ): Promise<boolean> {
   try {
-    // 1. Check if event notification is enabled
-    const enabledSetting = await db.systemSetting.findUnique({
-      where: { key: `notify_enabled_${eventType.toLowerCase()}` },
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      console.warn("[sendTelegramPhotoOrMessage] TELEGRAM_BOT_TOKEN is not set.");
+      return false;
+    }
+
+    const reply_markup = inlineButtons && inlineButtons.length > 0 ? {
+      inline_keyboard: [inlineButtons],
+    } : undefined;
+
+    // 1. Attempt sendPhoto if valid imageUrl provided
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+      try {
+        const photoRes = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            photo: imageUrl,
+            caption: text,
+            parse_mode: "HTML",
+            reply_markup,
+          }),
+        });
+
+        const photoData = await photoRes.json();
+        if (photoData.ok === true) {
+          return true;
+        }
+      } catch (err) {
+        console.warn("[sendPhoto failed, falling back to sendMessage]", err);
+      }
+    }
+
+    // 2. Fallback to sendMessage
+    const msgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        reply_markup,
+        disable_web_page_preview: false,
+      }),
     });
 
-    const isEnabled = enabledSetting ? enabledSetting.value === "true" : true; // default enabled
+    const msgData = await msgRes.json();
+    return msgData.ok === true;
+  } catch (error) {
+    console.error("[sendTelegramPhotoOrMessage error]", error);
+    return false;
+  }
+}
+
+/**
+ * Get configured official channel handle
+ */
+export async function getOfficialTelegramChannel(): Promise<string> {
+  const channel = await getSystemSetting("telegram_official_channel", "@milkytechonline");
+  return channel?.trim() || "@milkytechonline";
+}
+
+/**
+ * Broadcast Winner Proof Certificate to Official Public Telegram Channel (@milkytechonline)
+ */
+export async function broadcastWinnerToChannel(details: {
+  campaignTitle: string;
+  prizeTitle: string;
+  prizeValue: number;
+  currency: string;
+  winnerName: string;
+  ticketNumber: string;
+  snapshotHash?: string | null;
+  randomSeed?: string | null;
+  imageUrl?: string | null;
+}): Promise<boolean> {
+  try {
+    const isEnabled = (await getSystemSetting("telegram_channel_auto_broadcast_winners", "true")) === "true";
     if (!isEnabled) {
       return false;
     }
 
-    // 2. Fetch custom template or fallback to default
-    const templateSetting = await db.systemSetting.findUnique({
-      where: { key: `notify_template_${eventType.toLowerCase()}` },
-    });
+    const channelHandle = await getOfficialTelegramChannel();
+    if (!channelHandle) {
+      return false;
+    }
 
-    let templateText = templateSetting?.value || DEFAULT_TEMPLATES[eventType]?.defaultTemplate;
+    const templateSetting = await getSystemSetting(
+      "notify_template_channel_winner_announcement",
+      DEFAULT_TEMPLATES.CHANNEL_WINNER_ANNOUNCEMENT.defaultTemplate
+    );
+
+    let text = templateSetting || DEFAULT_TEMPLATES.CHANNEL_WINNER_ANNOUNCEMENT.defaultTemplate;
+    text = text
+      .split("{winner_name}").join(details.winnerName || "Lucky Player")
+      .split("{prize_title}").join(details.prizeTitle || details.campaignTitle)
+      .split("{prize_value}").join(details.prizeValue.toLocaleString())
+      .split("{currency}").join(details.currency || "ETB")
+      .split("{campaign_title}").join(details.campaignTitle)
+      .split("{winning_ticket}").join(details.ticketNumber)
+      .split("{snapshot_hash}").join(details.snapshotHash || "SHA256-PROVABLY-FAIR-CERTIFIED")
+      .split("{random_seed}").join(details.randomSeed || "NIST-BEACON-SEED-VERIFIED")
+      .split("{channel_url}").join(`https://t.me/${channelHandle.replace("@", "")}`);
+
+    const buttons = [
+      {
+        text: "🎟️ Play Next Draw on Mini App",
+        url: "https://t.me/milkytechonlinebot",
+      },
+    ];
+
+    return await sendTelegramPhotoOrMessage(channelHandle, text, details.imageUrl, buttons);
+  } catch (error) {
+    console.error("[broadcastWinnerToChannel error]", error);
+    return false;
+  }
+}
+
+/**
+ * Dispatch an event-based notification to a user
+ */
+export async function sendEventNotification(
+  userIdOrEvent: string,
+  eventTypeOrUserId: NotificationEventType | string,
+  variablesOrPayload?: Record<string, any>
+): Promise<boolean> {
+  let actualEventType: string;
+  let actualUserId: string;
+  let variables: Record<string, any> = {};
+
+  if (DEFAULT_TEMPLATES[userIdOrEvent as string] || Object.keys(DEFAULT_TEMPLATES).includes(userIdOrEvent as string)) {
+    actualEventType = userIdOrEvent;
+    actualUserId = eventTypeOrUserId;
+    variables = variablesOrPayload || {};
+  } else {
+    actualUserId = userIdOrEvent;
+    actualEventType = eventTypeOrUserId;
+    variables = variablesOrPayload || {};
+  }
+
+  try {
+    const enabledSetting = await getSystemSetting(`notify_enabled_${actualEventType.toLowerCase()}`, "true");
+    if (enabledSetting === "false") {
+      return false;
+    }
+
+    const templateSetting = await getSystemSetting(`notify_template_${actualEventType.toLowerCase()}`, "");
+    let templateText = templateSetting || DEFAULT_TEMPLATES[actualEventType]?.defaultTemplate;
     if (!templateText) return false;
 
-    // 3. Find User Telegram Chat ID
-    const chatId = await getTelegramChatIdForUser(userId);
+    const chatId = await getTelegramChatIdForUser(actualUserId);
     if (!chatId) {
       return false;
     }
 
-    // 4. Substitute placeholders
     for (const [key, val] of Object.entries(variables)) {
       const placeholder = `{${key}}`;
       templateText = templateText.split(placeholder).join(String(val ?? ""));
     }
 
-    // 5. Send message
     return await sendDirectTelegramMessage(chatId, templateText);
   } catch (error) {
-    console.error(`[sendEventNotification ${eventType} error]`, error);
+    console.error(`[sendEventNotification ${actualEventType} error]`, error);
     return false;
   }
 }
 
 /**
- * Automatically notifies all Telegram audience when a new campaign is started
- */
-export async function notifyNewCampaignStarted(campaignId: string): Promise<boolean> {
-  try {
-    const enabledSetting = await db.systemSetting.findUnique({
-      where: { key: "notify_enabled_campaign_started" },
-    });
-    const isEnabled = enabledSetting ? enabledSetting.value === "true" : true;
-    if (!isEnabled) return false;
-
-    const campaign = await db.campaign.findUnique({
-      where: { id: campaignId },
-      include: { prizes: { take: 1 } },
-    });
-
-    if (!campaign || campaign.status !== "ACTIVE") return false;
-
-    const templateSetting = await db.systemSetting.findUnique({
-      where: { key: "notify_template_campaign_started" },
-    });
-
-    let text = templateSetting?.value || DEFAULT_TEMPLATES.CAMPAIGN_STARTED.defaultTemplate;
-    const prizeTitle = campaign.prizes?.[0]?.title || campaign.title;
-    const drawDate = campaign.endsAt ? new Date(campaign.endsAt).toLocaleDateString() : "TBA";
-
-    text = text
-      .split("{campaign_title}").join(campaign.title)
-      .split("{prize_title}").join(prizeTitle)
-      .split("{ticket_price}").join(String(campaign.entryPrice))
-      .split("{currency}").join(campaign.currency || "ETB")
-      .split("{draw_date}").join(drawDate)
-      .split("{campaign_url}").join(`https://milkytech.online/telegram/campaigns/${campaign.slug}`);
-
-    const broadcastRes = await sendBroadcastTelegramMessage("ALL_USERS", text);
-    return broadcastRes.sentCount > 0;
-  } catch (e) {
-    console.error("[notifyNewCampaignStarted error]", e);
-    return false;
-  }
-}
-
-/**
- * Broadcast message to Telegram audience
+ * Broadcast message to Telegram audience or Official Channel
  */
 export async function sendBroadcastTelegramMessage(
-  target: "ALL_USERS" | "CAMPAIGN_HOLDERS" | "SPECIFIC_USER",
+  target: "ALL_USERS" | "CAMPAIGN_HOLDERS" | "SPECIFIC_USER" | "OFFICIAL_CHANNEL",
   text: string,
-  options?: { campaignId?: string; userId?: string }
+  options?: { campaignId?: string; userId?: string; imageUrl?: string | null }
 ): Promise<{ totalTargeted: number; sentCount: number; failedCount: number }> {
+  if (target === "OFFICIAL_CHANNEL") {
+    const channelHandle = await getOfficialTelegramChannel();
+    const ok = await sendTelegramPhotoOrMessage(channelHandle, text, options?.imageUrl);
+    return {
+      totalTargeted: 1,
+      sentCount: ok ? 1 : 0,
+      failedCount: ok ? 0 : 1,
+    };
+  }
+
   const chatIds = new Set<string>();
 
   try {
@@ -305,7 +514,9 @@ export async function sendBroadcastTelegramMessage(
       });
 
       for (const entry of entries) {
-        const tgId = entry.user.identities?.find((i) => i.provider === "telegram")?.providerId ||
+        const tgId =
+          entry.user.telegramId ||
+          entry.user.identities?.find((i) => i.provider === "telegram")?.providerId ||
           (entry.user.email?.startsWith("telegram_") ? entry.user.email.match(/^telegram_(\d+)@/)?.[1] : null);
         if (tgId) chatIds.add(tgId);
       }
@@ -316,7 +527,9 @@ export async function sendBroadcastTelegramMessage(
       });
 
       for (const u of users) {
-        const tgId = u.identities?.find((i) => i.provider === "telegram")?.providerId ||
+        const tgId =
+          u.telegramId ||
+          u.identities?.find((i) => i.provider === "telegram")?.providerId ||
           (u.email?.startsWith("telegram_") ? u.email.match(/^telegram_(\d+)@/)?.[1] : null);
         if (tgId) chatIds.add(tgId);
       }
@@ -329,7 +542,6 @@ export async function sendBroadcastTelegramMessage(
       const ok = await sendDirectTelegramMessage(chatId, text);
       if (ok) sentCount++;
       else failedCount++;
-      // Respect Telegram API rate limit (30 messages per second)
       await new Promise((r) => setTimeout(r, 40));
     }
 
@@ -345,5 +557,55 @@ export async function sendBroadcastTelegramMessage(
       sentCount: 0,
       failedCount: chatIds.size,
     };
+  }
+}
+
+/**
+ * Automatically notifies all Telegram audience and Official Public Channel when a new campaign is started
+ */
+export async function notifyNewCampaignStarted(campaignId: string): Promise<boolean> {
+  try {
+    const enabledSetting = await getSystemSetting("notify_enabled_campaign_started", "true");
+    if (enabledSetting === "false") return false;
+
+    const campaign = await db.campaign.findUnique({
+      where: { id: campaignId },
+      include: { prizes: { take: 1 } },
+    });
+
+    if (!campaign || campaign.status !== "ACTIVE") return false;
+
+    const templateSetting = await getSystemSetting("notify_template_campaign_started", "");
+    let text = templateSetting || DEFAULT_TEMPLATES.CAMPAIGN_STARTED.defaultTemplate;
+    const prizeTitle = campaign.prizes?.[0]?.title || campaign.title;
+    const drawDate = campaign.endsAt ? new Date(campaign.endsAt).toLocaleDateString() : "TBA";
+
+    text = text
+      .split("{campaign_title}").join(campaign.title)
+      .split("{prize_title}").join(prizeTitle)
+      .split("{ticket_price}").join(String(campaign.entryPrice))
+      .split("{currency}").join(campaign.currency || "ETB")
+      .split("{draw_date}").join(drawDate)
+      .split("{campaign_url}").join(`https://milkytech.online/telegram/campaigns/${campaign.slug}`);
+
+    // 1. Post to official channel
+    const channelHandle = await getOfficialTelegramChannel();
+    const autoPostChannel = (await getSystemSetting("telegram_channel_auto_broadcast_campaigns", "true")) === "true";
+    if (autoPostChannel && channelHandle) {
+      const buttons = [
+        {
+          text: "🎟️ Get Lucky Tickets Now",
+          url: `https://t.me/milkytechonlinebot?start=camp_${campaign.slug}`,
+        },
+      ];
+      await sendTelegramPhotoOrMessage(channelHandle, text, campaign.imageUrl, buttons).catch(console.error);
+    }
+
+    // 2. Broadcast to all users
+    const broadcastRes = await sendBroadcastTelegramMessage("ALL_USERS", text);
+    return broadcastRes.sentCount > 0;
+  } catch (e) {
+    console.error("[notifyNewCampaignStarted error]", e);
+    return false;
   }
 }

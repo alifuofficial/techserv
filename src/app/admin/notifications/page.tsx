@@ -26,7 +26,12 @@ export default async function AdminNotificationsPage() {
       orderBy: { createdAt: "desc" },
     }).catch(() => []),
     db.systemSetting.findMany({
-      where: { key: { startsWith: "notify_" } },
+      where: {
+        OR: [
+          { key: { startsWith: "notify_" } },
+          { key: { startsWith: "telegram_" } },
+        ],
+      },
     }).catch(() => []),
   ]);
 
@@ -57,11 +62,18 @@ export default async function AdminNotificationsPage() {
     totalTelegramUsers: Math.max(telegramIdentitiesCount, 1),
   };
 
+  const channelConfig = {
+    channelHandle: settingsMap.get("telegram_official_channel") || "@milkytechonline",
+    autoBroadcastWinners: settingsMap.get("telegram_channel_auto_broadcast_winners") !== "false",
+    autoBroadcastCampaigns: settingsMap.get("telegram_channel_auto_broadcast_campaigns") !== "false",
+  };
+
   return (
     <NotificationsClient
       initialBot={botData}
       initialTemplates={templates}
       campaigns={campaigns}
+      initialChannel={channelConfig}
     />
   );
 }
