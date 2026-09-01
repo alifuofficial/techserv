@@ -638,7 +638,10 @@ export default function NotificationsClient({
                 className="text-xs leading-relaxed whitespace-pre-wrap font-sans text-slate-100 pt-1"
                 dangerouslySetInnerHTML={{
                   __html: getPreviewText(
-                    DEFAULT_TEMPLATES.CHANNEL_WINNER_ANNOUNCEMENT?.defaultTemplate || ""
+                    templates.find((t) => t.eventType === "CHANNEL_WINNER_ANNOUNCEMENT")?.templateText ||
+                      templates.find((t) => t.eventType === "CHANNEL_WINNER_ANNOUNCEMENT")?.defaultTemplate ||
+                      editingText ||
+                      ""
                   ),
                 }}
               />
