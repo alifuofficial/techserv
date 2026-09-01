@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { format } from "date-fns";
+import { PrizeClaimService } from "@/lib/prize-claim-service";
 import WinnersClient, { WinnerItem } from "./winners-client";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +88,16 @@ export default async function AdminWinnersPage() {
         const prize = entry.campaign.prizes?.[0];
         const date = draw.completedAt || draw.createdAt;
 
+        // Fetch claim choice
+        const claim = await PrizeClaimService.getClaimDetails(draw.id);
+
+        let formattedDate = "";
+        try {
+          formattedDate = format(new Date(date), "MMM d, yyyy, HH:mm");
+        } catch (e) {
+          formattedDate = new Date().toISOString();
+        }
+
         winnersList.push({
           id: draw.id,
           drawId: draw.id,
@@ -103,8 +114,9 @@ export default async function AdminWinnersPage() {
           campaignTitle: entry.campaign.title,
           campaignImage: entry.campaign.imageUrl || prize?.imageUrl || null,
           currency: entry.campaign.currency || "ETB",
-          drawDate: format(new Date(date), "MMM d, yyyy, HH:mm"),
-          claimStatus: draw.status === "COMPLETED" ? "CLAIMED" : "PENDING",
+          drawDate: formattedDate,
+          claimStatus: claim ? (claim.claimType === "CASH" ? "CLAIMED_CASH" : "CLAIMED_PHYSICAL") : (draw.status === "COMPLETED" ? "CLAIMED" : "PENDING"),
+          claimDetails: claim || null,
           snapshotHash: draw.snapshotHash,
           randomSeed: draw.randomSeed,
         });
@@ -117,6 +129,13 @@ export default async function AdminWinnersPage() {
     if (!processedEntryIds.has(entry.id)) {
       const prefix = entry.campaignId.substring(0, 4).toUpperCase();
       const prize = entry.campaign.prizes?.[0];
+
+      let formattedDate = "";
+      try {
+        formattedDate = format(new Date(entry.createdAt), "MMM d, yyyy, HH:mm");
+      } catch (e) {
+        formattedDate = new Date().toISOString();
+      }
 
       winnersList.push({
         id: entry.id,
@@ -134,7 +153,7 @@ export default async function AdminWinnersPage() {
         campaignTitle: entry.campaign.title,
         campaignImage: entry.campaign.imageUrl || prize?.imageUrl || null,
         currency: entry.campaign.currency || "ETB",
-        drawDate: format(new Date(entry.createdAt), "MMM d, yyyy, HH:mm"),
+        drawDate: formattedDate,
         claimStatus: "CLAIMED",
       });
     }
