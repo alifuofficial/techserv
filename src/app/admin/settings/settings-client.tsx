@@ -94,10 +94,12 @@ export interface SettingsData {
   dailySpinCooldownHours: string;
   spinReminderDmEnabled: boolean;
 
+  // API Keys & External
   verifyEtApiKey: string;
   telegramBotToken: string;
   telegramBotUsername: string;
 
+  // Email & SMTP
   smtpHost: string;
   smtpPort: string;
   smtpUser: string;
@@ -106,6 +108,7 @@ export interface SettingsData {
   smtpFromEmail: string;
   smtpSecure: boolean;
 
+  // Referrals & Growth
   referralEnabled: boolean;
   referralBonusAmount: string;
   referralCurrency: string;
@@ -313,22 +316,25 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
         daily_spin_cooldown_hours: settings.dailySpinCooldownHours || "24",
         spin_reminder_dm_enabled: settings.spinReminderDmEnabled.toString(),
 
-        verify_et_api_key: settings.verifyEtApiKey,
-        telegram_bot_token: settings.telegramBotToken,
-        telegram_bot_username: settings.telegramBotUsername,
+        // API Keys & Integrations
+        verify_et_api_key: settings.verifyEtApiKey || "",
+        telegram_bot_token: settings.telegramBotToken || "",
+        telegram_bot_username: settings.telegramBotUsername || "",
 
-        smtp_host: settings.smtpHost,
-        smtp_port: settings.smtpPort,
-        smtp_user: settings.smtpUser,
-        smtp_pass: settings.smtpPass,
-        smtp_from_name: settings.smtpFromName,
-        smtp_from_email: settings.smtpFromEmail,
+        // SMTP Email
+        smtp_host: settings.smtpHost || "",
+        smtp_port: settings.smtpPort || "587",
+        smtp_user: settings.smtpUser || "",
+        smtp_pass: settings.smtpPass || "",
+        smtp_from_name: settings.smtpFromName || "MilkyTech Support",
+        smtp_from_email: settings.smtpFromEmail || "support@milkytech.online",
         smtp_secure: settings.smtpSecure.toString(),
 
+        // Referrals & Growth
         referral_enabled: settings.referralEnabled.toString(),
-        referral_bonus_amount: settings.referralBonusAmount,
-        referral_currency: settings.referralCurrency,
-        referral_custom_text: settings.referralCustomText,
+        referral_bonus_amount: settings.referralBonusAmount || "10",
+        referral_currency: settings.referralCurrency || "ETB",
+        referral_custom_text: settings.referralCustomText || "Earn bonus for every friend who joins MilkyTech using your link!",
         referral_unlock_condition: settings.referralUnlockCondition || "ON_FIRST_DEPOSIT",
         referral_min_deposit_amount: settings.referralMinDepositAmount || "50",
       });
@@ -460,7 +466,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             <Server className="w-6 h-6 text-emerald-600" /> Platform Settings
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure platform branding, withdrawal limits, welcome gifts, daily spin cooldown, and referrals.
+            Configure platform branding, withdrawal limits, Verify.et API, referrals, welcome gifts, and SMTP.
           </p>
         </div>
 
@@ -587,15 +593,43 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Platform Access & Channels</h2>
-                  <p className="text-xs text-slate-500">Enable or disable Web Application and Telegram Mini App endpoints.</p>
+                  <p className="text-xs text-slate-500">Toggle public access between Web application and Telegram Mini App.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
+                {/* Web Access Toggle */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">Telegram Mini App Access</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Enable access through Telegram Mini App bot</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">Web App Access</div>
+                      <div className="text-xs text-slate-500">Enable public website navigation and ticket purchase on Desktop/Mobile web.</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSetting("webEnabled", !settings.webEnabled)}
+                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                      settings.webEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
+                  </button>
+                </div>
+
+                {/* Telegram Mini App Access Toggle */}
+                <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center font-bold">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">Telegram Mini App Access</div>
+                      <div className="text-xs text-slate-500">Enable Telegram Bot Mini App endpoints and automated member sign-in.</div>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -608,16 +642,22 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   </button>
                 </div>
 
+                {/* Telegram Auth Only Toggle */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">Web Portal Access</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Allow web browser users to browse campaigns and checkout</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">Telegram-Only Authentication</div>
+                      <div className="text-xs text-slate-500">Redirect all regular web logins directly to Telegram bot authentication.</div>
+                    </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => updateSetting("webEnabled", !settings.webEnabled)}
+                    onClick={() => updateSetting("telegramAuthOnly", !settings.telegramAuthOnly)}
                     className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
-                      settings.webEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
+                      settings.telegramAuthOnly ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start"
                     }`}
                   >
                     <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
@@ -636,7 +676,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">Deposit Payment Gateways</h2>
+                    <h2 className="text-lg font-bold text-slate-900">Deposit Payment Gateways & Ethiopian Banks</h2>
                     <p className="text-xs text-slate-500">Configure bank accounts and mobile money options for player deposits.</p>
                   </div>
                 </div>
@@ -943,20 +983,21 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             </div>
           )}
 
-          {/* SECTION 7: API & INTEGRATIONS */}
+          {/* SECTION 7: API KEYS & INTEGRATIONS */}
           {activeSection === "api" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
                   <Key className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">API Keys & External Services</h2>
-                  <p className="text-xs text-slate-500">Manage credentials for Telegram Bot API and Verify.et receipt OCR.</p>
+                  <h2 className="text-lg font-bold text-slate-900">API Keys & External Integrations</h2>
+                  <p className="text-xs text-slate-500">Configure Telegram Bot credentials and third-party verification APIs.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
+                {/* Telegram Bot Token */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Telegram Bot Token</label>
                   <div className="relative">
@@ -965,7 +1006,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                       value={settings.telegramBotToken}
                       onChange={(e) => updateSetting("telegramBotToken", e.target.value)}
                       placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500 pr-12"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-12"
                     />
                     <button
                       type="button"
@@ -975,27 +1016,59 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                       {showBotToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <p className="text-[11px] text-slate-400">Obtained from @BotFather on Telegram.</p>
                 </div>
 
+                {/* Telegram Bot Username */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Telegram Bot Username</label>
-                  <input
-                    type="text"
-                    value={settings.telegramBotUsername}
-                    onChange={(e) => updateSetting("telegramBotUsername", e.target.value)}
-                    placeholder="milkytechonlinebot"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">@</span>
+                    <input
+                      type="text"
+                      value={settings.telegramBotUsername}
+                      onChange={(e) => updateSetting("telegramBotUsername", e.target.value)}
+                      placeholder="milkytechonlinebot"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400">Used to generate dynamic referral and bot deep-links.</p>
+                </div>
+
+                {/* Verify.et API Key */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Verify.et Automated Slip OCR API Key (Optional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={settings.verifyEtApiKey}
+                      onChange={(e) => updateSetting("verifyEtApiKey", e.target.value)}
+                      placeholder="api_live_..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Used to automatically verify Telebirr and CBE transaction receipts uploaded by players.
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SECTION 8: SMTP */}
+          {/* SECTION 8: EMAIL & SMTP */}
           {activeSection === "smtp" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                   <Mail className="w-5 h-5" />
                 </div>
                 <div>
@@ -1007,7 +1080,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
               <div className="space-y-4">
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Host</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Server Host</label>
                     <input
                       type="text"
                       value={settings.smtpHost}
@@ -1031,7 +1104,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP User</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">SMTP Username / Email</label>
                     <input
                       type="text"
                       value={settings.smtpUser}
@@ -1059,6 +1132,30 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                         {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sender From Name</label>
+                    <input
+                      type="text"
+                      value={settings.smtpFromName}
+                      onChange={(e) => updateSetting("smtpFromName", e.target.value)}
+                      placeholder="MilkyTech Support"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sender From Email</label>
+                    <input
+                      type="email"
+                      value={settings.smtpFromEmail}
+                      onChange={(e) => updateSetting("smtpFromEmail", e.target.value)}
+                      placeholder="support@milkytech.online"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
 
@@ -1099,7 +1196,7 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
             </div>
           )}
 
-          {/* SECTION 9: REFERRALS */}
+          {/* SECTION 9: REFERRALS & GROWTH */}
           {activeSection === "referrals" && (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in-50 duration-200">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
@@ -1108,11 +1205,12 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Referral Program Configuration</h2>
-                  <p className="text-xs text-slate-500">Configure how much bonus users earn for each friend they invite.</p>
+                  <p className="text-xs text-slate-500">Configure how much bonus users earn for each friend they invite (syncs dynamically to Telegram Mini App).</p>
                 </div>
               </div>
 
               <div className="space-y-5">
+                {/* Enable Switch */}
                 <div className="flex items-center justify-between p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl">
                   <div>
                     <div className="text-sm font-bold text-slate-900">Enable Referral Rewards</div>
@@ -1131,31 +1229,119 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   </button>
                 </div>
 
+                {/* Reward Configuration */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                       <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Reward Amount Per Referral
                     </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={settings.referralBonusAmount}
-                      onChange={(e) => updateSetting("referralBonusAmount", e.target.value)}
-                      placeholder="10"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={settings.referralBonusAmount}
+                        onChange={(e) => updateSetting("referralBonusAmount", e.target.value)}
+                        placeholder="10"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
+                        {settings.referralCurrency}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Users receive this bonus in their wallet for each successful friend sign-up.
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Currency</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Currency Code
+                    </label>
                     <input
                       type="text"
                       value={settings.referralCurrency}
                       onChange={(e) => updateSetting("referralCurrency", e.target.value)}
                       placeholder="ETB"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
+                </div>
+
+                {/* Custom Promo Text */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Telegram Referral Headline
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.referralCustomText}
+                    onChange={(e) => updateSetting("referralCustomText", e.target.value)}
+                    placeholder="Earn bonus for every friend who joins MilkyTech using your link!"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Live dynamic preview in Telegram Mini App: &ldquo;Earn <b>{settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'}</b> bonus for every friend who joins MilkyTech using your link!&rdquo;
+                  </p>
+                </div>
+
+                {/* Conditional Referral Release (Anti-Sybil / Fraud Prevention) */}
+                <div className="p-5 bg-purple-50/60 border border-purple-200/80 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
+                      🔒
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">Anti-Sybil Bonus Release Condition</h4>
+                      <p className="text-[11px] text-slate-500">
+                        Choose when the {settings.referralBonusAmount || 10} {settings.referralCurrency || 'ETB'} bonus is unlocked to prevent fake bot accounts.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Bonus Unlock Trigger
+                    </label>
+                    <select
+                      value={settings.referralUnlockCondition || "ON_FIRST_DEPOSIT"}
+                      onChange={(e) => updateSetting("referralUnlockCondition", e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    >
+                      <option value="ON_FIRST_DEPOSIT">
+                        🛡️ On First Deposit (Recommended - Unlocks when invited friend makes their first approved deposit)
+                      </option>
+                      <option value="ON_FIRST_PURCHASE">
+                        🎟️ On First Ticket Purchase (Unlocks when invited friend buys their first campaign ticket)
+                      </option>
+                      <option value="MIN_DEPOSIT_AMOUNT">
+                        💰 On Minimum Deposit of X ETB (Unlocks when friend deposits at least a specific amount)
+                      </option>
+                      <option value="IMMEDIATE">
+                        ⚡ Immediate on Registration (Instant bonus upon sign-up - No condition)
+                      </option>
+                    </select>
+                  </div>
+
+                  {settings.referralUnlockCondition === "MIN_DEPOSIT_AMOUNT" && (
+                    <div className="space-y-1.5 pt-2 animate-in fade-in">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Minimum Required Deposit (ETB)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={settings.referralMinDepositAmount || "50"}
+                        onChange={(e) => updateSetting("referralMinDepositAmount", e.target.value)}
+                        placeholder="50"
+                        className="w-full px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-purple-500"
+                      />
+                      <p className="text-[11px] text-purple-700">
+                        The referrer will only receive the {settings.referralBonusAmount} {settings.referralCurrency} bonus once their friend deposits at least {settings.referralMinDepositAmount || 50} ETB.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1279,6 +1465,17 @@ export default function AdminSettingsClient({ initialSettings }: { initialSettin
                   onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
                   placeholder="e.g. 01320876543200"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Transfer Instructions</label>
+                <textarea
+                  rows={2}
+                  value={paymentForm.instructions}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, instructions: e.target.value })}
+                  placeholder="e.g. Transfer to account and upload receipt screenshot."
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
