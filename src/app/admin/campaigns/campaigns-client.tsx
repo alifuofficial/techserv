@@ -20,7 +20,6 @@ import {
   Layers,
   ArrowUpRight,
 } from "lucide-react";
-import { format } from "date-fns";
 
 export interface AdminCampaignItem {
   id: string;
@@ -40,9 +39,9 @@ export interface AdminCampaignItem {
   progress: number;
   status: string;
   imageUrl?: string | null;
-  startsAt: Date | string;
-  endsAt: Date | string;
-  createdAt: Date | string;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
 }
 
 interface CampaignsClientProps {
@@ -58,16 +57,28 @@ interface CampaignsClientProps {
   };
 }
 
-export default function CampaignsClient({ initialCampaigns, stats }: CampaignsClientProps) {
-  const [campaigns, setCampaigns] = useState<AdminCampaignItem[]>(initialCampaigns);
+export default function CampaignsClient({ initialCampaigns = [], stats }: CampaignsClientProps) {
+  const [campaigns, setCampaigns] = useState<AdminCampaignItem[]>(initialCampaigns || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const filteredCampaigns = campaigns.filter((c) => {
-    const matchesSearch =
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.slug.toLowerCase().includes(searchQuery.toLowerCase());
+  const safeStats = {
+    totalCampaigns: stats?.totalCampaigns || 0,
+    activeCampaigns: stats?.activeCampaigns || 0,
+    totalTargetGross: stats?.totalTargetGross || 0,
+    totalRealizedGross: stats?.totalRealizedGross || 0,
+    totalProductCost: stats?.totalProductCost || 0,
+    totalTargetProfit: stats?.totalTargetProfit || 0,
+    totalRealizedProfit: stats?.totalRealizedProfit || 0,
+  };
 
+  const filteredCampaigns = (campaigns || []).filter((c) => {
+    if (!c) return false;
+    const title = (c.title || "").toLowerCase();
+    const slug = (c.slug || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    const matchesSearch = title.includes(query) || slug.includes(query);
     const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -109,7 +120,9 @@ export default function CampaignsClient({ initialCampaigns, stats }: CampaignsCl
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns</p>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><Trophy className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900">{stats.activeCampaigns} <span className="text-xs text-slate-400 font-normal">/ {stats.totalCampaigns} Total</span></h3>
+          <h3 className="text-2xl font-black text-slate-900">
+            {safeStats.activeCampaigns} <span className="text-xs text-slate-400 font-normal">/ {safeStats.totalCampaigns} Total</span>
+          </h3>
           <p className="text-[11px] text-slate-400 mt-1">Live active ticket raffles</p>
         </div>
 
@@ -119,8 +132,12 @@ export default function CampaignsClient({ initialCampaigns, stats }: CampaignsCl
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Gross Volume</p>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><DollarSign className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-black text-slate-900">{stats.totalTargetGross.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span></h3>
-          <p className="text-[11px] text-blue-600 font-semibold mt-1">Realized: {stats.totalRealizedGross.toLocaleString()} ETB</p>
+          <h3 className="text-2xl font-black text-slate-900">
+            {safeStats.totalTargetGross.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
+          </h3>
+          <p className="text-[11px] text-blue-600 font-semibold mt-1">
+            Realized: {safeStats.totalRealizedGross.toLocaleString()} ETB
+          </p>
         </div>
 
         {/* Card 3: Total Product Market Cost */}
@@ -129,7 +146,9 @@ export default function CampaignsClient({ initialCampaigns, stats }: CampaignsCl
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Product Costs</p>
             <div className="p-2 bg-rose-50 text-rose-600 rounded-xl"><Tag className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-black text-rose-600">{stats.totalProductCost.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span></h3>
+          <h3 className="text-2xl font-black text-rose-600">
+            {safeStats.totalProductCost.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
+          </h3>
           <p className="text-[11px] text-slate-400 mt-1">Total product acquisition costs</p>
         </div>
 
@@ -140,11 +159,11 @@ export default function CampaignsClient({ initialCampaigns, stats }: CampaignsCl
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><TrendingUp className="w-4 h-4" /></div>
           </div>
           <h3 className="text-2xl font-black text-emerald-600">
-            {stats.totalTargetProfit >= 0 ? "+" : ""}{stats.totalTargetProfit.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
+            {safeStats.totalTargetProfit >= 0 ? "+" : ""}{safeStats.totalTargetProfit.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
           </h3>
           <p className="text-[11px] text-slate-500 font-semibold mt-1">
-            Realized Net: <span className={stats.totalRealizedProfit >= 0 ? "text-emerald-600 font-bold" : "text-slate-600 font-bold"}>
-              {stats.totalRealizedProfit >= 0 ? "+" : ""}{stats.totalRealizedProfit.toLocaleString()} ETB
+            Realized Net: <span className={safeStats.totalRealizedProfit >= 0 ? "text-emerald-600 font-bold" : "text-slate-600 font-bold"}>
+              {safeStats.totalRealizedProfit >= 0 ? "+" : ""}{safeStats.totalRealizedProfit.toLocaleString()} ETB
             </span>
           </p>
         </div>
@@ -203,131 +222,143 @@ export default function CampaignsClient({ initialCampaigns, stats }: CampaignsCl
                   </td>
                 </tr>
               ) : (
-                filteredCampaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                    {/* Title & Image */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3.5">
-                        {c.imageUrl ? (
-                          <img src={c.imageUrl} alt={c.title} className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0 border border-emerald-100">
-                            <Trophy className="w-6 h-6" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900 truncate max-w-[200px]">{c.title}</div>
-                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                            <span>/{c.slug}</span>
+                filteredCampaigns.map((c) => {
+                  const productCost = c.productCost || 0;
+                  const targetGross = c.targetGross || 0;
+                  const realizedGross = c.realizedGross || 0;
+                  const targetProfit = c.targetProfit || 0;
+                  const realizedProfit = c.realizedProfit || 0;
+                  const entriesSold = c.entriesSold || 0;
+                  const maxEntries = c.maxEntries || 0;
+                  const entryPrice = c.entryPrice || 0;
+                  const progress = c.progress || 0;
+
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                      {/* Title & Image */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3.5">
+                          {c.imageUrl ? (
+                            <img src={c.imageUrl} alt={c.title} className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0 border border-emerald-100">
+                              <Trophy className="w-6 h-6" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate max-w-[200px]">{c.title}</div>
+                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                              <span>/{c.slug}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Product Cost (Market Price) */}
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-rose-600 font-mono text-sm">
-                        {c.productCost > 0 ? `${c.productCost.toLocaleString()} ETB` : "0 ETB"}
-                      </div>
-                      <span className="text-[10px] font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
-                        Asset Cost
-                      </span>
-                    </td>
+                      {/* Product Cost (Market Price) */}
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-rose-600 font-mono text-sm">
+                          {productCost > 0 ? `${productCost.toLocaleString()} ETB` : "0 ETB"}
+                        </div>
+                        <span className="text-[10px] font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                          Asset Cost
+                        </span>
+                      </td>
 
-                    {/* Ticket Price & Target Gross */}
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-900 font-mono text-sm">
-                        {c.targetGross.toLocaleString()} ETB
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                        {c.maxEntries.toLocaleString()} tix × {c.entryPrice} ETB
-                      </div>
-                    </td>
+                      {/* Ticket Price & Target Gross */}
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900 font-mono text-sm">
+                          {targetGross.toLocaleString()} ETB
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                          {maxEntries.toLocaleString()} tix × {entryPrice} ETB
+                        </div>
+                      </td>
 
-                    {/* Live Sold & Progress */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 font-mono">{c.entriesSold.toLocaleString()}</span>
-                        <span className="text-xs text-slate-400">/ {c.maxEntries.toLocaleString()}</span>
-                        <span className="text-[11px] font-bold text-emerald-600">({c.progress}%)</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                        {c.realizedGross.toLocaleString()} ETB Realized
-                      </div>
-                      <div className="w-28 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1.5">
-                        <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${c.progress}%` }}></div>
-                      </div>
-                    </td>
+                      {/* Live Sold & Progress */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 font-mono">{entriesSold.toLocaleString()}</span>
+                          <span className="text-xs text-slate-400">/ {maxEntries.toLocaleString()}</span>
+                          <span className="text-[11px] font-bold text-emerald-600">({progress}%)</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                          {realizedGross.toLocaleString()} ETB Realized
+                        </div>
+                        <div className="w-28 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1.5">
+                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${progress}%` }}></div>
+                        </div>
+                      </td>
 
-                    {/* Net Profit & ROI */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`font-mono font-bold text-sm ${c.targetProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                          {c.targetProfit >= 0 ? "+" : ""}{c.targetProfit.toLocaleString()} ETB
-                        </span>
-                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
-                          {c.targetRoi}% ROI
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        Live Net: <span className={c.realizedProfit >= 0 ? "text-emerald-600 font-bold font-mono" : "text-slate-500 font-mono"}>
-                          {c.realizedProfit >= 0 ? "+" : ""}{c.realizedProfit.toLocaleString()} ETB
-                        </span>
-                      </div>
-                    </td>
+                      {/* Net Profit & ROI */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-mono font-bold text-sm ${targetProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                            {targetProfit >= 0 ? "+" : ""}{targetProfit.toLocaleString()} ETB
+                          </span>
+                          <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                            {c.targetRoi || "0.0"}% ROI
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          Live Net: <span className={realizedProfit >= 0 ? "text-emerald-600 font-bold font-mono" : "text-slate-500 font-mono"}>
+                            {realizedProfit >= 0 ? "+" : ""}{realizedProfit.toLocaleString()} ETB
+                          </span>
+                        </div>
+                      </td>
 
-                    {/* Status Badge */}
-                    <td className="px-6 py-4 text-center">
-                      {c.status === "ACTIVE" && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                          Active
-                        </span>
-                      )}
-                      {c.status === "DRAWING" && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-600 border border-purple-200 animate-pulse">
-                          Drawing
-                        </span>
-                      )}
-                      {c.status === "COMPLETED" && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
-                          Completed
-                        </span>
-                      )}
-                      {c.status === "DRAFT" && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                          Draft
-                        </span>
-                      )}
-                      {c.status === "CANCELLED" && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
-                          Cancelled
-                        </span>
-                      )}
-                    </td>
+                      {/* Status Badge */}
+                      <td className="px-6 py-4 text-center">
+                        {c.status === "ACTIVE" && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            Active
+                          </span>
+                        )}
+                        {c.status === "DRAWING" && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-600 border border-purple-200 animate-pulse">
+                            Drawing
+                          </span>
+                        )}
+                        {c.status === "COMPLETED" && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
+                            Completed
+                          </span>
+                        )}
+                        {c.status === "DRAFT" && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            Draft
+                          </span>
+                        )}
+                        {c.status === "CANCELLED" && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+                            Cancelled
+                          </span>
+                        )}
+                      </td>
 
-                    {/* Actions */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/campaigns/${c.id}`}
-                          className="p-2 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-xl transition-colors"
-                          title="Edit Campaign"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        {c.status === "ACTIVE" || c.status === "DRAWING" ? (
+                      {/* Actions */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Link
-                            href="/admin/draws"
-                            className="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl transition-colors"
-                            title="Go to Live Draw Room"
+                            href={`/admin/campaigns/${c.id}`}
+                            className="p-2 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-xl transition-colors"
+                            title="Edit Campaign"
                           >
-                            <Sparkles className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Link>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {c.status === "ACTIVE" || c.status === "DRAWING" ? (
+                            <Link
+                              href="/admin/draws"
+                              className="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl transition-colors"
+                              title="Go to Live Draw Room"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                            </Link>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
