@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Crown,
   CheckCircle2,
+  Filter,
 } from "lucide-react";
 import Link from "next/link";
 import { fetchTelegramApi, getTelegramStartParam } from "@/lib/telegram-client";
@@ -38,6 +39,7 @@ interface CampaignItem {
   percentage: number;
   remainingTickets: number;
   isCompleted?: boolean;
+  isInstant?: boolean;
   status?: string;
   winnerName?: string | null;
   winningTicketNumber?: string | null;
@@ -67,6 +69,7 @@ export default function TelegramMiniApp() {
   const { data: session, status } = useSession();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"ALL" | "INSTANT" | "OFFICIAL">("ALL");
 
   const loadDashboard = async () => {
     try {
@@ -128,6 +131,10 @@ export default function TelegramMiniApp() {
   const totalWins = dashboardData?.winsCount || 0;
   const referralBonus = dashboardData?.referralBonus || 10;
   const currency = dashboardData?.referralCurrency || "ETB";
+
+  const allCampaigns = dashboardData?.campaigns || [];
+  const instantDraws = allCampaigns.filter((c) => c.isInstant);
+  const officialCampaigns = allCampaigns.filter((c) => !c.isInstant);
 
   return (
     <div className="min-h-screen bg-[#070A11] text-white pb-24 overflow-x-hidden selection:bg-emerald-500/30">
@@ -293,7 +300,6 @@ export default function TelegramMiniApp() {
 
           {/* Gamified 3-Card Interactive HUD */}
           <div className="grid grid-cols-3 gap-2.5">
-            
             {/* Card 1: My Tickets */}
             <Link
               href="/telegram/tickets"
@@ -352,28 +358,13 @@ export default function TelegramMiniApp() {
               <span className="text-white font-extrabold text-xs leading-tight">Refer & Earn</span>
               <span className="text-[10px] text-purple-300/80 font-medium mt-0.5">Free Bonus</span>
             </Link>
-
           </div>
 
-          {/* Winning Odds Motivation Booster Card */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/70 via-purple-950/50 to-indigo-950/70 border border-indigo-500/30 shadow-lg shadow-indigo-950/40 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                <span>Multiply Your Winning Chances</span>
-                <span className="text-[9px] font-black bg-indigo-500 text-white px-1.5 py-0.2 rounded-full uppercase">PRO TIP</span>
-              </h3>
-              <p className="text-[11px] text-indigo-200/90 leading-snug mt-0.5">
-                The more tickets you collect, the higher your probability of winning the live draw!
-              </p>
-            </div>
-          </div>
-
-          {/* Active Campaigns Header */}
+          {/* Section: HOT PRIZE DRAWS with Category Switcher */}
           <div className="pt-2">
-            <div className="flex justify-between items-center mb-3.5">
+            
+            {/* Header Title */}
+            <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
                 <h2 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-1.5">
@@ -389,159 +380,327 @@ export default function TelegramMiniApp() {
               </Link>
             </div>
 
-            {/* Campaign Cards List */}
-            <div className="space-y-3.5">
-              {dashboardData?.campaigns?.map((campaign) => {
-                const isCompleted = campaign.isCompleted || campaign.status === "COMPLETED";
+            {/* Category Filter Chips */}
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => setActiveTab("ALL")}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  activeTab === "ALL"
+                    ? "bg-white text-slate-950 shadow-md shadow-white/10 scale-[1.02]"
+                    : "bg-white/5 text-slate-400 hover:text-white border border-white/5"
+                }`}
+              >
+                <span>All Draws</span>
+                <span className="text-[10px] opacity-75">({allCampaigns.length})</span>
+              </button>
 
-                if (isCompleted) {
-                  return (
-                    <Link
-                      href={`/telegram/campaigns/${campaign.slug}`}
-                      key={campaign.id}
-                      className="block bg-gradient-to-r from-[#1E160A] via-[#140F08] to-[#0C0F1A] border border-amber-500/40 hover:border-amber-500/70 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-black/40 group relative overflow-hidden"
-                    >
-                      {/* Subtle Gold Glow */}
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors pointer-events-none"></div>
+              <button
+                onClick={() => setActiveTab("INSTANT")}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  activeTab === "INSTANT"
+                    ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/25 scale-[1.02]"
+                    : "bg-purple-500/10 text-purple-300 border border-purple-500/20 hover:bg-purple-500/20"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>Instant Mini Draws</span>
+                <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.2 rounded-full">
+                  {instantDraws.length}
+                </span>
+              </button>
 
-                      <div className="flex items-center gap-3.5">
-                        {/* Prize Image with Winner Trophy Stamp */}
-                        <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/40 overflow-hidden relative shadow-inner">
-                          {campaign.image ? (
-                            <img
-                              src={campaign.image}
-                              alt={campaign.title}
-                              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <Trophy className="w-8 h-8 text-amber-400" />
-                          )}
-                          <div className="absolute top-1 right-1 bg-amber-500 text-slate-950 p-1 rounded-lg shadow-md">
-                            <Trophy className="w-3 h-3 fill-slate-950" />
-                          </div>
-                        </div>
+              <button
+                onClick={() => setActiveTab("OFFICIAL")}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  activeTab === "OFFICIAL"
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.02]"
+                    : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20"
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5 fill-current" />
+                <span>Official Campaigns</span>
+                <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.2 rounded-full">
+                  {officialCampaigns.length}
+                </span>
+              </button>
+            </div>
 
-                        {/* Winner Info Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-[9px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/40 uppercase tracking-wider flex items-center gap-1">
-                              <Trophy className="w-2.5 h-2.5" /> DRAW COMPLETED
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              {campaign.drawDate ? new Date(campaign.drawDate).toLocaleDateString() : "Finished"}
-                            </span>
-                          </div>
+            <div className="space-y-6">
 
-                          <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-amber-300 transition-colors">
-                            {campaign.title}
-                          </h3>
-
-                          {/* Winner Badge Callout */}
-                          <div className="mt-2 bg-[#090C16] border border-amber-500/25 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span className="text-xs font-black text-amber-200 truncate">
-                                {campaign.winnerName || "Winner Selected"}
-                              </span>
-                            </div>
-                            {campaign.winningTicketNumber && (
-                              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                                {campaign.winningTicketNumber}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Footer */}
-                      <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
-                        <span className="text-[11px] font-bold text-amber-400/90 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Won: {campaign.prizeTitle}
-                        </span>
-                        <div className="inline-flex items-center gap-1 font-bold text-amber-300 group-hover:translate-x-0.5 transition-transform text-xs">
-                          <span>See Winner Details</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                }
-
-                return (
-                  <Link
-                    href={`/telegram/campaigns/${campaign.slug}`}
-                    key={campaign.id}
-                    className="block bg-gradient-to-r from-[#0E1526] to-[#0A0F1D] border border-slate-800/80 hover:border-emerald-500/50 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-black/40 group relative overflow-hidden"
-                  >
-                    {/* Subtle Card Glow */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none"></div>
-
-                    <div className="flex items-center gap-3.5">
-                      {/* Prize Image */}
-                      <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/10 overflow-hidden relative shadow-inner">
-                        {campaign.image ? (
-                          <img
-                            src={campaign.image}
-                            alt={campaign.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <Trophy className="w-8 h-8 text-slate-600" />
-                        )}
-                        <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-md text-[9px] font-black text-emerald-400 px-1.5 py-0.5 rounded-md border border-white/10">
-                          {campaign.ticketPrice} {campaign.currency}
-                        </div>
-                      </div>
-
-                      {/* Campaign Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-500" />
-                            {new Date(campaign.drawDate).toLocaleDateString()}
-                          </span>
-                          <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            {campaign.percentage}% Complete
-                          </span>
-                        </div>
-
-                        <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-emerald-300 transition-colors">
-                          {campaign.title}
-                        </h3>
-
-                        {/* Clean Modern Progress Bar */}
-                        <div className="mt-3">
-                          <div className="w-full h-2.5 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-white/5">
-                            <div
-                              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
-                              style={{ width: `${Math.min(100, Math.max(8, campaign.percentage))}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Footer */}
-                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
-                      <span className="text-[11px] font-semibold text-slate-400">
-                        🎯 Grand Prize Draw
+              {/* 1. SEPARATE SECTION: Instant Mini Draws */}
+              {(activeTab === "ALL" || activeTab === "INSTANT") && instantDraws.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded-lg bg-purple-500/20 text-purple-400">
+                        <Zap className="w-4 h-4 fill-purple-400" />
                       </span>
-                      <div className="inline-flex items-center gap-1 font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform text-xs">
-                        <span>Get Lucky Tickets</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
+                      <div>
+                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                          ⚡ Instant Mini Draws
+                        </h3>
+                        <p className="text-[10px] text-purple-300/80 font-medium">
+                          5-Min Fast Games • Auto-Draw Upon 100% Sellout
+                        </p>
                       </div>
                     </div>
-                  </Link>
-                );
-              })}
+                    <Link
+                      href="/telegram/instant"
+                      className="text-purple-400 hover:text-purple-300 text-[11px] font-bold flex items-center gap-0.5"
+                    >
+                      <span>Play Flash</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </div>
 
-              {dashboardData?.campaigns?.length === 0 && (
+                  <div className="space-y-3">
+                    {instantDraws.map((campaign) => {
+                      const isCompleted = campaign.isCompleted || campaign.status === "COMPLETED";
+
+                      return (
+                        <Link
+                          href={`/telegram/campaigns/${campaign.slug}`}
+                          key={campaign.id}
+                          className="block bg-gradient-to-r from-[#180F29] via-[#120B20] to-[#0A0713] border border-purple-500/40 hover:border-purple-400 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-purple-950/40 group relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                          <div className="flex items-center gap-3.5">
+                            {/* Prize Thumbnail */}
+                            <div className="w-20 h-20 bg-slate-950 rounded-2xl flex items-center justify-center shrink-0 border border-purple-500/30 overflow-hidden relative shadow-inner">
+                              {campaign.image ? (
+                                <img
+                                  src={campaign.image}
+                                  alt={campaign.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <Zap className="w-8 h-8 text-purple-400" />
+                              )}
+                              <div className="absolute top-1 left-1 bg-purple-600 text-[9px] font-black text-white px-1.5 py-0.5 rounded-md shadow-md">
+                                {campaign.ticketPrice} {campaign.currency}
+                              </div>
+                            </div>
+
+                            {/* Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="text-[9px] font-black text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/40 uppercase tracking-wider flex items-center gap-1">
+                                  <Zap className="w-2.5 h-2.5 fill-current" /> 5-MIN FLASH
+                                </span>
+                                <span className="text-[10px] font-bold text-purple-300">
+                                  {campaign.entriesCount}/{campaign.maxEntries} Sold
+                                </span>
+                              </div>
+
+                              <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-purple-300 transition-colors">
+                                {campaign.title}
+                              </h3>
+
+                              <div className="text-xs text-emerald-400 font-bold font-mono mt-0.5">
+                                Prize: {campaign.prizeTitle}
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="mt-2.5">
+                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-purple-500/20">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-400 rounded-full transition-all duration-500 shadow-sm"
+                                    style={{ width: `${Math.min(100, Math.max(8, campaign.percentage))}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
+                            <span className="text-[11px] font-bold text-purple-300/80">
+                              ⚡ Instant Win Drop
+                            </span>
+                            <div className="inline-flex items-center gap-1 font-bold text-purple-300 group-hover:translate-x-0.5 transition-transform text-xs">
+                              <span>Enter 5-Min Draw</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. SEPARATE SECTION: Official Campaigns */}
+              {(activeTab === "ALL" || activeTab === "OFFICIAL") && officialCampaigns.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400">
+                        <Trophy className="w-4 h-4 fill-emerald-400" />
+                      </span>
+                      <div>
+                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                          🏆 Official Grand Campaigns
+                        </h3>
+                        <p className="text-[10px] text-emerald-300/80 font-medium">
+                          Major Flagship Prizes & High Value Jackpots
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/telegram/campaigns"
+                      className="text-emerald-400 hover:text-emerald-300 text-[11px] font-bold flex items-center gap-0.5"
+                    >
+                      <span>All Campaigns</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {officialCampaigns.map((campaign) => {
+                      const isCompleted = campaign.isCompleted || campaign.status === "COMPLETED";
+
+                      if (isCompleted) {
+                        return (
+                          <Link
+                            href={`/telegram/campaigns/${campaign.slug}`}
+                            key={campaign.id}
+                            className="block bg-gradient-to-r from-[#1E160A] via-[#140F08] to-[#0C0F1A] border border-amber-500/40 hover:border-amber-500/70 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-black/40 group relative overflow-hidden"
+                          >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                            <div className="flex items-center gap-3.5">
+                              <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/40 overflow-hidden relative shadow-inner">
+                                {campaign.image ? (
+                                  <img
+                                    src={campaign.image}
+                                    alt={campaign.title}
+                                    className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : (
+                                  <Trophy className="w-8 h-8 text-amber-400" />
+                                )}
+                                <div className="absolute top-1 right-1 bg-amber-500 text-slate-950 p-1 rounded-lg shadow-md">
+                                  <Trophy className="w-3 h-3 fill-slate-950" />
+                                </div>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                  <span className="text-[9px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/40 uppercase tracking-wider flex items-center gap-1">
+                                    <Trophy className="w-2.5 h-2.5" /> DRAW COMPLETED
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    {campaign.drawDate ? new Date(campaign.drawDate).toLocaleDateString() : "Finished"}
+                                  </span>
+                                </div>
+
+                                <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-amber-300 transition-colors">
+                                  {campaign.title}
+                                </h3>
+
+                                <div className="mt-2 bg-[#090C16] border border-amber-500/25 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span className="text-xs font-black text-amber-200 truncate">
+                                      {campaign.winnerName || "Winner Selected"}
+                                    </span>
+                                  </div>
+                                  {campaign.winningTicketNumber && (
+                                    <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                      {campaign.winningTicketNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
+                              <span className="text-[11px] font-bold text-amber-400/90 flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Won: {campaign.prizeTitle}
+                              </span>
+                              <div className="inline-flex items-center gap-1 font-bold text-amber-300 group-hover:translate-x-0.5 transition-transform text-xs">
+                                <span>See Winner Details</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          href={`/telegram/campaigns/${campaign.slug}`}
+                          key={campaign.id}
+                          className="block bg-gradient-to-r from-[#0E1526] to-[#0A0F1D] border border-slate-800/80 hover:border-emerald-500/50 rounded-3xl p-4 active:scale-[0.99] transition-all shadow-xl shadow-black/40 group relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                          <div className="flex items-center gap-3.5">
+                            <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/10 overflow-hidden relative shadow-inner">
+                              {campaign.image ? (
+                                <img
+                                  src={campaign.image}
+                                  alt={campaign.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <Trophy className="w-8 h-8 text-slate-600" />
+                              )}
+                              <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-md text-[9px] font-black text-emerald-400 px-1.5 py-0.5 rounded-md border border-white/10">
+                                {campaign.ticketPrice} {campaign.currency}
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-slate-500" />
+                                  {new Date(campaign.drawDate).toLocaleDateString()}
+                                </span>
+                                <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                  {campaign.percentage}% Complete
+                                </span>
+                              </div>
+
+                              <h3 className="text-white font-extrabold text-sm leading-snug truncate group-hover:text-emerald-300 transition-colors">
+                                {campaign.title}
+                              </h3>
+
+                              <div className="mt-3">
+                                <div className="w-full h-2.5 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
+                                    style={{ width: `${Math.min(100, Math.max(8, campaign.percentage))}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
+                            <span className="text-[11px] font-semibold text-slate-400">
+                              🎯 Grand Prize Draw
+                            </span>
+                            <div className="inline-flex items-center gap-1 font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform text-xs">
+                              <span>Get Lucky Tickets</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {allCampaigns.length === 0 && (
                 <div className="bg-[#0D1424] border border-slate-800 rounded-3xl p-8 text-center space-y-2">
                   <Trophy className="w-10 h-10 text-slate-600 mx-auto" />
                   <p className="text-sm font-bold text-slate-300">No active campaigns yet</p>
                   <p className="text-xs text-slate-500">Check back soon for exciting new prize draws!</p>
                 </div>
               )}
+
             </div>
           </div>
 

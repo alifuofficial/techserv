@@ -33,7 +33,7 @@ export async function GET(req: Request) {
           },
         },
         orderBy: { createdAt: "desc" },
-        take: 12,
+        take: 20,
       }),
       db.draw.findMany({
         where: { status: "COMPLETED", winningEntryId: { not: null } },
@@ -82,6 +82,12 @@ export async function GET(req: Request) {
         c.status === "COMPLETED" ||
         (c.draw && c.draw.status === "COMPLETED" && !!c.draw.winningEntryId);
 
+      const isInstant =
+        c.slug.startsWith("flash-") ||
+        c.slug.startsWith("instant-") ||
+        c.title.toLowerCase().includes("instant") ||
+        c.title.toLowerCase().includes("flash");
+
       let winnerName: string | null = null;
       let winningTicketNumber: string | null = null;
 
@@ -109,6 +115,7 @@ export async function GET(req: Request) {
         percentage: Math.min(100, Math.round((c._count.entries / (c.maxEntries || 1)) * 100)),
         remainingTickets: Math.max(0, c.maxEntries - c._count.entries),
         isCompleted: !!isCompleted,
+        isInstant: !!isInstant,
         status: isCompleted ? "COMPLETED" : c.status,
         winnerName,
         winningTicketNumber,
