@@ -40,6 +40,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       let newBalance = 0;
 
       await db.$transaction(async (tx) => {
+        // 0. Anti-Replay Guard: Ensure no other payment with the same transactionId has already been approved
+        if (existingPayment.transactionId && !existingPayment.provider?.startsWith('WITHDRAW_') && existingPayment.provider !== 'WALLET') {
+          const cleanTxId = existingPayment.transactionId.trim();
+          const alreadyApproved = await tx.payment.findFirst({
+            where: {
+              id: { not: existingPayment.id },
+              transactionId: { equals: cleanTxId, mode: 'insensitive' },
+              status: 'APPROVED',
+            },
+          });
+
+          if (alreadyApproved) {
+            throw new Error(`REPLAY_DETECTED: Transaction ID "${cleanTxId}" was already approved in payment #${alreadyApproved.id.slice(0, 8)}. Cannot approve duplicate.`);
+          }
+        }
+
         // 1. Update Payment status
         await tx.payment.update({
           where: { id },

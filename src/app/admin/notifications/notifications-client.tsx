@@ -98,6 +98,29 @@ export default function NotificationsClient({
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<any | null>(null);
 
+  // Sync Bot Menu and Commands
+  const [isSyncingBotMenu, setIsSyncingBotMenu] = useState(false);
+  const [botMenuSyncStatus, setBotMenuSyncStatus] = useState<string | null>(null);
+
+  const handleSyncBotMenu = async () => {
+    setIsSyncingBotMenu(true);
+    setBotMenuSyncStatus(null);
+    try {
+      const res = await fetch("/api/admin/notifications/bot-menu", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setBotMenuSyncStatus("✅ " + (data.message || "Bot menu button & commands synced!"));
+        setTimeout(() => setBotMenuSyncStatus(null), 5000);
+      } else {
+        setBotMenuSyncStatus("❌ " + (data.error || "Failed to sync bot menu"));
+      }
+    } catch (e) {
+      setBotMenuSyncStatus("❌ Network error syncing bot menu");
+    } finally {
+      setIsSyncingBotMenu(false);
+    }
+  };
+
   // Test send state
   const [testChatId, setTestChatId] = useState("");
   const [testStatus, setTestStatus] = useState<string | null>(null);
@@ -344,7 +367,22 @@ export default function NotificationsClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSyncBotMenu}
+            disabled={isSyncingBotMenu}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+            title="Registers persistent Mini App menu button and slash commands with Telegram"
+          >
+            {isSyncingBotMenu ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            <span>Sync Bot Menu &amp; Commands</span>
+          </button>
+
           <a
             href={`https://t.me/${channelHandle.replace("@", "")}`}
             target="_blank"
@@ -364,6 +402,20 @@ export default function NotificationsClient({
           </a>
         </div>
       </div>
+
+      {/* Bot Menu Sync Alert Banner */}
+      {botMenuSyncStatus && (
+        <div className="p-3.5 rounded-xl bg-slate-900 text-white text-xs font-mono font-bold flex items-center justify-between shadow-md animate-in fade-in">
+          <span>{botMenuSyncStatus}</span>
+          <button
+            type="button"
+            onClick={() => setBotMenuSyncStatus(null)}
+            className="text-slate-400 hover:text-white text-xs"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Bot & Channel Status KPI Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

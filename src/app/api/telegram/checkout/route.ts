@@ -199,12 +199,12 @@ export async function POST(req: Request) {
 
     const cleanTxId = txId.trim();
 
-    // 1. Strict Global Unique Transaction ID Check
-    const isDuplicate = await isTransactionIdDuplicate(cleanTxId);
-    if (isDuplicate) {
+    // 1. Strict Global Unique Transaction ID Check & Anti-Replay Guard
+    const dupCheck = await isTransactionIdDuplicate(cleanTxId);
+    if (dupCheck.isDuplicate) {
       return NextResponse.json({
         success: false,
-        error: `Transaction ID "${cleanTxId}" has already been submitted on the platform. Each receipt can only be used once.`,
+        error: dupCheck.reason || `Transaction ID "${cleanTxId}" has already been submitted on the platform. Each receipt can only be used once.`,
       }, { status: 400 });
     }
 

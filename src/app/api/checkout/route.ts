@@ -171,11 +171,11 @@ export async function POST(req: Request) {
 
     const cleanTxId = txId.trim();
 
-    // 1. Strict Global Unique TxID Check
-    const isDuplicate = await isTransactionIdDuplicate(cleanTxId);
-    if (isDuplicate) {
+    // 1. Strict Global Unique TxID Check & Anti-Replay Guard
+    const dupCheck = await isTransactionIdDuplicate(cleanTxId);
+    if (dupCheck.isDuplicate) {
       return NextResponse.json({
-        error: `Transaction ID "${cleanTxId}" has already been used on the platform.`,
+        error: dupCheck.reason || `Transaction ID "${cleanTxId}" has already been used on the platform.`,
       }, { status: 400 });
     }
 
