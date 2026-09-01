@@ -53,14 +53,23 @@ interface WithdrawalsClientProps {
 }
 
 export default function WithdrawalsClient({
-  initialWithdrawals,
+  initialWithdrawals = [],
   initialStats,
 }: WithdrawalsClientProps) {
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>(initialWithdrawals);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>(initialWithdrawals || []);
   const [stats, setStats] = useState(initialStats);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [providerFilter, setProviderFilter] = useState("ALL");
+
+  const safeStats = {
+    totalPendingCount: stats?.totalPendingCount || 0,
+    totalPendingAmount: stats?.totalPendingAmount || 0,
+    totalApprovedCount: stats?.totalApprovedCount || 0,
+    totalApprovedAmount: stats?.totalApprovedAmount || 0,
+    totalRejectedCount: stats?.totalRejectedCount || 0,
+    totalCount: stats?.totalCount || 0,
+  };
 
   // Action Modals State
   const [approvingItem, setApprovingItem] = useState<WithdrawalRecord | null>(null);
@@ -76,7 +85,9 @@ export default function WithdrawalsClient({
       const data = await res.json();
       if (data.success) {
         setWithdrawals(data.withdrawals || []);
-        setStats(data.stats);
+        if (data.stats) {
+          setStats(data.stats);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -156,13 +167,14 @@ export default function WithdrawalsClient({
     }
   };
 
-  const filteredWithdrawals = withdrawals.filter((w) => {
+  const filteredWithdrawals = (withdrawals || []).filter((w) => {
+    if (!w) return false;
     const query = searchQuery.toLowerCase();
     const matchesSearch =
-      w.userName.toLowerCase().includes(query) ||
-      w.userEmail.toLowerCase().includes(query) ||
-      w.accountName.toLowerCase().includes(query) ||
-      w.accountNumber.toLowerCase().includes(query) ||
+      (w.userName || "").toLowerCase().includes(query) ||
+      (w.userEmail || "").toLowerCase().includes(query) ||
+      (w.accountName || "").toLowerCase().includes(query) ||
+      (w.accountNumber || "").toLowerCase().includes(query) ||
       (w.adminTxId || "").toLowerCase().includes(query);
 
     const matchesStatus = statusFilter === "ALL" || w.status === statusFilter;
@@ -175,13 +187,13 @@ export default function WithdrawalsClient({
     const headers = ["ID", "User Name", "Email", "Amount", "Currency", "Channel", "Account Name", "Account Number", "Status", "Admin Tx ID", "Rejection Reason", "Requested At"];
     const rows = filteredWithdrawals.map((w) => [
       w.id,
-      `"${w.userName.replace(/"/g, '""')}"`,
-      w.userEmail,
-      w.amount,
-      w.currency,
-      w.provider,
-      `"${w.accountName.replace(/"/g, '""')}"`,
-      `"${w.accountNumber.replace(/"/g, '""')}"`,
+      `"${(w.userName || "").replace(/"/g, '""')}"`,
+      w.userEmail || "",
+      w.amount || 0,
+      w.currency || "ETB",
+      w.provider || "",
+      `"${(w.accountName || "").replace(/"/g, '""')}"`,
+      `"${(w.accountNumber || "").replace(/"/g, '""')}"`,
       w.status,
       w.adminTxId || "",
       `"${(w.rejectionReason || "").replace(/"/g, '""')}"`,
@@ -237,7 +249,7 @@ export default function WithdrawalsClient({
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Payouts</p>
             <div className="p-2 bg-amber-50 text-amber-600 rounded-xl"><Clock className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-black text-amber-600">{stats.totalPendingCount}</h3>
+          <h3 className="text-2xl font-black text-amber-600">{safeStats.totalPendingCount}</h3>
           <p className="text-[11px] text-slate-400 mt-1">Awaiting admin transfer</p>
         </div>
 
@@ -248,7 +260,7 @@ export default function WithdrawalsClient({
             <div className="p-2 bg-amber-50 text-amber-600 rounded-xl"><Wallet className="w-4 h-4" /></div>
           </div>
           <h3 className="text-2xl font-black text-slate-900">
-            {stats.totalPendingAmount.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
+            {safeStats.totalPendingAmount.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
           </h3>
           <p className="text-[11px] text-amber-600 font-semibold mt-1">Total pending to payout</p>
         </div>
@@ -260,9 +272,9 @@ export default function WithdrawalsClient({
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 className="w-4 h-4" /></div>
           </div>
           <h3 className="text-2xl font-black text-emerald-600">
-            {stats.totalApprovedAmount.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
+            {safeStats.totalApprovedAmount.toLocaleString()} <span className="text-xs text-slate-400 font-normal">ETB</span>
           </h3>
-          <p className="text-[11px] text-slate-400 mt-1">{stats.totalApprovedCount} completed transfers</p>
+          <p className="text-[11px] text-slate-400 mt-1">{safeStats.totalApprovedCount} completed transfers</p>
         </div>
 
         {/* Card 4: Rejected Requests */}
@@ -271,7 +283,7 @@ export default function WithdrawalsClient({
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rejected Requests</p>
             <div className="p-2 bg-red-50 text-red-600 rounded-xl"><XCircle className="w-4 h-4" /></div>
           </div>
-          <h3 className="text-2xl font-black text-red-600">{stats.totalRejectedCount}</h3>
+          <h3 className="text-2xl font-black text-red-600">{safeStats.totalRejectedCount}</h3>
           <p className="text-[11px] text-slate-400 mt-1">Automatically refunded</p>
         </div>
       </div>
@@ -346,7 +358,7 @@ export default function WithdrawalsClient({
                   {/* Amount */}
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900 font-mono text-sm">
-                      {w.amount.toLocaleString()} {w.currency}
+                      {(w.amount || 0).toLocaleString()} {w.currency || "ETB"}
                     </div>
                   </td>
 
@@ -459,7 +471,7 @@ export default function WithdrawalsClient({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Amount:</span>
-                <span className="font-bold text-emerald-600">{approvingItem.amount.toLocaleString()} {approvingItem.currency}</span>
+                <span className="font-bold text-emerald-600">{(approvingItem.amount || 0).toLocaleString()} {approvingItem.currency || "ETB"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Destination:</span>
@@ -539,7 +551,7 @@ export default function WithdrawalsClient({
 
             <div className="p-3 bg-red-50 rounded-2xl text-xs space-y-1 border border-red-100">
               <p className="text-red-800 font-semibold">
-                Rejecting this request will automatically refund <strong>{rejectingItem.amount.toLocaleString()} {rejectingItem.currency}</strong> back to {rejectingItem.userName}'s wallet balance.
+                Rejecting this request will automatically refund <strong>{(rejectingItem.amount || 0).toLocaleString()} {rejectingItem.currency || "ETB"}</strong> back to {rejectingItem.userName}'s wallet balance.
               </p>
             </div>
 

@@ -14,18 +14,65 @@ export class WithdrawalService {
    * Calculate User's Total Balance, Non-Withdrawable Virtual Bonus Credits, and Withdrawable Cash
    */
   static async getUserBalanceBreakdown(userId: string, txClient: any = db) {
-    const user = await txClient.user.findUnique({
-      where: { id: userId },
-      include: {
-        ledgerAccount: {
-          include: {
-            transactions: true,
+    try {
+      const user = await txClient.user.findUnique({
+        where: { id: userId },
+        include: {
+          ledgerAccount: {
+            include: {
+              transactions: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!user || !user.ledgerAccount) {
+      if (!user || !user.ledgerAccount) {
+        return {
+          totalBalance: 0,
+          withdrawableBalance: 0,
+          bonusCredits: 0,
+          currency: "ETB",
+        };
+      }
+
+      const totalBalance = user.ledgerAccount.balance || 0;
+      const transactions = user.ledgerAccount.transactions || [];
+
+      // 1. Calculate all virtual bonus credits ever granted
+      const VIRTUAL_BONUS_TYPES = [
+        "DAILY_SPIN_REWARD",
+        "REFERRAL_BONUS",
+        "REFERRAL_UNLOCK",
+        "SIGNUP_BONUS",
+        "BONUS_RECEIVED",
+      ];
+
+      const totalBonusCredited = transactions
+        .filter((t: any) => VIRTUAL_BONUS_TYPES.includes(t.referenceType) && t.amount > 0)
+        .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+
+      // 2. Calculate all gameplay spend (entries & tickets bought)
+      const totalTicketSpend = transactions
+        .filter((t: any) => t.referenceType === "ENTRY_PURCHASE" && t.amount < 0)
+        .reduce((sum: number, t: any) => sum + Math.abs(t.amount || 0), 0);
+
+      // 3. Virtual bonus credits used up when playing games
+      const bonusSpentOnGames = Math.min(totalBonusCredited, totalTicketSpend);
+
+      // 4. Remaining unspent virtual bonus credits
+      const unspentBonusCredits = Math.max(0, totalBonusCredited - bonusSpentOnGames);
+
+      // 5. Withdrawable cash balance cannot exceed total balance minus unspent bonus credits
+      const withdrawableBalance = Math.max(0, Math.min(totalBalance, totalBalance - unspentBonusCredits));
+
+      return {
+        totalBalance,
+        withdrawableBalance,
+        bonusCredits: unspentBonusCredits,
+        currency: user.ledgerAccount.currency || "ETB",
+      };
+    } catch (e) {
+      console.error("[getUserBalanceBreakdown error]", e);
       return {
         totalBalance: 0,
         withdrawableBalance: 0,
@@ -33,43 +80,6 @@ export class WithdrawalService {
         currency: "ETB",
       };
     }
-
-    const totalBalance = user.ledgerAccount.balance || 0;
-    const transactions = user.ledgerAccount.transactions || [];
-
-    // 1. Calculate all virtual bonus credits ever granted
-    const VIRTUAL_BONUS_TYPES = [
-      "DAILY_SPIN_REWARD",
-      "REFERRAL_BONUS",
-      "REFERRAL_UNLOCK",
-      "SIGNUP_BONUS",
-      "BONUS_RECEIVED",
-    ];
-
-    const totalBonusCredited = transactions
-      .filter((t: any) => VIRTUAL_BONUS_TYPES.includes(t.referenceType) && t.amount > 0)
-      .reduce((sum: number, t: any) => sum + t.amount, 0);
-
-    // 2. Calculate all gameplay spend (entries & tickets bought)
-    const totalTicketSpend = transactions
-      .filter((t: any) => t.referenceType === "ENTRY_PURCHASE" && t.amount < 0)
-      .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
-
-    // 3. Virtual bonus credits used up when playing games
-    const bonusSpentOnGames = Math.min(totalBonusCredited, totalTicketSpend);
-
-    // 4. Remaining unspent virtual bonus credits
-    const unspentBonusCredits = Math.max(0, totalBonusCredited - bonusSpentOnGames);
-
-    // 5. Withdrawable cash balance cannot exceed total balance minus unspent bonus credits
-    const withdrawableBalance = Math.max(0, Math.min(totalBalance, totalBalance - unspentBonusCredits));
-
-    return {
-      totalBalance,
-      withdrawableBalance,
-      bonusCredits: unspentBonusCredits,
-      currency: user.ledgerAccount.currency || "ETB",
-    };
   }
 
   /**
@@ -177,97 +187,128 @@ export class WithdrawalService {
    * List withdrawals with parsed metadata
    */
   static async listWithdrawals(status?: string) {
-    const where: any = {
-      provider: { startsWith: "WITHDRAW_" },
-    };
+    try {
+      const where: any = {
+        provider: { startsWith: "WITHDRAW_" },
+      };
 
-    if (status && status !== "ALL") {
-      where.status = status;
-    }
+      if (status && status !== "ALL") {
+        where.status = status;
+      }
 
-    const payments = await db.payment.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            telegramId: true,
+      const payments = await db.payment.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              telegramId: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
 
-    return payments.map((p) => {
-      let meta: any = {};
-      try {
-        if (p.adminNote?.startsWith("{")) {
-          meta = JSON.parse(p.adminNote);
+      return (payments || []).map((p) => {
+        let meta: any = {};
+        try {
+          if (p.adminNote?.startsWith("{")) {
+            meta = JSON.parse(p.adminNote);
+          }
+        } catch (e) {}
+
+        const cleanProvider = (p.provider || "").replace("WITHDRAW_", "");
+
+        let createdAtStr = "";
+        try {
+          createdAtStr = p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString();
+        } catch (e) {
+          createdAtStr = new Date().toISOString();
         }
-      } catch (e) {}
 
-      const cleanProvider = p.provider.replace("WITHDRAW_", "");
+        let updatedAtStr = "";
+        try {
+          updatedAtStr = p.updatedAt ? new Date(p.updatedAt).toISOString() : new Date().toISOString();
+        } catch (e) {
+          updatedAtStr = new Date().toISOString();
+        }
 
-      return {
-        id: p.id,
-        userId: p.userId,
-        userName: p.user?.name || "User",
-        userEmail: p.user?.email || "",
-        userPhone: p.user?.phone || "",
-        telegramId: p.user?.telegramId || "",
-        amount: p.amount,
-        currency: p.currency,
-        provider: cleanProvider,
-        accountName: meta.accountName || p.user?.name || "N/A",
-        accountNumber: meta.accountNumber || p.transactionId?.split("_")[0] || "N/A",
-        rejectionReason: meta.rejectionReason || (p.status === "REJECTED" ? p.adminNote : null),
-        adminTxId: meta.adminTxId || (p.status === "APPROVED" ? p.transactionId : null),
-        status: p.status, // PENDING, APPROVED, REJECTED
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
-      };
-    });
+        return {
+          id: p.id,
+          userId: p.userId,
+          userName: p.user?.name || "User",
+          userEmail: p.user?.email || "",
+          userPhone: p.user?.phone || "",
+          telegramId: p.user?.telegramId || "",
+          amount: p.amount || 0,
+          currency: p.currency || "ETB",
+          provider: cleanProvider || "TELEBIRR",
+          accountName: meta.accountName || p.user?.name || "N/A",
+          accountNumber: meta.accountNumber || p.transactionId?.split("_")[0] || "N/A",
+          rejectionReason: meta.rejectionReason || (p.status === "REJECTED" ? p.adminNote : null),
+          adminTxId: meta.adminTxId || (p.status === "APPROVED" ? p.transactionId : null),
+          status: p.status || "PENDING",
+          createdAt: createdAtStr,
+          updatedAt: updatedAtStr,
+        };
+      });
+    } catch (err) {
+      console.error("[listWithdrawals error]", err);
+      return [];
+    }
   }
 
   /**
    * Get user's own withdrawal history
    */
   static async getUserWithdrawals(userId: string) {
-    const payments = await db.payment.findMany({
-      where: {
-        userId,
-        provider: { startsWith: "WITHDRAW_" },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    });
+    try {
+      const payments = await db.payment.findMany({
+        where: {
+          userId,
+          provider: { startsWith: "WITHDRAW_" },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
 
-    return payments.map((p) => {
-      let meta: any = {};
-      try {
-        if (p.adminNote?.startsWith("{")) {
-          meta = JSON.parse(p.adminNote);
+      return (payments || []).map((p) => {
+        let meta: any = {};
+        try {
+          if (p.adminNote?.startsWith("{")) {
+            meta = JSON.parse(p.adminNote);
+          }
+        } catch (e) {}
+
+        const cleanProvider = (p.provider || "").replace("WITHDRAW_", "");
+
+        let createdAtStr = "";
+        try {
+          createdAtStr = p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString();
+        } catch (e) {
+          createdAtStr = new Date().toISOString();
         }
-      } catch (e) {}
 
-      const cleanProvider = p.provider.replace("WITHDRAW_", "");
-
-      return {
-        id: p.id,
-        amount: p.amount,
-        currency: p.currency,
-        provider: cleanProvider,
-        accountNumber: meta.accountNumber || p.transactionId?.split("_")[0] || "N/A",
-        accountName: meta.accountName || "N/A",
-        status: p.status,
-        createdAt: p.createdAt.toISOString(),
-        adminTxId: meta.adminTxId || null,
-        rejectionReason: meta.rejectionReason || (p.status === "REJECTED" ? p.adminNote : null),
-      };
-    });
+        return {
+          id: p.id,
+          amount: p.amount || 0,
+          currency: p.currency || "ETB",
+          provider: cleanProvider || "TELEBIRR",
+          accountNumber: meta.accountNumber || p.transactionId?.split("_")[0] || "N/A",
+          accountName: meta.accountName || "N/A",
+          status: p.status || "PENDING",
+          createdAt: createdAtStr,
+          adminTxId: meta.adminTxId || null,
+          rejectionReason: meta.rejectionReason || (p.status === "REJECTED" ? p.adminNote : null),
+        };
+      });
+    } catch (err) {
+      console.error("[getUserWithdrawals error]", err);
+      return [];
+    }
   }
 
   /**
@@ -405,28 +446,40 @@ export class WithdrawalService {
    * Get KPI stats for admin dashboard
    */
   static async getStats() {
-    const withdrawals = await db.payment.findMany({
-      where: { provider: { startsWith: "WITHDRAW_" } },
-      select: { amount: true, status: true, createdAt: true },
-    });
+    try {
+      const withdrawals = await db.payment.findMany({
+        where: { provider: { startsWith: "WITHDRAW_" } },
+        select: { amount: true, status: true, createdAt: true },
+      });
 
-    const pending = withdrawals.filter((w) => w.status === "PENDING");
-    const approved = withdrawals.filter((w) => w.status === "APPROVED");
-    const rejected = withdrawals.filter((w) => w.status === "REJECTED");
+      const pending = withdrawals.filter((w) => w.status === "PENDING");
+      const approved = withdrawals.filter((w) => w.status === "APPROVED");
+      const rejected = withdrawals.filter((w) => w.status === "REJECTED");
 
-    const totalPendingCount = pending.length;
-    const totalPendingAmount = pending.reduce((acc, w) => acc + (w.amount || 0), 0);
-    const totalApprovedCount = approved.length;
-    const totalApprovedAmount = approved.reduce((acc, w) => acc + (w.amount || 0), 0);
-    const totalRejectedCount = rejected.length;
+      const totalPendingCount = pending.length;
+      const totalPendingAmount = pending.reduce((acc, w) => acc + (w.amount || 0), 0);
+      const totalApprovedCount = approved.length;
+      const totalApprovedAmount = approved.reduce((acc, w) => acc + (w.amount || 0), 0);
+      const totalRejectedCount = rejected.length;
 
-    return {
-      totalPendingCount,
-      totalPendingAmount,
-      totalApprovedCount,
-      totalApprovedAmount,
-      totalRejectedCount,
-      totalCount: withdrawals.length,
-    };
+      return {
+        totalPendingCount,
+        totalPendingAmount,
+        totalApprovedCount,
+        totalApprovedAmount,
+        totalRejectedCount,
+        totalCount: withdrawals.length,
+      };
+    } catch (err) {
+      console.error("[getStats error]", err);
+      return {
+        totalPendingCount: 0,
+        totalPendingAmount: 0,
+        totalApprovedCount: 0,
+        totalApprovedAmount: 0,
+        totalRejectedCount: 0,
+        totalCount: 0,
+      };
+    }
   }
 }
