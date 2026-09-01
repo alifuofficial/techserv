@@ -9,7 +9,7 @@ import Link from "next/link";
 
 // Crash-proof SVG Mini Sparkline
 function Sparkline({ data, color }: { data: number[]; color: string }) {
-  if (!data || data.length === 0) return null;
+  if (!data || data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -18,9 +18,9 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 
   const points = data
     .map((val, idx) => {
-      const x = (idx / (data.length - 1)) * width;
-      const y = height - ((val - min) / range) * (height - 6) - 3;
-      return `${x},${y}`;
+      const x = (idx / Math.max(1, data.length - 1)) * width;
+      const y = height - (((val - min) / range) * (height - 6)) - 3;
+      return `${(x || 0).toFixed(1)},${(y || 0).toFixed(1)}`;
     })
     .join(" ");
 
@@ -28,7 +28,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     <svg viewBox={`0 0 ${width} ${height}`} className="w-24 h-8 overflow-visible">
       <polyline
         fill="none"
-        stroke={color}
+        stroke={color || "#10B981"}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -50,7 +50,7 @@ function RevenueAreaChart({ data }: { data: { name: string; value: number }[] })
     );
   }
 
-  const values = data.map((d) => d.value);
+  const values = data.map((d) => d.value || 0);
   const maxVal = Math.max(1000, ...values);
   const width = 600;
   const height = 200;
@@ -59,12 +59,12 @@ function RevenueAreaChart({ data }: { data: { name: string; value: number }[] })
 
   const points = data.map((d, i) => {
     const x = paddingX + (i / Math.max(1, data.length - 1)) * (width - paddingX * 2);
-    const y = height - paddingY - (d.value / maxVal) * (height - paddingY * 2);
-    return { x, y, ...d };
+    const y = height - paddingY - (((d.value || 0) / maxVal) * (height - paddingY * 2));
+    return { x: x || 0, y: y || 0, name: d.name || "", value: d.value || 0 };
   });
 
-  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
-  const areaPoints = `${points[0].x},${height - paddingY} ${polylinePoints} ${points[points.length - 1].x},${height - paddingY}`;
+  const polylinePoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaPoints = `${points[0].x.toFixed(1)},${height - paddingY} ${polylinePoints} ${points[points.length - 1].x.toFixed(1)},${height - paddingY}`;
 
   return (
     <div className="relative w-full h-[250px] flex flex-col justify-between select-none">
@@ -131,7 +131,7 @@ function RevenueAreaChart({ data }: { data: { name: string; value: number }[] })
             top: `${(points[hoveredIdx].y / height) * 100}%`,
           }}
         >
-          <div className="font-bold text-emerald-400">{points[hoveredIdx].value.toLocaleString()} ETB</div>
+          <div className="font-bold text-emerald-400">{(points[hoveredIdx].value || 0).toLocaleString()} ETB</div>
           <div className="text-[10px] text-slate-400">{points[hoveredIdx].name}</div>
         </div>
       )}
@@ -158,8 +158,8 @@ function StatusDonutChart({ data, total }: { data: { name: string; value: number
   return (
     <div className="relative w-32 h-32 flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
-        {data.map((slice, i) => {
-          const percent = total > 0 ? slice.value / total : 0;
+        {(data || []).map((slice, i) => {
+          const percent = total > 0 ? (slice.value || 0) / total : 0;
           const strokeDasharray = `${percent * circumference} ${circumference}`;
           const strokeDashoffset = -accumulatedPercent * circumference;
           accumulatedPercent += percent;
@@ -171,7 +171,7 @@ function StatusDonutChart({ data, total }: { data: { name: string; value: number
               cy={size / 2}
               r={radius}
               fill="transparent"
-              stroke={slice.color}
+              stroke={slice.color || "#94A3B8"}
               strokeWidth={strokeWidth}
               strokeDasharray={strokeDasharray}
               strokeDashoffset={strokeDashoffset}
@@ -181,7 +181,7 @@ function StatusDonutChart({ data, total }: { data: { name: string; value: number
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-slate-900 leading-none">{total}</span>
+        <span className="text-xl font-bold text-slate-900 leading-none">{total || 0}</span>
         <span className="text-[10px] text-slate-500 font-medium mt-0.5">Total</span>
       </div>
     </div>
@@ -415,15 +415,15 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         {camp.img ? (
-                          <img src={camp.img} alt={camp.name} className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0" />
+                          <img src={camp.img} alt={camp.name || "Campaign"} className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0" />
                         ) : (
                           <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold border border-emerald-100 shrink-0">
                             <Trophy className="w-5 h-5" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-bold text-slate-900 truncate max-w-[150px]">{camp.name}</div>
-                          <div className="text-[10px] text-slate-400">{camp.time}</div>
+                          <div className="font-bold text-slate-900 truncate max-w-[150px]">{camp.name || "Untitled"}</div>
+                          <div className="text-[10px] text-slate-400">{camp.time || ""}</div>
                         </div>
                       </div>
                     </td>
@@ -437,7 +437,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                       <div className="font-bold text-slate-700 text-xs">
                         {(camp.sold || 0).toLocaleString()} <span className="text-slate-400 font-normal">/ {(camp.total || 0).toLocaleString()}</span>
                       </div>
-                      <div className="text-[9px] text-emerald-600 font-semibold">{camp.conv}</div>
+                      <div className="text-[9px] text-emerald-600 font-semibold">{camp.conv || "0%"}</div>
                     </td>
                     <td className="py-4 font-bold text-slate-700 font-mono text-xs">
                       {(camp.rev || 0).toLocaleString()} ETB
@@ -455,7 +455,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                         camp.status === 'ACTIVE' ? 'text-emerald-600 bg-emerald-100' :
                         camp.status === 'COMPLETED' ? 'text-blue-600 bg-blue-100' : 'text-slate-600 bg-slate-100'
                       }`}>
-                        {camp.status}
+                        {camp.status || "DRAFT"}
                       </span>
                     </td>
                   </tr>
@@ -463,7 +463,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
 
                 {(!data?.campaigns || data.campaigns.length === 0) && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs text-slate-400">No campaigns found.</td>
+                    <td colSpan={6} className="py-8 text-center text-xs text-slate-400">No campaigns found.</td>
                   </tr>
                 )}
               </tbody>
@@ -494,7 +494,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                     </div>
                   </div>
                   <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${Math.max(2, pm.percentage || 0)}%`, backgroundColor: pm.color }}></div>
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(2, pm.percentage || 0)}%`, backgroundColor: pm.color || "#10B981" }}></div>
                   </div>
                 </div>
               ))}
