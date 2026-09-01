@@ -4,6 +4,7 @@ import { getTelegramUserFromRequest } from "@/lib/telegram-auth";
 import { sendEventNotification } from "@/lib/telegram-notifications";
 import { isTransactionIdDuplicate, verifyPaymentWithVerifyEt } from "@/lib/verify-et";
 import { checkAndUnlockReferralBonus } from "@/lib/referral-service";
+import { InstantDrawService } from "@/lib/instant-draw-service";
 
 export const dynamic = "force-dynamic";
 
@@ -144,6 +145,9 @@ export async function POST(req: Request) {
 
         // Check & Unlock Referral Bonus on First Ticket Purchase
         checkAndUnlockReferralBonus(user.id, "PURCHASE", purchaseResult.totalAmount).catch(console.error);
+
+        // Trigger Instant Auto-Draw execution if full
+        InstantDrawService.checkAndExecuteAutoDraw(campaignId).catch(console.error);
 
         return NextResponse.json(
           {

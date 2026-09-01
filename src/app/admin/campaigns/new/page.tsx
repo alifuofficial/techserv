@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Plus } from "lucide-react";
+import { ArrowLeft, Save, TrendingUp, DollarSign, ShieldCheck, Calculator } from "lucide-react";
 import dynamic from "next/dynamic";
-import "react-quill-new/dist/quill.snow.css"; // We'll customize this via CSS
+import "react-quill-new/dist/quill.snow.css";
 
-// Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 export default function NewCampaignPage() {
@@ -21,6 +20,7 @@ export default function NewCampaignPage() {
     description: "",
     entryPrice: "",
     maxEntries: "",
+    productCost: "", // Market price / purchase cost of product
     startsAt: "",
     endsAt: "",
     status: "DRAFT",
@@ -50,6 +50,16 @@ export default function NewCampaignPage() {
       reader.readAsDataURL(file);
     }
   };
+
+  // Live Financial Calculation
+  const entryPriceNum = parseFloat(formData.entryPrice) || 0;
+  const maxEntriesNum = parseInt(formData.maxEntries, 10) || 0;
+  const productCostNum = parseFloat(formData.productCost) || 0;
+
+  const targetGross = entryPriceNum * maxEntriesNum;
+  const projectedNetProfit = targetGross - productCostNum;
+  const projectedRoi = productCostNum > 0 ? ((projectedNetProfit / productCostNum) * 100).toFixed(1) : "0.0";
+  const breakEvenTickets = entryPriceNum > 0 ? Math.ceil(productCostNum / entryPriceNum) : 0;
 
   const saveCampaign = async (statusOverride?: string) => {
     setLoading(true);
@@ -84,23 +94,23 @@ export default function NewCampaignPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-16">
       
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/admin" className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors">
+          <Link href="/admin/campaigns" className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Create New Campaign</h1>
-            <p className="text-sm text-slate-500">Launch a new prize draw campaign</p>
+            <p className="text-xs text-slate-500">Configure prize details, ticket sales target, product market cost, and net margins.</p>
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-sm font-medium">
+        <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-200 text-xs font-bold">
           {error}
         </div>
       )}
@@ -112,7 +122,7 @@ export default function NewCampaignPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Campaign Title <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Campaign Title <span className="text-red-500">*</span></label>
               <input 
                 type="text" 
                 name="title" 
@@ -120,34 +130,34 @@ export default function NewCampaignPage() {
                 value={formData.title} 
                 onChange={handleChange} 
                 onBlur={generateSlug}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 font-semibold"
                 placeholder="e.g. iPhone 17 Pro Max Giveaway"
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">URL Slug <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">URL Slug <span className="text-red-500">*</span></label>
               <input 
                 type="text" 
                 name="slug" 
                 required 
                 value={formData.slug} 
                 onChange={handleChange} 
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 font-mono"
                 placeholder="iphone-17-pro-max"
               />
             </div>
           </div>
 
           <div className="space-y-2 quill-container">
-            <label className="text-sm font-semibold text-slate-700 block mb-2">Description <span className="text-red-500">*</span></label>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Description <span className="text-red-500">*</span></label>
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
               <ReactQuill 
                 theme="snow"
                 value={formData.description} 
                 onChange={handleDescriptionChange}
-                placeholder="Describe the campaign, rules, and what makes it special..."
-                className="h-64"
+                placeholder="Describe the campaign, rules, and specifications..."
+                className="h-56"
                 modules={{
                   toolbar: [
                     [{ 'header': [1, 2, 3, false] }],
@@ -160,24 +170,24 @@ export default function NewCampaignPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 block mb-2">Product Image (Optional)</label>
+          <div className="space-y-2 pt-4">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Product Image (Optional)</label>
             <div className="flex items-center gap-6">
               {formData.imageUrl ? (
-                <div className="w-32 h-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex-shrink-0 relative">
+                <div className="w-28 h-28 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex-shrink-0 relative shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={formData.imageUrl} alt="Campaign Product" className="w-full h-full object-cover" />
                   <button 
                     type="button" 
                     onClick={() => setFormData({ ...formData, imageUrl: "" })}
-                    className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white shadow-sm transition-all"
+                    className="absolute top-2 right-2 bg-white/90 p-1 rounded-full text-red-500 hover:bg-white shadow-sm transition-all"
                   >
-                    X
+                    ✕
                   </button>
                 </div>
               ) : (
-                <div className="w-32 h-32 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center flex-shrink-0 text-slate-400">
-                  <span className="text-xs font-semibold">No Image</span>
+                <div className="w-28 h-28 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center flex-shrink-0 text-slate-400">
+                  <span className="text-[11px] font-bold">No Image</span>
                 </div>
               )}
               
@@ -186,29 +196,59 @@ export default function NewCampaignPage() {
                   type="file" 
                   accept="image/*"
                   onChange={handleImageUpload}
-                  className="block w-full text-sm text-slate-500
+                  className="block w-full text-xs text-slate-500
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-xl file:border-0
-                    file:text-sm file:font-semibold
+                    file:text-xs file:font-bold
                     file:bg-emerald-50 file:text-emerald-700
                     hover:file:bg-emerald-100 transition-all cursor-pointer
                   "
                 />
-                <p className="text-xs text-slate-500">Upload a square image (e.g. 800x800). Max 2MB.</p>
+                <p className="text-[11px] text-slate-400">Upload a square image (e.g. 800x800). Max 2MB.</p>
               </div>
             </div>
           </div>
 
         </div>
 
+        {/* Financials, Product Cost & Profit Calculator */}
         <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6">
-          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-4">Financials & Entries</h2>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Financials, Market Cost & Profit Margins</h2>
+              <p className="text-[11px] text-slate-500">Set ticket price, max capacity, and product purchase cost to calculate your net profits.</p>
+            </div>
+            <span className="text-[10px] font-bold bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full border border-purple-200">
+              🔒 Admin Only • Hidden from Players
+            </span>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Product Market Price / Purchase Cost */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Entry Price (ETB) <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <span>Product Market Price / Cost</span>
+              </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">ETB</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ETB</span>
+                <input 
+                  type="number" 
+                  name="productCost" 
+                  min="0"
+                  value={formData.productCost} 
+                  onChange={handleChange} 
+                  className="w-full bg-slate-50 border border-purple-200/80 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 font-bold"
+                  placeholder="e.g. 200000"
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">What you paid / actual product value (hidden from users).</p>
+            </div>
+
+            {/* Entry Price */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Entry Ticket Price <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ETB</span>
                 <input 
                   type="number" 
                   name="entryPrice" 
@@ -216,15 +256,16 @@ export default function NewCampaignPage() {
                   min="1"
                   value={formData.entryPrice} 
                   onChange={handleChange} 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
-                  placeholder="100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 font-bold"
+                  placeholder="e.g. 200"
                 />
               </div>
-              <p className="text-xs text-slate-500">Price for a single entry ticket.</p>
+              <p className="text-[11px] text-slate-400">Price per ticket entry paid by player.</p>
             </div>
             
+            {/* Maximum Entries */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Maximum Total Entries <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Max Total Tickets <span className="text-red-500">*</span></label>
               <input 
                 type="number" 
                 name="maxEntries" 
@@ -232,52 +273,102 @@ export default function NewCampaignPage() {
                 min="1"
                 value={formData.maxEntries} 
                 onChange={handleChange} 
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
-                placeholder="5000"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 font-bold"
+                placeholder="e.g. 2000"
               />
-              <p className="text-xs text-slate-500">The total number of tickets available to be sold.</p>
+              <p className="text-[11px] text-slate-400">Total tickets required to sell out.</p>
             </div>
           </div>
+
+          {/* Live Profit Calculation Preview Box */}
+          <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl text-white border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Live Campaign Profit Projection</span>
+              </div>
+              <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                {projectedRoi}% ROI
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div>
+                <div className="text-slate-400 text-[10px] uppercase font-semibold">Target Gross Revenue</div>
+                <div className="text-base font-black text-white font-mono mt-0.5">
+                  {targetGross.toLocaleString()} ETB
+                </div>
+                <div className="text-[10px] text-slate-400">({maxEntriesNum} × {entryPriceNum} ETB)</div>
+              </div>
+
+              <div>
+                <div className="text-slate-400 text-[10px] uppercase font-semibold">Product Market Cost</div>
+                <div className="text-base font-black text-rose-400 font-mono mt-0.5">
+                  -{productCostNum.toLocaleString()} ETB
+                </div>
+                <div className="text-[10px] text-slate-400">Purchase / Asset Cost</div>
+              </div>
+
+              <div>
+                <div className="text-slate-400 text-[10px] uppercase font-semibold">Projected Net Profit</div>
+                <div className={`text-base font-black font-mono mt-0.5 ${projectedNetProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {projectedNetProfit >= 0 ? "+" : ""}{projectedNetProfit.toLocaleString()} ETB
+                </div>
+                <div className="text-[10px] text-slate-400">Your clean margin</div>
+              </div>
+
+              <div>
+                <div className="text-slate-400 text-[10px] uppercase font-semibold">Break-Even Point</div>
+                <div className="text-base font-black text-blue-400 font-mono mt-0.5">
+                  {breakEvenTickets.toLocaleString()} Tickets
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  ({maxEntriesNum > 0 ? Math.round((breakEvenTickets / maxEntriesNum) * 100) : 0}% of campaign)
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6">
-          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-4">Timeline & Status</h2>
+          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-4">Timeline & Initial Status</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Start Date & Time <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Start Date & Time <span className="text-red-500">*</span></label>
               <input 
                 type="datetime-local" 
                 name="startsAt" 
                 required 
                 value={formData.startsAt} 
                 onChange={handleChange} 
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">End Date & Time <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">End Date & Time <span className="text-red-500">*</span></label>
               <input 
                 type="datetime-local" 
                 name="endsAt" 
                 required 
                 value={formData.endsAt} 
                 onChange={handleChange} 
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Initial Status</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Initial Status</label>
               <select 
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 appearance-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 appearance-none"
               >
                 <option value="DRAFT">Draft (Hidden)</option>
-                <option value="ACTIVE">Active (Live)</option>
+                <option value="ACTIVE">Active (Live Immediately)</option>
               </select>
             </div>
           </div>
@@ -285,21 +376,21 @@ export default function NewCampaignPage() {
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-4 pt-4">
-          <Link href="/admin/campaigns" className="px-6 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+          <Link href="/admin/campaigns" className="px-6 py-3 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors">
             Cancel
           </Link>
           <button 
             type="button" 
             onClick={() => saveCampaign("ACTIVE")}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-xl text-sm font-bold shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? "Publishing..." : "Publish Now"}
+            {loading ? "Publishing..." : "Publish & Go Live"}
           </button>
           <button 
             type="submit" 
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? (
               "Saving..."

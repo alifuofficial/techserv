@@ -20,7 +20,9 @@ interface SearchResultItem {
 const NAV_PAGES = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin", category: "Overview" },
   { icon: Trophy, label: "Campaigns", href: "/admin/campaigns", category: "Management" },
+  { icon: Zap, label: "Instant Mini Draws", href: "/admin/instant-draws", category: "Management" },
   { icon: Sparkles, label: "Live Draw Room", href: "/admin/draws", category: "Management" },
+  { icon: Gift, label: "Daily Lucky Spin", href: "/admin/spin", category: "Management" },
   { icon: Ticket, label: "Entries & Tickets", href: "/admin/entries", category: "Management" },
   { icon: Users, label: "Users Directory", href: "/admin/users", category: "Management" },
   { icon: Wallet, label: "Payments & Verification", href: "/admin/payments", category: "Management" },

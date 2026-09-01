@@ -274,7 +274,7 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           </div>
         </div>
 
-        {/* Card 4 */}
+        {/* Card 4: Revenue & Net Profit */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
@@ -289,10 +289,13 @@ export default function AdminDashboardClient({ data }: { data: any }) {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-emerald-500 text-xs font-bold flex items-center"><ArrowUpRight className="w-3 h-3 mr-0.5" /> Approved</span>
-              <span className="text-[10px] text-slate-400">verified payments</span>
+              <span className="text-emerald-600 text-xs font-bold flex items-center">
+                <ArrowUpRight className="w-3 h-3 mr-0.5" />
+                Net Profit: {(data?.totalProjectedNetProfit || 0).toLocaleString()} ETB
+              </span>
+              <span className="text-[10px] text-slate-400">after product costs</span>
             </div>
-            <Sparkline data={[20, 30, 25, 45, 35, 50, 40, 60]} color="#F59E0B" />
+            <Sparkline data={[20, 30, 25, 45, 35, 50, 40, 60]} color="#10B981" />
           </div>
         </div>
       </div>
@@ -304,12 +307,19 @@ export default function AdminDashboardClient({ data }: { data: any }) {
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-base font-bold text-slate-900 mb-2">Revenue Overview</h2>
-              <div className="flex items-end gap-3">
-                <span className="text-3xl font-bold text-slate-900">{(data?.totalRevenue || 0).toLocaleString()} ETB</span>
-                <span className="text-emerald-500 text-sm font-bold flex items-center mb-1">
-                  <ArrowUpRight className="w-4 h-4 mr-0.5" /> Live Verified
-                </span>
+              <h2 className="text-base font-bold text-slate-900 mb-2">Revenue & Profit Overview</h2>
+              <div className="flex items-end gap-4">
+                <div>
+                  <span className="text-2xl font-bold text-slate-900">{(data?.totalRevenue || 0).toLocaleString()} ETB</span>
+                  <span className="text-xs text-slate-400 ml-1">Gross</span>
+                </div>
+                <div className="w-px h-6 bg-slate-200 mb-1"></div>
+                <div className="mb-0.5">
+                  <span className="text-base font-bold text-emerald-600">
+                    {(data?.totalProjectedNetProfit || 0) >= 0 ? "+" : ""}{(data?.totalProjectedNetProfit || 0).toLocaleString()} ETB
+                  </span>
+                  <span className="text-[11px] text-slate-400 ml-1">Projected Net Margin</span>
+                </div>
               </div>
             </div>
           </div>
@@ -380,10 +390,10 @@ export default function AdminDashboardClient({ data }: { data: any }) {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Real Top Performing Campaigns Table */}
+        {/* Real Top Performing Campaigns Table with Product Cost and Net Profit */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-base font-bold text-slate-900">Active & Recent Campaigns</h2>
+            <h2 className="text-base font-bold text-slate-900">Active Campaigns & Net Profitability</h2>
             <Link href="/admin/campaigns" className="text-emerald-500 text-xs font-semibold hover:text-emerald-600">View All</Link>
           </div>
           
@@ -391,10 +401,11 @@ export default function AdminDashboardClient({ data }: { data: any }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-2/5">Campaign</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entries Sold</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</th>
-                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progress</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Campaign</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Cost</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tickets Sold</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Realized Gross</th>
+                  <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Net Profit</th>
                   <th className="pb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
                 </tr>
               </thead>
@@ -404,23 +415,41 @@ export default function AdminDashboardClient({ data }: { data: any }) {
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         {camp.img ? (
-                          <img src={camp.img} alt={camp.name} className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
+                          <img src={camp.img} alt={camp.name} className="w-10 h-10 rounded-lg object-cover border border-slate-100 shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold border border-emerald-100">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold border border-emerald-100 shrink-0">
                             <Trophy className="w-5 h-5" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-bold text-slate-900 truncate max-w-[180px]">{camp.name}</div>
+                          <div className="font-bold text-slate-900 truncate max-w-[150px]">{camp.name}</div>
                           <div className="text-[10px] text-slate-400">{camp.time}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-4">
-                      <div className="font-bold text-slate-700">{(camp.sold || 0).toLocaleString()} <span className="text-slate-400 font-normal">/ {(camp.total || 0).toLocaleString()}</span></div>
+                      <div className="font-mono font-bold text-rose-600 text-xs">
+                        {(camp.productCost || 0).toLocaleString()} ETB
+                      </div>
+                      <div className="text-[9px] text-slate-400">Market Cost</div>
                     </td>
-                    <td className="py-4 font-bold text-slate-700">{(camp.rev || 0).toLocaleString()} ETB</td>
-                    <td className="py-4 font-semibold text-slate-700">{camp.conv}</td>
+                    <td className="py-4">
+                      <div className="font-bold text-slate-700 text-xs">
+                        {(camp.sold || 0).toLocaleString()} <span className="text-slate-400 font-normal">/ {(camp.total || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="text-[9px] text-emerald-600 font-semibold">{camp.conv}</div>
+                    </td>
+                    <td className="py-4 font-bold text-slate-700 font-mono text-xs">
+                      {(camp.rev || 0).toLocaleString()} ETB
+                    </td>
+                    <td className="py-4">
+                      <div className={`font-bold font-mono text-xs ${(camp.targetProfit || 0) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        {(camp.targetProfit || 0) >= 0 ? "+" : ""}{(camp.targetProfit || 0).toLocaleString()} ETB
+                      </div>
+                      <div className="text-[9px] text-slate-400">
+                        Live: {(camp.realizedProfit || 0) >= 0 ? "+" : ""}{(camp.realizedProfit || 0).toLocaleString()} ETB
+                      </div>
+                    </td>
                     <td className="py-4 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
                         camp.status === 'ACTIVE' ? 'text-emerald-600 bg-emerald-100' :

@@ -131,7 +131,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           entriesCount: campaign._count.entries,
           status: isCompleted ? "COMPLETED" : campaign.status,
           isCompleted: !!isCompleted,
-          prizes: campaign.prizes,
+          prizes: campaign.prizes?.map((p) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            imageUrl: p.imageUrl,
+          })),
           prizeTitle: campaign.prizes?.[0]?.title || campaign.title,
           winner: winnerInfo,
         },

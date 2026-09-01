@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { format, subDays } from "date-fns";
+import { getSystemSetting } from "@/modules/settings/settings-service";
 import AdminDashboardClient from "./admin-client";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function AdminDashboardPage() {
     db.entry.count().catch(() => 0),
     db.campaign.findMany({
       include: {
+        prizes: true,
         _count: {
           select: { entries: true },
         },
@@ -136,7 +138,7 @@ export default async function AdminDashboardPage() {
     percentage: Math.round((pm.amount / totalProvRevenue) * 100),
   }));
 
-  // 4. Real Recent Activity Feed (Strict ISO String serialization)
+  // 4. Real Recent Activity Feed
   const activityList: any[] = [];
 
   recentUsers.forEach((u) => {
@@ -173,28 +175,54 @@ export default async function AdminDashboardPage() {
   activityList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const finalActivities = activityList.slice(0, 6);
 
-  // 5. Top Campaigns
-  const mappedCampaigns = campaigns.map((c) => {
-    let formattedEndsAt = "";
-    try {
-      formattedEndsAt = c.endsAt ? `Ends ${format(new Date(c.endsAt), "MMM d, yyyy")}` : "";
-    } catch (e) {}
+  // 5. Top Campaigns with Product Cost & Net Profit Calculations
+  let totalProductCostsAll = 0;
+  let totalTargetGrossAll = 0;
+  let totalRealizedGrossAll = 0;
 
-    const entriesSold = c._count?.entries || 0;
-    const max = c.maxEntries || 1;
+  const mappedCampaigns = await Promise.all(
+    campaigns.map(async (c) => {
+      let formattedEndsAt = "";
+      try {
+        formattedEndsAt = c.endsAt ? `Ends ${format(new Date(c.endsAt), "MMM d, yyyy")}` : "";
+      } catch (e) {}
 
-    return {
-      id: c.id,
-      name: c.title,
-      time: formattedEndsAt,
-      img: c.imageUrl || "",
-      sold: entriesSold,
-      total: c.maxEntries || 0,
-      rev: (c.entryPrice || 0) * entriesSold,
-      conv: `${Math.min(100, Math.round((entriesSold / max) * 100))}%`,
-      status: c.status,
-    };
-  });
+      const entriesSold = c._count?.entries || 0;
+      const max = c.maxEntries || 1;
+      const prizeCost = c.prizes?.[0]?.value || 0;
+      const settingCost = parseInt(await getSystemSetting(`product_cost_${c.id}`, "0"), 10) || 0;
+      const productCost = prizeCost || settingCost || 0;
+
+      const targetGross = (c.entryPrice || 0) * max;
+      const realizedGross = (c.entryPrice || 0) * entriesSold;
+      const targetProfit = targetGross - productCost;
+      const realizedProfit = realizedGross - productCost;
+
+      totalProductCostsAll += productCost;
+      totalTargetGrossAll += targetGross;
+      totalRealizedGrossAll += realizedGross;
+
+      return {
+        id: c.id,
+        name: c.title,
+        time: formattedEndsAt,
+        img: c.imageUrl || "",
+        sold: entriesSold,
+        total: c.maxEntries || 0,
+        entryPrice: c.entryPrice || 0,
+        productCost,
+        targetGross,
+        rev: realizedGross,
+        targetProfit,
+        realizedProfit,
+        conv: `${Math.min(100, Math.round((entriesSold / max) * 100))}%`,
+        status: c.status,
+      };
+    })
+  );
+
+  const totalProjectedNetProfit = totalTargetGrossAll - totalProductCostsAll;
+  const totalRealizedNetProfit = totalRealizedGrossAll - totalProductCostsAll;
 
   const dashboardData = {
     totalUsers: totalUsers || 0,
@@ -202,6 +230,9 @@ export default async function AdminDashboardPage() {
     activeCampaigns: activeCampaigns || 0,
     totalRevenue: totalRevenue || 0,
     totalTicketsCount: totalTicketsCount || 0,
+    totalProductCosts: totalProductCostsAll,
+    totalProjectedNetProfit,
+    totalRealizedNetProfit,
     revenueData: revenueData || [],
     pieData: pieData || [],
     paymentMethods: paymentMethods || [],

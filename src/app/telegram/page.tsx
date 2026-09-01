@@ -248,6 +248,49 @@ export default function TelegramMiniApp() {
             </div>
           </div>
 
+          {/* High Energy Featured Action Cards (Daily Spin & Instant Mini Draws) */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* 1. Daily Free Lucky Spin */}
+            <Link
+              href="/telegram/spin"
+              className="bg-gradient-to-br from-[#291A08] via-[#1C1205] to-[#120B02] border border-amber-500/40 hover:border-amber-500/80 rounded-3xl p-4 flex flex-col justify-between relative active:scale-95 transition-all shadow-xl shadow-amber-950/40 group overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/10 rounded-full blur-xl pointer-events-none group-hover:bg-amber-400/20 transition-colors"></div>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-5 h-5 fill-amber-400" />
+                </div>
+                <span className="text-[9px] font-black uppercase text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> FREE
+                </span>
+              </div>
+              <div>
+                <span className="text-white font-extrabold text-sm leading-tight block">Daily Lucky Spin</span>
+                <span className="text-[10px] text-amber-300/80 font-semibold mt-0.5 block">Win Free ETB Every 24h</span>
+              </div>
+            </Link>
+
+            {/* 2. Instant Mini Draws */}
+            <Link
+              href="/telegram/instant"
+              className="bg-gradient-to-br from-[#241038] via-[#170B24] to-[#0D0514] border border-purple-500/40 hover:border-purple-500/80 rounded-3xl p-4 flex flex-col justify-between relative active:scale-95 transition-all shadow-xl shadow-purple-950/40 group overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-400/10 rounded-full blur-xl pointer-events-none group-hover:bg-purple-400/20 transition-colors"></div>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/40 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Zap className="w-5 h-5 fill-purple-400" />
+                </div>
+                <span className="text-[9px] font-black uppercase text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
+                  ⚡ FAST
+                </span>
+              </div>
+              <div>
+                <span className="text-white font-extrabold text-sm leading-tight block">Instant Mini Draws</span>
+                <span className="text-[10px] text-purple-300/80 font-semibold mt-0.5 block">5-Min 100-Ticket Drops</span>
+              </div>
+            </Link>
+          </div>
+
           {/* Gamified 3-Card Interactive HUD */}
           <div className="grid grid-cols-3 gap-2.5">
             

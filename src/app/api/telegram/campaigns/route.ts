@@ -33,7 +33,12 @@ export async function GET() {
       maxEntries: c.maxEntries,
       entriesCount: c._count.entries,
       status: c.status,
-      prizes: c.prizes,
+      prizes: c.prizes?.map((p) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        imageUrl: p.imageUrl,
+      })),
     }));
 
     return NextResponse.json({ success: true, campaigns: mapped });
